@@ -72,6 +72,26 @@ Use [edgar-api/.env.production.example](edgar-api/.env.production.example) as th
 - SEC_APP_NAME and SEC_CONTACT_EMAIL (optional)
   - Used to compose the User-Agent when SEC_USER_AGENT is not provided.
 
+- SEC_REQUIRE_EXPLICIT_USER_AGENT
+  - When true, startup fails unless SEC_USER_AGENT is set.
+  - Recommended: true in production.
+
+- SEC_HTTP_TIMEOUT_SECONDS
+  - Timeout per upstream SEC request in seconds.
+
+- SEC_HTTP_MAX_RETRIES
+  - Number of retries for transient upstream failures (429/5xx, timeout, connection errors).
+
+- SEC_HTTP_RETRY_BASE_SECONDS
+  - Base delay for exponential backoff between retries.
+
+## Upstream resilience behavior
+
+- Transient upstream failures are retried with exponential backoff.
+- Upstream timeout errors are surfaced as HTTP 504.
+- Upstream request/connection errors are surfaced as HTTP 502.
+- SEC 429 responses are surfaced as HTTP 503.
+
 ## Deploy
 
 Render config is in render.yaml.

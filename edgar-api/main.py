@@ -8,7 +8,10 @@ Routes:
 """
 
 from fastapi import FastAPI
+from fastapi import Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+import httpx
 import os
 
 from routers import (
@@ -48,3 +51,32 @@ app.include_router(narrative_summary.router)
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.exception_handler(httpx.TimeoutException)
+async def handle_upstream_timeout(_request: Request, _exc: httpx.TimeoutException):
+    return JSONResponse(
+        status_code=504,
+        content={"detail": "Upstream SEC service timed out"},
+    )
+
+
+@app.exception_handler(httpx.RequestError)
+async def handle_upstream_request_error(_request: Request, _exc: httpx.RequestError):
+    return JSONResponse(
+        status_code=502,
+        content={"detail": "Upstream SEC service request failed"},
+    )
+
+
+@app.exception_handler(httpx.HTTPStatusError)
+async def handle_upstream_status_error(_request: Request, exc: httpx.HTTPStatusError):
+    status_code = exc.response.status_code
+    if status_code == 429:
+        detail = "Upstream SEC service rate-limited the request"
+        return JSONResponse(status_code=503, content={"detail": detail})
+
+    return JSONResponse(
+        status_code=502,
+        content={"detail": f"Upstream SEC service returned HTTP {status_code}"},
+    )
