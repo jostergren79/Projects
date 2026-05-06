@@ -5,7 +5,7 @@ financial performance based on the metrics data.
 """
 
 from fastapi import APIRouter, HTTPException
-from edgar_client import get_company_facts, pad_cik
+from edgar_client import fetch_company_facts, normalize_cik_to_10_digits
 from routers.financial_metrics import (
     _select_best_concept_rows, _map_period_to_value,
     _calculate_margin_pct, _calculate_yoy_growth_pct,
@@ -69,9 +69,9 @@ def _margin_commentary(current, prior):
 
 @router.get("/company/{cik}/summary")
 async def company_summary(cik: str):
-    cik10 = pad_cik(cik)
+    cik10 = normalize_cik_to_10_digits(cik)
     try:
-        facts = await get_company_facts(cik10)
+        facts = await fetch_company_facts(cik10)
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"EDGAR fetch failed: {e}")
 

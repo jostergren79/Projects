@@ -15,7 +15,7 @@ CACHE_PATH = Path(__file__).parent / "data" / "edgar_cache.db"
 TTL_SECONDS = 6 * 60 * 60  # 6 hours
 
 
-def _get_conn() -> sqlite3.Connection:
+def open_cache_connection() -> sqlite3.Connection:
     CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(CACHE_PATH))
     conn.execute("""
@@ -29,8 +29,8 @@ def _get_conn() -> sqlite3.Connection:
     return conn
 
 
-def cache_get(key: str):
-    conn = _get_conn()
+def load_cached_json(key: str):
+    conn = open_cache_connection()
     row = conn.execute(
         "SELECT value, cached_at FROM cache WHERE key = ?", (key,)
     ).fetchone()
@@ -43,8 +43,8 @@ def cache_get(key: str):
     return json.loads(value)
 
 
-def cache_set(key: str, value: dict) -> None:
-    conn = _get_conn()
+def store_cached_json(key: str, value: dict) -> None:
+    conn = open_cache_connection()
     conn.execute(
         "INSERT OR REPLACE INTO cache (key, value, cached_at) VALUES (?, ?, ?)",
         (key, json.dumps(value), int(time.time()))
@@ -53,8 +53,21 @@ def cache_set(key: str, value: dict) -> None:
     conn.close()
 
 
-def cache_clear(key: str) -> None:
-    conn = _get_conn()
+def clear_cached_json(key: str) -> None:
+    conn = open_cache_connection()
     conn.execute("DELETE FROM cache WHERE key = ?", (key,))
     conn.commit()
     conn.close()
+
+
+# Backward-compatible aliases for existing imports.
+def cache_get(key: str):
+    return load_cached_json(key)
+
+
+def cache_set(key: str, value: dict) -> None:
+    store_cached_json(key, value)
+
+
+def cache_clear(key: str) -> None:
+    clear_cached_json(key)

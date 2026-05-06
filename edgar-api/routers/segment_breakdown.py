@@ -10,7 +10,7 @@ Flow:
 """
 
 from fastapi import APIRouter, HTTPException
-from edgar_client import get_submissions, pad_cik
+from edgar_client import fetch_company_submissions, normalize_cik_to_10_digits
 import httpx
 import re
 from html import unescape
@@ -89,10 +89,10 @@ async def _get_rfile(url: str) -> str:
 
 @router.get("/company/{cik}/segments")
 async def company_segments(cik: str):
-    cik10 = pad_cik(cik)
+    cik10 = normalize_cik_to_10_digits(cik)
 
     try:
-        subs = await get_submissions(cik10)
+        subs = await fetch_company_submissions(cik10)
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"EDGAR submissions fetch failed: {e}")
 

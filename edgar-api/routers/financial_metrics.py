@@ -12,7 +12,7 @@ XBRL concept mapping (us-gaap):
 """
 
 from fastapi import APIRouter, HTTPException, Query
-from edgar_client import get_company_facts, pad_cik
+from edgar_client import fetch_company_facts, normalize_cik_to_10_digits
 from datetime import date
 from typing import Optional
 
@@ -457,9 +457,9 @@ async def company_metrics(
     quarters: int = 8,
     debug: bool = Query(False, description="Include concept/normalization diagnostics"),
 ):
-    cik10 = pad_cik(cik)
+    cik10 = normalize_cik_to_10_digits(cik)
     try:
-        facts = await get_company_facts(cik10)
+        facts = await fetch_company_facts(cik10)
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"EDGAR fetch failed: {e}")
 

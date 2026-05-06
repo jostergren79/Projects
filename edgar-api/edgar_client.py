@@ -11,7 +11,7 @@ SEC rate-limit guidance: max 10 req/s, identify yourself via User-Agent.
 
 import httpx
 import os
-from cache import cache_get, cache_set
+from cache import load_cached_json, store_cached_json
 
 
 def _user_agent() -> str:
@@ -34,9 +34,9 @@ BASE_DATA = "https://data.sec.gov"
 BASE_WWW  = "https://www.sec.gov"
 
 
-async def _get(url: str, cache_key=None) -> dict:
+async def fetch_json_with_optional_cache(url: str, cache_key=None) -> dict:
     if cache_key:
-        cached = cache_get(cache_key)
+        cached = load_cached_json(cache_key)
         if cached is not None:
             return cached
     async with httpx.AsyncClient(headers=HEADERS, timeout=20) as client:
@@ -44,26 +44,49 @@ async def _get(url: str, cache_key=None) -> dict:
         r.raise_for_status()
         data = r.json()
     if cache_key:
-        cache_set(cache_key, data)
+        store_cached_json(cache_key, data)
     return data
 
 
-async def get_ticker_map() -> dict:
+async def fetch_company_ticker_index() -> dict:
     """Returns {TICKER: {cik_str, title, ticker}} for all US public companies."""
-    data = await _get(f"{BASE_WWW}/files/company_tickers.json", cache_key="ticker_map")
+    data = await fetch_json_with_optional_cache(
+        f"{BASE_WWW}/files/company_tickers.json", cache_key="ticker_map"
+    )
     return {v["ticker"].upper(): v for v in data.values()}
 
 
-async def get_submissions(cik10: str) -> dict:
+async def fetch_company_submissions(cik10: str) -> dict:
     """Company metadata + filing history. cik10 = zero-padded 10-digit CIK."""
-    return await _get(f"{BASE_DATA}/submissions/CIK{cik10}.json", cache_key=f"submissions:{cik10}")
+    return await fetch_json_with_optional_cache(
+        f"{BASE_DATA}/submissions/CIK{cik10}.json", cache_key=f"submissions:{cik10}"
+    )
+
+
+async def fetch_company_facts(cik10: str) -> dict:
+    """All reported XBRL facts across all filings."""
+    return await fetch_json_with_optional_cache(
+        f"{BASE_DATA}/api/xbrl/companyfacts/CIK{cik10}.json", cache_key=f"facts:{cik10}"
+    )
+
+
+def normalize_cik_to_10_digits(cik) -> str:
+    """Zero-pad CIK to 10 digits as required by SEC URLs."""
+    return str(cik).zfill(10)
+
+
+# Backward-compatible aliases for existing imports.
+async def get_ticker_map() -> dict:
+    return await fetch_company_ticker_index()
+
+
+async def get_submissions(cik10: str) -> dict:
+    return await fetch_company_submissions(cik10)
 
 
 async def get_company_facts(cik10: str) -> dict:
-    """All reported XBRL facts across all filings."""
-    return await _get(f"{BASE_DATA}/api/xbrl/companyfacts/CIK{cik10}.json", cache_key=f"facts:{cik10}")
+    return await fetch_company_facts(cik10)
 
 
 def pad_cik(cik) -> str:
-    """Zero-pad CIK to 10 digits as required by SEC URLs."""
-    return str(cik).zfill(10)
+    return normalize_cik_to_10_digits(cik)

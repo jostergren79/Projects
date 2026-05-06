@@ -15,7 +15,12 @@ Lookup endpoints:
 
 import re
 from fastapi import APIRouter, HTTPException, Query
-from edgar_client import get_ticker_map, get_submissions, get_company_facts, pad_cik
+from edgar_client import (
+    fetch_company_ticker_index,
+    fetch_company_submissions,
+    fetch_company_facts,
+    normalize_cik_to_10_digits,
+)
 from routers.financial_metrics import (
     _select_best_concept_with_rows,
     REVENUE_CONCEPTS,
@@ -134,8 +139,8 @@ def _score_entry(query: str, entry: dict):
 
 
 async def _company_payload(entry: dict) -> dict:
-    cik10 = pad_cik(entry["cik_str"])
-    subs = await get_submissions(cik10)
+    cik10 = normalize_cik_to_10_digits(entry["cik_str"])
+    subs = await fetch_company_submissions(cik10)
 
     filings = subs.get("filings", {}).get("recent", {})
     forms   = filings.get("form", [])
@@ -161,7 +166,7 @@ async def _company_payload(entry: dict) -> dict:
 async def company_lookup(ticker: str = Query(..., description="Stock ticker symbol, e.g. AAPL")):
     ticker = ticker.upper().strip()
 
-    tickers = await get_ticker_map()
+    tickers = await fetch_company_ticker_index()
     if ticker not in tickers:
         raise HTTPException(status_code=404, detail=f"Ticker '{ticker}' not found in SEC EDGAR")
 
@@ -177,7 +182,7 @@ async def company_search(
     if len(q) < 2:
         raise HTTPException(status_code=400, detail="Search text must be at least 2 characters")
 
-    tickers = await get_ticker_map()
+    tickers = await fetch_company_ticker_index()
 
     # Score matches by quality, then prefer shorter cleaner names.
     scored = []
@@ -195,7 +200,7 @@ async def company_search(
     matches = [
         {
             "ticker": item[6]["ticker"].upper(),
-            "cik": pad_cik(item[6]["cik_str"]),
+            "cik": normalize_cik_to_10_digits(item[6]["cik_str"]),
             "name": item[6].get("title"),
             "score": item[0],
             "reason": item[5],
@@ -219,7 +224,7 @@ async def company_resolve(
     if len(query) < 1:
         raise HTTPException(status_code=400, detail="Query cannot be empty")
 
-    tickers = await get_ticker_map()
+    tickers = await fetch_company_ticker_index()
     tkr = query.upper()
 
     if tkr in tickers:
@@ -248,10 +253,10 @@ async def company_resolve(
 
 @router.get("/company/object/{cik}")
 async def company_object(cik: str):
-    cik10 = pad_cik(cik)
+    cik10 = normalize_cik_to_10_digits(cik)
     try:
-        subs = await get_submissions(cik10)
-        facts = await get_company_facts(cik10)
+        subs = await fetch_company_submissions(cik10)
+        facts = await fetch_company_facts(cik10)
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"EDGAR fetch failed: {e}")
 
