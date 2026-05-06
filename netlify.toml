@@ -1,7 +1,6 @@
 [build]
-  base = "notes-api"
-  publish = "public"
-  command = ""
+  publish = "notes-api/public"
+  command = "echo 'No build step required'"
 
 [[redirects]]
   from = "/edgar"
