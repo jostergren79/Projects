@@ -1,0 +1,183 @@
+"""
+GET /company/{cik}/summary
+Generates a rules-based natural language summary of the latest quarter's
+financial performance based on the metrics data.
+"""
+
+from fastapi import APIRouter, HTTPException
+from edgar_client import get_company_facts, pad_cik
+from routers.metrics import (
+    _pick_concept, _index_by_period,
+    _margin, _yoy_growth,
+    _prefer_10q_rows,
+    _find_prior_period,
+    REVENUE_CONCEPTS,
+    GROSS_PROFIT_CONCEPTS,
+    OPERATING_INCOME_CONCEPTS,
+    NET_INCOME_CONCEPTS,
+    EPS_DILUTED_CONCEPTS,
+)
+from datetime import date
+
+router = APIRouter()
+
+
+def _fmt_currency(val, unit="M"):
+    """Format large dollar values into readable strings."""
+    if val is None:
+        return "N/A"
+    if unit == "B" or abs(val) >= 1_000_000_000:
+        return f"${abs(val)/1_000_000_000:.1f}B"
+    return f"${abs(val)/1_000_000:.0f}M"
+
+
+def _fmt_pct(val, decimals=1):
+    if val is None:
+        return "N/A"
+    sign = "+" if val >= 0 else ""
+    return f"{sign}{val:.{decimals}f}%"
+
+
+def _direction(val, positive_word="grew", negative_word="declined"):
+    if val is None:
+        return "was flat"
+    return positive_word if val >= 0 else negative_word
+
+
+def _magnitude(val):
+    if val is None:
+        return ""
+    abs_val = abs(val)
+    if abs_val < 1:
+        return "slightly"
+    if abs_val < 5:
+        return "modestly"
+    if abs_val < 15:
+        return "meaningfully"
+    return "significantly"
+
+
+def _margin_commentary(current, prior):
+    if current is None or prior is None:
+        return None
+    delta = current - prior
+    if abs(delta) < 0.3:
+        return "relatively stable"
+    direction = "expanded" if delta > 0 else "contracted"
+    return f"{direction} {abs(delta):.1f}pp year-over-year to {current:.1f}%"
+
+
+@router.get("/company/{cik}/summary")
+async def company_summary(cik: str):
+    cik10 = pad_cik(cik)
+    try:
+        facts = await get_company_facts(cik10)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"EDGAR fetch failed: {e}")
+
+    rev_rows = _prefer_10q_rows(_pick_concept(facts, REVENUE_CONCEPTS))
+    gp_rows  = _prefer_10q_rows(_pick_concept(facts, GROSS_PROFIT_CONCEPTS))
+    oi_rows  = _prefer_10q_rows(_pick_concept(facts, OPERATING_INCOME_CONCEPTS))
+    ni_rows  = _prefer_10q_rows(_pick_concept(facts, NET_INCOME_CONCEPTS))
+    eps_rows = _prefer_10q_rows(_pick_concept(facts, EPS_DILUTED_CONCEPTS))
+
+    rev_idx = _index_by_period(rev_rows)
+    gp_idx  = _index_by_period(gp_rows)
+    oi_idx  = _index_by_period(oi_rows)
+    ni_idx  = _index_by_period(ni_rows)
+    eps_idx = _index_by_period(eps_rows)
+
+    if not rev_rows:
+        raise HTTPException(status_code=404, detail="Insufficient financial data to generate summary")
+
+    # Latest and prior-year period
+    latest = rev_rows[0]
+    period = latest["period"]
+    rev    = rev_idx.get(period)
+
+    try:
+        d = date.fromisoformat(period)
+        period_label = f"Q{(d.month - 1) // 3 + 1} {d.year}"
+    except Exception:
+        period_label = period
+
+    prior_period = _find_prior_period(period, list(rev_idx.keys()))
+    prior_rev = rev_idx.get(prior_period) if prior_period else None
+    prior_gp  = gp_idx.get(prior_period) if prior_period else None
+    prior_oi  = oi_idx.get(prior_period) if prior_period else None
+
+    rev_yoy   = _yoy_growth(rev, prior_rev)
+    gm        = _margin(gp_idx.get(period), rev)
+    prior_gm  = _margin(prior_gp, prior_rev)
+    om        = _margin(oi_idx.get(period), rev)
+    prior_om  = _margin(prior_oi, prior_rev)
+    ni        = ni_idx.get(period)
+    eps       = eps_idx.get(period)
+
+    name = facts.get("entityName", "The company")
+
+    # Build sentences
+    sentences = []
+
+    # 1. Revenue headline
+    if rev is not None:
+        rev_str = _fmt_currency(rev)
+        if rev_yoy is not None:
+            mag = _magnitude(rev_yoy)
+            verb = _direction(rev_yoy)
+            sentences.append(
+                f"{name} reported {rev_str} in net revenue for {period_label}, "
+                f"which {verb} {mag} {_fmt_pct(rev_yoy)} year-over-year."
+            )
+        else:
+            sentences.append(f"{name} reported {rev_str} in net revenue for {period_label}.")
+
+    # 2. Gross margin
+    gm_comment = _margin_commentary(gm, prior_gm)
+    if gm is not None:
+        if gm_comment:
+            sentences.append(f"Gross margin {gm_comment}.")
+        else:
+            sentences.append(f"Gross margin was {gm:.1f}%.")
+
+    # 3. Operating margin
+    om_comment = _margin_commentary(om, prior_om)
+    if om is not None:
+        if om_comment:
+            sentences.append(f"Operating margin {om_comment}.")
+        else:
+            sentences.append(f"Operating margin was {om:.1f}%.")
+
+    # 4. Net income + EPS
+    if ni is not None:
+        ni_str = _fmt_currency(ni)
+        if eps is not None:
+            sentences.append(f"Net income was {ni_str}, or ${eps:.2f} per diluted share.")
+        else:
+            sentences.append(f"Net income was {ni_str}.")
+
+    # 5. Outlook tone
+    if rev_yoy is not None and gm is not None:
+        if rev_yoy >= 5 and (gm_comment and "expanded" in (gm_comment or "")):
+            sentences.append("Overall, the quarter reflected strong top-line momentum with improving profitability.")
+        elif rev_yoy < -5:
+            sentences.append("The quarter reflected revenue pressure, with top-line results below prior-year levels.")
+        elif rev_yoy >= 0:
+            sentences.append("Results were broadly stable relative to the prior year.")
+        else:
+            sentences.append("The quarter reflected modest revenue headwinds relative to the prior year.")
+
+    return {
+        "cik":     cik10,
+        "name":    name,
+        "period":  period,
+        "summary": " ".join(sentences),
+        "data": {
+            "revenue":          rev,
+            "revenue_yoy_pct":  rev_yoy,
+            "gross_margin_pct": gm,
+            "operating_margin_pct": om,
+            "net_income":       ni,
+            "eps_diluted":      eps,
+        },
+    }

@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PCB S&OP Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --navy:     #1e3a5f;
+      --navy-l:   #2d5282;
+      --blue:     #3b82f6;
+      --green:    #16a34a;
+      --amber:    #d97706;
+      --red:      #dc2626;
+      --bg:       #f1f5f9;
+      --surface:  #ffffff;
+      --border:   #e2e8f0;
+      --text:     #1e293b;
+      --muted:    #64748b;
+      --mono:     'DM Mono', 'Courier New', monospace;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); }
+
+    /* ── Header ── */
+    header {
+      background: var(--navy);
+      color: #fff;
+      height: 56px;
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 10px rgba(0,0,0,.25);
+    }
+    .hdr-brand  { font-size: 1rem; font-weight: 700; letter-spacing: -.3px; }
+    .hdr-sub    { font-size: .7rem; opacity: .65; text-transform: uppercase; letter-spacing: .08em; }
+    .hdr-meta   { font-size: .72rem; opacity: .55; }
+
+    /* ── Layout ── */
+    main { max-width: 1380px; margin: 0 auto; padding: 1.5rem 2rem 3rem; }
+
+    .section-label {
+      display: flex; align-items: center; gap: .6rem;
+      margin: 1.75rem 0 .8rem;
+      font-size: .68rem; font-weight: 700; letter-spacing: .12em;
+      text-transform: uppercase; color: var(--muted);
+    }
+    .section-label::after { content:''; flex:1; height:1px; background: var(--border); }
+
+    /* ── Exception Queue ── */
+    .eq-list { display: flex; flex-direction: column; gap: .5rem; }
+
+    .eq-card {
+      background: var(--surface);
+      border-radius: 8px;
+      border-left: 4px solid transparent;
+      padding: .9rem 1.1rem;
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 1.25rem;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    }
+    .eq-card.critical { border-color: var(--red);   background: #fff5f5; }
+    .eq-card.warning  { border-color: var(--amber);  background: #fffbeb; }
+
+    .eq-body { flex: 1; }
+    .eq-pill {
+      display: inline-block; font-size: .62rem; font-weight: 700; letter-spacing: .09em;
+      text-transform: uppercase; padding: .18rem .5rem; border-radius: 4px; margin-bottom: .35rem;
+    }
+    .eq-pill.critical { background: var(--red);   color: #fff; }
+    .eq-pill.warning  { background: var(--amber); color: #fff; }
+    .eq-title  { font-size: .88rem; font-weight: 600; margin-bottom: .2rem; }
+    .eq-desc   { font-size: .78rem; color: var(--muted); }
+    .eq-action { font-size: .73rem; text-align: right; white-space: nowrap; min-width: 200px; }
+    .eq-action strong { display: block; color: var(--navy); margin-bottom: .2rem; font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; }
+
+    .eq-clear {
+      background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;
+      padding: .85rem 1.1rem; color: var(--green); font-size: .85rem; font-weight: 500;
+    }
+
+    /* ── KPI Tiles ── */
+    .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+    .kpi {
+      background: var(--surface); border-radius: 10px;
+      padding: 1.1rem 1.25rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    }
+    .kpi-lbl  { font-size: .68rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; margin-bottom: .45rem; }
+    .kpi-val  { font-size: 2rem; font-weight: 700; line-height: 1; margin-bottom: .3rem; }
+    .kpi-sub  { font-size: .72rem; color: var(--muted); }
+    .red   { color: var(--red);   }
+    .amber { color: var(--amber); }
+    .green { color: var(--green); }
+    .navy  { color: var(--navy);  }
+
+    /* ── Chart Grid ── */
+    .chart-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+    .card {
+      background: var(--surface); border-radius: 10px;
+      padding: 1.25rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    }
+    .card-title { font-size: .8rem; font-weight: 600; margin-bottom: .2rem; }
+    .card-sub   { font-size: .7rem; color: var(--muted); margin-bottom: 1rem; }
+    .chart-box  { position: relative; height: 230px; }
+    .chart-box-lg { position: relative; height: 290px; }
+
+    /* ── Summary Table ── */
+    table { width: 100%; border-collapse: collapse; font-size: .79rem; }
+    th {
+      background: #f8fafc;
+      padding: .6rem .9rem;
+      text-align: left;
+      font-size: .66rem; text-transform: uppercase; letter-spacing: .08em;
+      color: var(--muted); font-weight: 600;
+      border-bottom: 2px solid var(--border);
+    }
+    td { padding: .6rem .9rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #f8fafc; }
+    .mono { font-family: var(--mono); font-size: .78rem; }
+
+    .badge {
+      display: inline-block; font-size: .63rem; font-weight: 700; letter-spacing: .05em;
+      padding: .18rem .5rem; border-radius: 4px; text-transform: uppercase;
+    }
+    .b-critical { background: #fee2e2; color: var(--red);   }
+    .b-risk     { background: #fef3c7; color: #92400e;      }
+    .b-excess   { background: #ede9fe; color: #6b21a8;      }
+    .b-ok       { background: #dcfce7; color: #15803d;      }
+
+    .auto-tag {
+      display: inline-flex; align-items: center; gap: .3rem;
+      font-size: .65rem; color: var(--green); font-weight: 600;
+    }
+    .auto-tag::before { content: '●'; font-size: .5rem; }
+
+    /* ── Loading ── */
+    .loading { display: flex; align-items: center; justify-content: center; height: 80px; color: var(--muted); font-size: .85rem; }
+
+    @media (max-width: 900px) {
+      .kpi-row    { grid-template-columns: repeat(2,1fr); }
+      .chart-2col { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="hdr-brand">Post Consumer Brands</div>
+    <div class="hdr-sub">S&amp;OP Planning Dashboard &mdash; Golden Touch</div>
+  </div>
+  <div class="hdr-meta" id="tsLabel">Loading&hellip;</div>
+</header>
+
+<main>
+
+  <!-- Exception Queue -->
+  <div class="section-label">Exception Queue &mdash; Human Decision Required</div>
+  <div class="eq-list" id="exQueue"><div class="loading">Loading&hellip;</div></div>
+
+  <!-- KPIs -->
+  <div class="section-label">Key Performance Indicators</div>
+  <div class="kpi-row">
+    <div class="kpi">
+      <div class="kpi-lbl">Avg OTIF</div>
+      <div class="kpi-val" id="kOtif">&mdash;</div>
+      <div class="kpi-sub">Target &ge;98% (Walmart SLA)</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-lbl">Min Weeks of Supply</div>
+      <div class="kpi-val" id="kWos">&mdash;</div>
+      <div class="kpi-sub">Worst SKU &mdash; target &ge;3 WOS</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-lbl">Avg Forecast MAPE</div>
+      <div class="kpi-val" id="kMape">&mdash;</div>
+      <div class="kpi-sub">All SKUs, 6-month avg</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-lbl">YTD Revenue vs Plan</div>
+      <div class="kpi-val" id="kRev">&mdash;</div>
+      <div class="kpi-sub" id="kRevSub">Jan&ndash;Mar 2026</div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="section-label">Demand &amp; Supply Signals</div>
+  <div class="chart-2col">
+
+    <div class="card">
+      <div class="card-title">Forecast Accuracy &mdash; MAPE % by SKU</div>
+      <div class="card-sub">Mean Absolute % Error, 6-month avg. &nbsp;Target &lt;10%. Red = promo lift not captured in baseline.</div>
+      <div class="chart-box"><canvas id="cMape"></canvas></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Weeks of Supply by SKU</div>
+      <div class="card-sub">Apr 2026 snapshot. Target band: 3&ndash;8 WOS. Purple = excess; red/amber = at risk.</div>
+      <div class="chart-box"><canvas id="cWos"></canvas></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">OTIF % by Retailer</div>
+      <div class="card-sub">On-Time &amp; In-Full, all shipped orders. Blue bars = Case Fill Rate %.</div>
+      <div class="chart-box"><canvas id="cOtif"></canvas></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Supply vs Demand Gap &mdash; Open Orders</div>
+      <div class="card-sub">Inbound PO cases minus open SO commitments. Negative = shortfall risk.</div>
+      <div class="chart-box"><canvas id="cGap"></canvas></div>
+    </div>
+
+  </div>
+
+  <!-- Revenue trend -->
+  <div class="section-label">Revenue vs Plan &mdash; YTD 2026</div>
+  <div class="card" style="margin-bottom:1rem">
+    <div class="card-title">Monthly Revenue: Actual vs Plan by Brand</div>
+    <div class="card-sub">Net revenue to retailer (excl. trade spend). Dashed = plan; solid = actual.</div>
+    <div class="chart-box-lg"><canvas id="cRevenue"></canvas></div>
+  </div>
+
+  <!-- Summary table -->
+  <div class="section-label">Product Summary &mdash; Apr 2026</div>
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>SKU</th>
+          <th>Brand</th>
+          <th>Plant</th>
+          <th>WOS</th>
+          <th>On Hand</th>
+          <th>Proj ATP</th>
+          <th>Open Demand</th>
+          <th>OTIF</th>
+          <th>MAPE</th>
+          <th>Mo. Revenue</th>
+          <th>Status</th>
+          <th>Planning</th>
+        </tr>
+      </thead>
+      <tbody id="summaryBody">
+        <tr><td colspan="12" class="loading">Loading&hellip;</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</main>
+
+<script>
+// ── Color helpers ────────────────────────────────────────────────────────────
+const C = {
+  red:    '#dc2626', redL:    '#fca5a5',
+  amber:  '#d97706', amberL:  '#fde68a',
+  green:  '#16a34a', greenL:  '#86efac',
+  purple: '#7c3aed', purpleL: '#ddd6fe',
+  blue:   '#2563eb', blueL:   '#93c5fd',
+  navy:   '#1e3a5f',
+};
+
+function wosColor(v) {
+  if (v < 2)  return { bg: C.redL,    bd: C.red    };
+  if (v < 3)  return { bg: C.amberL,  bd: C.amber  };
+  if (v > 8)  return { bg: C.purpleL, bd: C.purple };
+  return           { bg: C.greenL,   bd: C.green  };
+}
+function mapeColor(v) {
+  if (v > 15) return { bg: C.redL,   bd: C.red   };
+  if (v > 10) return { bg: C.amberL, bd: C.amber };
+  return           { bg: C.greenL,  bd: C.green };
+}
+function otifColor(v) {
+  if (v < 90) return { bg: C.redL,   bd: C.red   };
+  if (v < 98) return { bg: C.amberL, bd: C.amber };
+  return           { bg: C.greenL,  bd: C.green };
+}
+function gapColor(v) {
+  return v < 0 ? { bg: C.redL, bd: C.red } : { bg: C.greenL, bd: C.green };
+}
+
+function fmt(n)  { return Number(n).toLocaleString(); }
+function fmtK(n) { return '$' + (n / 1000).toFixed(0) + 'K'; }
+
+// ── Data fetch ───────────────────────────────────────────────────────────────
+async function init() {
+  const [forecast, inventory, otif, gap, revenue, summary, dbExceptions] = await Promise.all([
+    fetch('/api/sop/forecast').then(r => r.json()),
+    fetch('/api/sop/inventory').then(r => r.json()),
+    fetch('/api/sop/otif').then(r => r.json()),
+    fetch('/api/sop/supply-gap').then(r => r.json()),
+    fetch('/api/sop/revenue').then(r => r.json()),
+    fetch('/api/sop/summary').then(r => r.json()),
+    fetch('/api/sop/exceptions').then(r => r.json()),
+  ]);
+
+  document.getElementById('tsLabel').textContent =
+    'Refreshed ' + new Date().toLocaleString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit' });
+
+  renderExceptions(dbExceptions);
+  renderKPIs(otif, inventory, forecast, revenue);
+  renderMape(forecast);
+  renderWos(inventory);
+  renderOtif(otif);
+  renderGap(gap);
+  renderRevenue(revenue);
+  renderTable(summary);
+}
+
+// ── Exception Queue ───────────────────────────────────────────────────────────
+function renderExceptions(exceptions) {
+  const active = exceptions.filter(e => e.status === 'OPEN' || e.status === 'ESCALATED');
+  const el = document.getElementById('exQueue');
+  if (!active.length) {
+    el.innerHTML = '<div class="eq-clear">&#10003; All SKUs within parameters — system is managing automatically. No human decisions required.</div>';
+    return;
+  }
+  const fmtRev = v => v >= 1e6 ? '$' + (v/1e6).toFixed(2) + 'M' : '$' + fmt(v);
+  const sevClass = sev => sev === 'HIGH' ? 'critical' : 'warning';
+  el.innerHTML = active.map(e => {
+    const pill     = e.status === 'ESCALATED' ? 'critical' : sevClass(e.severity);
+    const pillText = e.status === 'ESCALATED' ? 'ESCALATED' : e.severity;
+    const typeLabel = e.exception_type.replace(/_/g, ' ');
+    const account   = e.customer_name ? e.customer_name : '(multi-account)';
+    const action    = e.planner_action || '<em>Awaiting planner decision — action required</em>';
+    const casesLine = e.cases_at_risk ? `${fmt(e.cases_at_risk)} cases at risk &nbsp;|&nbsp; Revenue exposure: ${fmtRev(e.revenue_at_risk)}` : `Revenue exposure: ${fmtRev(e.revenue_at_risk)}`;
+    return `
+    <div class="eq-card ${sevClass(e.severity)}">
+      <div class="eq-body">
+        <span class="eq-pill ${pill}">${pillText}</span>
+        <div class="eq-title">${e.sku || ''} ${e.brand || ''} — ${typeLabel} &nbsp;<small style="font-weight:400;opacity:.75">${e.period_key} · ${account}</small></div>
+        <div class="eq-desc" style="font-size:.82rem;color:#94a3b8;margin:.25rem 0">${casesLine}</div>
+        <div class="eq-desc">${e.description}</div>
+      </div>
+      <div class="eq-action">
+        <strong>Planner Action</strong>
+        ${action}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── KPI Tiles ─────────────────────────────────────────────────────────────────
+function renderKPIs(otif, inventory, forecast, revenue) {
+  const avgOtif  = otif.reduce((s,r) => s + r.otif_pct, 0) / otif.length;
+  const minWos   = Math.min(...inventory.map(r => r.wos));
+  const avgMape  = forecast.reduce((s,r) => s + r.mape_pct, 0) / forecast.length;
+  const periods  = [...new Set(revenue.map(r => r.period_key))].sort();
+  const closedPeriods = periods.filter(period =>
+    revenue.some(r => r.period_key === period && r.actual_rev !== null)
+  );
+  const openPeriods = periods.filter(period => !closedPeriods.includes(period));
+  const closedRows = revenue.filter(r => closedPeriods.includes(r.period_key));
+  const totPlan  = closedRows.reduce((s,r) => s + Number(r.plan_rev || 0), 0);
+  const totAct   = closedRows.reduce((s,r) => s + Number(r.actual_rev || 0), 0);
+  const revVar   = totPlan === 0 ? 0 : (totAct - totPlan) / totPlan * 100;
+
+  const set = (id, val, txt, cls) => {
+    const el = document.getElementById(id);
+    el.textContent = val;
+    el.className = 'kpi-val ' + cls;
+    if (txt) document.getElementById(id + '_sub') && (document.getElementById(id + '_sub').textContent = txt);
+  };
+
+  const otifEl = document.getElementById('kOtif');
+  otifEl.textContent = avgOtif.toFixed(1) + '%';
+  otifEl.className = 'kpi-val ' + (avgOtif >= 98 ? 'green' : avgOtif >= 90 ? 'amber' : 'red');
+
+  const wosEl = document.getElementById('kWos');
+  wosEl.textContent = minWos.toFixed(1);
+  wosEl.className = 'kpi-val ' + (minWos >= 3 ? 'green' : minWos >= 2 ? 'amber' : 'red');
+
+  const mapeEl = document.getElementById('kMape');
+  mapeEl.textContent = avgMape.toFixed(1) + '%';
+  mapeEl.className = 'kpi-val ' + (avgMape <= 10 ? 'green' : avgMape <= 15 ? 'amber' : 'red');
+
+  const revEl = document.getElementById('kRev');
+  revEl.textContent = (revVar >= 0 ? '+' : '') + revVar.toFixed(1) + '%';
+  revEl.className = 'kpi-val ' + (revVar >= 0 ? 'green' : revVar >= -3 ? 'amber' : 'red');
+  const closedLabel = closedPeriods.length
+    ? `${closedPeriods[0]} to ${closedPeriods[closedPeriods.length - 1]}`
+    : 'No closed months';
+  const openLabel = openPeriods.length
+    ? ` | Month in progress: ${openPeriods.join(', ')}`
+    : '';
+  document.getElementById('kRevSub').textContent =
+    `$${(totAct/1e6).toFixed(2)}M actual vs $${(totPlan/1e6).toFixed(2)}M plan (${closedLabel}, closed months only${openLabel})`;
+}
+
+// ── Chart: MAPE ───────────────────────────────────────────────────────────────
+function renderMape(rows) {
+  new Chart(document.getElementById('cMape'), {
+    type: 'bar',
+    data: {
+      labels: rows.map(r => r.sku),
+      datasets: [{
+        data: rows.map(r => r.mape_pct),
+        backgroundColor: rows.map(r => mapeColor(r.mape_pct).bg),
+        borderColor:     rows.map(r => mapeColor(r.mape_pct).bd),
+        borderWidth: 1.5, borderRadius: 4,
+      }],
+    },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ` MAPE ${ctx.raw}% | Bias: ${rows[ctx.dataIndex].bias_pct}%` } },
+      },
+      scales: {
+        x: { title: { display: true, text: 'MAPE %', font: { size: 11 } }, grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 } } },
+        y: { ticks: { font: { size: 11 } }, grid: { display: false } },
+      },
+    },
+  });
+}
+
+// ── Chart: WOS ────────────────────────────────────────────────────────────────
+function renderWos(rows) {
+  new Chart(document.getElementById('cWos'), {
+    type: 'bar',
+    data: {
+      labels: rows.map(r => r.sku),
+      datasets: [{
+        data: rows.map(r => r.wos),
+        backgroundColor: rows.map(r => wosColor(r.wos).bg),
+        borderColor:     rows.map(r => wosColor(r.wos).bd),
+        borderWidth: 1.5, borderRadius: 4,
+      }],
+    },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.raw} WOS | ATP: ${fmt(rows[ctx.dataIndex].atp)} cs | ${rows[ctx.dataIndex].status}` } },
+      },
+      scales: {
+        x: { title: { display: true, text: 'Weeks of Supply', font: { size: 11 } }, grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 } } },
+        y: { ticks: { font: { size: 11 } }, grid: { display: false } },
+      },
+    },
+  });
+}
+
+// ── Chart: OTIF ───────────────────────────────────────────────────────────────
+function renderOtif(rows) {
+  new Chart(document.getElementById('cOtif'), {
+    type: 'bar',
+    data: {
+      labels: rows.map(r => r.customer),
+      datasets: [
+        {
+          label: 'OTIF %',
+          data: rows.map(r => r.otif_pct),
+          backgroundColor: rows.map(r => otifColor(r.otif_pct).bg),
+          borderColor:     rows.map(r => otifColor(r.otif_pct).bd),
+          borderWidth: 1.5, borderRadius: 4,
+        },
+        {
+          label: 'Case Fill Rate %',
+          data: rows.map(r => r.fill_rate_pct),
+          backgroundColor: C.blueL,
+          borderColor:     C.blue,
+          borderWidth: 1.5, borderRadius: 4,
+        },
+      ],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'top', labels: { font: { size: 11 }, boxWidth: 12 } } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+        y: { min: 0, max: 100, title: { display: true, text: '%', font: { size: 11 } }, grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 } } },
+      },
+    },
+  });
+}
+
+// ── Chart: Supply Gap ─────────────────────────────────────────────────────────
+function renderGap(rows) {
+  new Chart(document.getElementById('cGap'), {
+    type: 'bar',
+    data: {
+      labels: rows.map(r => r.sku),
+      datasets: [{
+        data: rows.map(r => r.gap),
+        backgroundColor: rows.map(r => gapColor(r.gap).bg),
+        borderColor:     rows.map(r => gapColor(r.gap).bd),
+        borderWidth: 1.5, borderRadius: 4,
+      }],
+    },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: {
+          label: ctx => {
+            const r = rows[ctx.dataIndex];
+            return ` Gap: ${fmt(ctx.raw)} cs | Supply: ${fmt(r.open_supply)} | Demand: ${fmt(r.open_demand)}`;
+          }
+        }},
+      },
+      scales: {
+        x: { title: { display: true, text: 'Cases (Supply − Demand)', font: { size: 11 } }, grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 } } },
+        y: { ticks: { font: { size: 11 } }, grid: { display: false } },
+      },
+    },
+  });
+}
+
+// ── Chart: Revenue vs Plan ────────────────────────────────────────────────────
+function renderRevenue(rows) {
+  const brands  = [...new Set(rows.map(r => r.brand))];
+  const periods = [...new Set(rows.map(r => r.period_key))].sort();
+
+  const palette = {
+    'Honey Bunches of Oats': { plan: '#93c5fd', actual: '#1d4ed8' },
+    'PEBBLES':               { plan: '#fca5a5', actual: '#dc2626' },
+    'Grape-Nuts':            { plan: '#6ee7b7', actual: '#059669' },
+    'Raisin Bran':           { plan: '#fde68a', actual: '#d97706' },
+  };
+
+  const datasets = [];
+  brands.forEach(brand => {
+    const col = palette[brand] || { plan: '#e2e8f0', actual: '#64748b' };
+    const planData   = periods.map(p => rows.find(r => r.brand === brand && r.period_key === p)?.plan_rev   ?? 0);
+    const actualData = periods.map(p => rows.find(r => r.brand === brand && r.period_key === p)?.actual_rev ?? 0);
+    datasets.push({
+      label: `${brand} — Plan`,
+      data: planData,
+      borderColor: col.plan, backgroundColor: col.plan + '22',
+      borderDash: [5, 3], borderWidth: 1.5, pointRadius: 3, tension: 0.3, fill: false,
+    });
+    datasets.push({
+      label: `${brand} — Actual`,
+      data: actualData,
+      borderColor: col.actual, backgroundColor: col.actual + '18',
+      borderWidth: 2, pointRadius: 4, tension: 0.3, fill: false,
+    });
+  });
+
+  new Chart(document.getElementById('cRevenue'), {
+    type: 'line',
+    data: { labels: periods, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top', labels: { font: { size: 10 }, boxWidth: 20, padding: 10 } },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${fmtK(ctx.raw)}` } },
+      },
+      scales: {
+        x: { ticks: { font: { size: 11 } }, grid: { color: '#f1f5f9' } },
+        y: {
+          title: { display: true, text: 'Revenue ($)', font: { size: 11 } },
+          ticks: { font: { size: 11 }, callback: v => fmtK(v) },
+          grid: { color: '#f1f5f9' },
+        },
+      },
+    },
+  });
+}
+
+// ── Summary Table ─────────────────────────────────────────────────────────────
+function renderTable(rows) {
+  const badge = s => {
+    const cls = { CRITICAL:'b-critical', RISK:'b-risk', EXCESS:'b-excess', OK:'b-ok' }[s] || 'b-ok';
+    return `<span class="badge ${cls}">${s}</span>`;
+  };
+  const auto = () => `<span class="auto-tag">Auto-managed</span>`;
+
+  document.getElementById('summaryBody').innerHTML = rows.map(r => {
+    const needsHuman = r.inv_status === 'CRITICAL' || r.inv_status === 'RISK' || r.projected_atp < 0 || r.otif_pct < 90;
+    return `
+      <tr>
+        <td><strong>${r.sku}</strong></td>
+        <td>${r.brand}</td>
+        <td style="font-size:.75rem;color:var(--muted)">${r.plant}</td>
+        <td class="mono" style="color:${r.wos < 3 ? 'var(--red)' : r.wos > 8 ? 'var(--purple)' : 'inherit'}">${r.wos}</td>
+        <td class="mono">${fmt(r.qty_on_hand)}</td>
+        <td class="mono" style="color:${r.projected_atp < 0 ? 'var(--red)' : 'inherit'}">${fmt(r.projected_atp)}</td>
+        <td class="mono">${fmt(r.open_demand)}</td>
+        <td class="mono" style="color:${r.otif_pct < 90 ? 'var(--red)' : r.otif_pct < 98 ? 'var(--amber)' : 'var(--green)'}">${r.otif_pct}%</td>
+        <td class="mono" style="color:${r.mape_pct > 15 ? 'var(--red)' : r.mape_pct > 10 ? 'var(--amber)' : 'inherit'}">${r.mape_pct}%</td>
+        <td class="mono">$${(r.monthly_rev / 1000).toFixed(0)}K</td>
+        <td>${badge(r.inv_status)}</td>
+        <td>${needsHuman ? '<span style="font-size:.72rem;color:var(--red);font-weight:600">&#9650; Needs Review</span>' : auto()}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+init().catch(e => console.error('Dashboard error:', e));
+</script>
+</body>
+</html>

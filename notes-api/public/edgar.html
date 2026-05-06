@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SEC Filing Metrics</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230f1117'/%3E%3Cpath d='M18 18h28v6H24v10h18v6H24v16h-6z' fill='%234f8ef7'/%3E%3C/svg%3E" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #22263a;
+      --border: #2e3352;
+      --text: #e8eaf6;
+      --muted: #8b90b8;
+      --accent: #4f8ef7;
+      --green: #34d399;
+      --red: #f87171;
+      --yellow: #fbbf24;
+      --radius: 10px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
+
+    /* ── Header ── */
+    header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 18px 28px; display: flex; align-items: center; gap: 16px; }
+    header h1 { font-size: 1.1rem; font-weight: 700; letter-spacing: -.02em; }
+    header .subtitle { font-size: .8rem; color: var(--muted); }
+    /* ── Search ── */
+    .search-wrap { max-width: 640px; margin: 48px auto 0; padding: 0 20px; text-align: center; }
+    .search-wrap h2 { font-size: 1.6rem; font-weight: 700; margin-bottom: 8px; }
+    .search-wrap p { color: var(--muted); font-size: .9rem; margin-bottom: 28px; }
+    .search-row { display: flex; gap: 10px; }
+    .search-row input {
+      flex: 1; background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 12px 16px; color: var(--text);
+      font-size: 1rem; outline: none; text-transform: uppercase;
+    }
+    .search-row input::placeholder { text-transform: none; color: var(--muted); }
+    .search-row input:focus { border-color: var(--accent); }
+    .search-row input.input-error,
+    .search-row input.input-error:focus {
+      border-color: var(--red);
+      box-shadow: 0 0 0 2px rgba(248, 113, 113, 0.2);
+    }
+    .search-row button {
+      background: var(--accent); border: none; border-radius: var(--radius);
+      padding: 12px 24px; color: #fff; font-size: .95rem; font-weight: 600;
+      cursor: pointer; white-space: nowrap;
+    }
+    .search-row button:hover { filter: brightness(1.1); }
+    .search-row button:disabled { opacity: .5; cursor: default; }
+    .examples { margin-top: 12px; color: var(--muted); font-size: .82rem; }
+    .examples span { cursor: pointer; color: var(--accent); margin: 0 4px; }
+    .examples span:hover { text-decoration: underline; }
+
+    /* ── Error ── */
+    #error-msg { display: none; background: #3b1f1f; border: 1px solid #7f2020; border-radius: var(--radius); padding: 12px 16px; color: var(--red); margin-top: 16px; font-size: .88rem; }
+
+    /* ── Dashboard ── */
+    #dashboard { display: none; max-width: 1100px; margin: 32px auto 60px; padding: 0 20px; }
+
+    /* Company header */
+    .company-header { display: flex; align-items: flex-start; gap: 20px; margin-bottom: 24px; }
+    .company-header .co-info h2 { font-size: 1.5rem; font-weight: 700; }
+    .company-header .co-info .co-meta { color: var(--muted); font-size: .85rem; margin-top: 4px; }
+    .company-header .co-info .summary-text { color: var(--text); font-size: .9rem; margin-top: 10px; line-height: 1.6; max-width: 720px; background: var(--surface2); border-left: 3px solid var(--accent); padding: 10px 14px; border-radius: 0 var(--radius) var(--radius) 0; }
+    .company-header .co-info .profile-chip { display: inline-block; margin-top: 10px; font-size: .76rem; color: var(--muted); border: 1px solid var(--border); background: var(--surface); border-radius: 999px; padding: 5px 10px; }
+    .action-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .action-row button {
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: .78rem;
+      cursor: pointer;
+    }
+    .action-row button:hover { border-color: var(--accent); }
+
+    /* KPI tiles */
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 24px; }
+    .kpi-tile { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
+    .kpi-tile .kpi-label { font-size: .75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; }
+    .kpi-tile .kpi-value { font-size: 1.6rem; font-weight: 700; }
+    .kpi-tile .kpi-sub { font-size: .8rem; margin-top: 4px; }
+    .kpi-tile .kpi-source { font-size: .73rem; color: var(--muted); margin-top: 6px; text-transform: uppercase; letter-spacing: .04em; }
+    .pos { color: var(--green); }
+    .neg { color: var(--red); }
+    .neu { color: var(--muted); }
+
+    /* Flags */
+    #flags-section { margin-bottom: 24px; }
+    #flags-section h3 { font-size: .9rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 10px; }
+    .flag-list { display: flex; flex-wrap: wrap; gap: 10px; }
+    .flag-badge { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 7px 14px; font-size: .82rem; }
+    .flag-badge.HIGH { border-color: var(--red); background: #2d1a1a; }
+    .flag-badge.MEDIUM { border-color: var(--yellow); background: #2a2212; }
+    .flag-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .flag-badge.HIGH .flag-dot { background: var(--red); }
+    .flag-badge.MEDIUM .flag-dot { background: var(--yellow); }
+    .flag-clean { color: var(--green); font-size: .85rem; padding: 7px 0; }
+
+    .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 20px; }
+    .panel h3 { font-size: .82rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px; }
+    .trust-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+    .trust-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px; }
+    .trust-item .label { color: var(--muted); font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; }
+    .trust-item .value { margin-top: 4px; font-size: .84rem; }
+    .muted { color: var(--muted); }
+
+    .prov-controls { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+    .prov-controls select,
+    #peer-input {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 7px 10px;
+      font-size: .82rem;
+    }
+    .prov-details { font-size: .82rem; line-height: 1.5; color: var(--text); }
+    .prov-details .muted { margin-right: 6px; }
+
+    #peer-table-wrap table { font-size: .8rem; }
+
+    /* Two-column layout for charts */
+    .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 24px; }
+    @media (max-width: 700px) { .charts-row { grid-template-columns: 1fr; } }
+    .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
+    .chart-card h3 { font-size: .82rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 14px; }
+
+    /* Segments table */
+    #segments-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 24px; }
+    #segments-section h3 { font-size: .82rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 14px; }
+    .seg-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+    .seg-name { min-width: 180px; font-size: .88rem; position: relative; cursor: help; border-bottom: 1px dotted #4a5072; }
+    .seg-name[data-tip]:hover::after,
+    .seg-name[data-tip]:focus-visible::after {
+      content: attr(data-tip);
+      position: absolute;
+      left: 0;
+      top: calc(100% + 8px);
+      width: 240px;
+      max-width: 70vw;
+      background: #121622;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: .75rem;
+      line-height: 1.35;
+      z-index: 50;
+      box-shadow: 0 10px 24px rgba(0,0,0,.28);
+      white-space: normal;
+      pointer-events: none;
+    }
+    .seg-name[data-tip]:hover::before,
+    .seg-name[data-tip]:focus-visible::before {
+      content: '';
+      position: absolute;
+      left: 16px;
+      top: calc(100% + 2px);
+      border: 6px solid transparent;
+      border-bottom-color: #121622;
+      z-index: 51;
+      pointer-events: none;
+    }
+    .seg-bar-wrap { flex: 1; background: var(--surface2); border-radius: 4px; height: 10px; overflow: hidden; }
+    .seg-bar { height: 100%; border-radius: 4px; background: var(--accent); }
+    .seg-val { min-width: 80px; text-align: right; font-size: .85rem; font-weight: 600; }
+    .seg-pct { min-width: 48px; text-align: right; font-size: .8rem; color: var(--muted); }
+    .seg-na { color: var(--muted); font-size: .85rem; }
+
+    /* Quarterly table */
+    #table-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+    #table-section h3 { font-size: .82rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 14px; }
+    table { width: 100%; border-collapse: collapse; font-size: .83rem; }
+    thead th { text-align: right; color: var(--muted); font-weight: 500; padding: 6px 10px; border-bottom: 1px solid var(--border); }
+    thead th:first-child { text-align: left; }
+    tbody td { text-align: right; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+    tbody td:first-child { text-align: left; color: var(--muted); }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: var(--surface2); }
+
+    /* Loading */
+    .loading { display: none; text-align: center; padding: 48px; color: var(--muted); }
+    .spinner { display: inline-block; width: 28px; height: 28px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; margin-bottom: 12px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>SEC Filing Metrics</h1>
+      <div class="subtitle">Real financial data from SEC EDGAR — any US public company</div>
+    </div>
+  </header>
+
+  <div class="search-wrap">
+    <h2>Public Company Financials</h2>
+    <p>Enter any US stock ticker to see key metrics from the latest SEC filing</p>
+    <div class="search-row">
+      <input type="text" id="ticker-input" placeholder="e.g. AAPL or Apple" maxlength="80" />
+      <button id="search-btn" onclick="search()">Analyze</button>
+    </div>
+    <div class="examples">
+      Try:
+      <span onclick="quickSearch('AAPL')">AAPL</span>
+      <span onclick="quickSearch('POST')">POST</span>
+      <span onclick="quickSearch('WMT')">WMT</span>
+      <span onclick="quickSearch('KHC')">KHC</span>
+      <span onclick="quickSearch('GIS')">GIS</span>
+      <span onclick="quickSearch('CAG')">CAG</span>
+    </div>
+    <div id="error-msg"></div>
+  </div>
+
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <div>Fetching SEC EDGAR data…</div>
+  </div>
+
+  <div id="dashboard">
+    <!-- Company header + summary -->
+    <div class="company-header">
+      <div class="co-info">
+        <h2 id="co-name"></h2>
+        <div class="co-meta" id="co-meta"></div>
+        <div class="summary-text" id="co-summary"></div>
+        <div class="profile-chip" id="co-profile" style="display:none;"></div>
+        <div class="action-row">
+          <button id="watch-btn" onclick="toggleWatchlist()">Add to Watchlist</button>
+          <button onclick="exportMetrics('csv')">Export CSV</button>
+          <button onclick="exportMetrics('json')">Export JSON</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- KPI tiles -->
+    <div class="kpi-grid" id="kpi-grid"></div>
+
+    <div class="panel" id="trust-panel">
+      <h3>Metric Trust & Sources</h3>
+      <div class="trust-grid" id="trust-grid"></div>
+    </div>
+
+    <!-- Exception flags -->
+    <div id="flags-section">
+      <h3>Exception Flags</h3>
+      <div class="flag-list" id="flag-list"></div>
+    </div>
+
+    <!-- Charts row -->
+    <div class="charts-row">
+      <div class="chart-card">
+        <h3>Revenue (8 Quarters)</h3>
+        <canvas id="rev-chart" height="200"></canvas>
+      </div>
+      <div class="chart-card">
+        <h3>Margins (%)</h3>
+        <canvas id="margin-chart" height="200"></canvas>
+      </div>
+    </div>
+
+    <div class="panel" id="peers-section">
+      <h3>Peer Snapshot</h3>
+      <div class="prov-controls">
+        <input id="peer-input" type="text" placeholder="Tickers, e.g. KHC,CAG,CPB" />
+        <button onclick="comparePeers()">Compare</button>
+        <span class="muted" id="peer-note">Uses latest quarter revenue growth and margins.</span>
+      </div>
+      <div id="peer-table-wrap" class="muted">Add peer tickers and click Compare.</div>
+    </div>
+
+    <!-- Segment breakdown -->
+    <div id="segments-section">
+      <h3>Segment Revenue Breakdown</h3>
+      <div id="seg-body"></div>
+    </div>
+
+    <div class="panel" id="provenance-panel">
+      <h3>Filing Provenance</h3>
+      <div class="prov-controls">
+        <label for="prov-period" class="muted">Period</label>
+        <select id="prov-period" onchange="renderProvenance()"></select>
+      </div>
+      <div class="prov-details" id="prov-details"></div>
+    </div>
+
+    <!-- Quarterly data table -->
+    <div id="table-section">
+      <h3>Quarterly Data</h3>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>Period</th>
+              <th>Revenue</th>
+              <th>Rev YoY</th>
+              <th>Gross Margin</th>
+              <th>Op Margin</th>
+              <th>Net Margin</th>
+              <th>EPS</th>
+            </tr>
+          </thead>
+          <tbody id="tbl-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API = new URLSearchParams(window.location.search).get('api')
+      || window.EDGAR_API_BASE
+      || 'http://127.0.0.1:8000';
+    let revChart, marginChart;
+    let currentCompany = null;
+    let currentMetrics = null;
+    let currentTicker = null;
+
+    function quickSearch(ticker) {
+      document.getElementById('ticker-input').value = ticker;
+      search();
+    }
+
+    document.getElementById('ticker-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') search();
+    });
+
+    function showError(msg) {
+      const el = document.getElementById('error-msg');
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+
+    function hideError() {
+      document.getElementById('error-msg').style.display = 'none';
+    }
+
+    function setInputError(active) {
+      const input = document.getElementById('ticker-input');
+      input.classList.toggle('input-error', active);
+    }
+
+    document.getElementById('ticker-input').addEventListener('input', e => {
+      if (e.target.value.trim()) {
+        hideError();
+        setInputError(false);
+      }
+    });
+
+    async function search() {
+      const query = document.getElementById('ticker-input').value.trim();
+      if (!query) {
+        showError('Please enter a ticker or company name.');
+        setInputError(true);
+        return;
+      }
+
+      hideError();
+      setInputError(false);
+      document.getElementById('dashboard').style.display = 'none';
+      document.getElementById('loading').style.display = 'block';
+      document.getElementById('search-btn').disabled = true;
+
+      try {
+        // Smart resolver accepts ticker OR company name (e.g., NKE or Nike).
+        const resolveRes = await fetch(`${API}/company/resolve?q=${encodeURIComponent(query)}&suggestions=5`);
+        if (!resolveRes.ok) {
+          const err = await resolveRes.json();
+          throw new Error(err.detail || 'Company not found');
+        }
+        const resolved = await resolveRes.json();
+        const company = resolved.company;
+        const cik = company.cik;
+
+        // Pull a consolidated company object so we can parse/display richer EDGAR fields.
+        const objectRes = await fetch(`${API}/company/object/${cik}`);
+        const companyObject = objectRes.ok ? await objectRes.json() : null;
+
+        const [metricsRes, segmentsRes, flagsRes, summaryRes] = await Promise.all([
+          fetch(`${API}/company/${cik}/metrics?debug=true`),
+          fetch(`${API}/company/${cik}/segments`),
+          fetch(`${API}/company/${cik}/flags`),
+          fetch(`${API}/company/${cik}/summary`),
+        ]);
+
+        const metrics  = metricsRes.ok  ? await metricsRes.json()  : null;
+        const segments = segmentsRes.ok ? await segmentsRes.json() : null;
+        const flags    = flagsRes.ok    ? await flagsRes.json()    : null;
+        const summary  = summaryRes.ok  ? await summaryRes.json()  : null;
+
+        renderDashboard(company, metrics, segments, flags, summary, companyObject);
+      } catch (e) {
+        showError(e.message);
+      } finally {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('search-btn').disabled = false;
+      }
+    }
+
+    function fmtCurrency(val) {
+      if (val == null) return '—';
+      if (Math.abs(val) >= 1e9) return '$' + (val / 1e9).toFixed(2) + 'B';
+      return '$' + (val / 1e6).toFixed(0) + 'M';
+    }
+
+    function fmtPct(val, decimals = 1) {
+      if (val == null) return '—';
+      const sign = val >= 0 ? '+' : '';
+      return sign + val.toFixed(decimals) + '%';
+    }
+
+    function colorClass(val, invert = false) {
+      if (val == null) return 'neu';
+      if (invert) return val >= 0 ? 'neg' : 'pos';
+      return val >= 0 ? 'pos' : 'neg';
+    }
+
+    function sourceLabel(source) {
+      if (!source) return 'Reported';
+      if (source === 'derived_from_cost_of_revenue') return 'Derived';
+      if (source === 'reported_stale') return 'Reported (Stale)';
+      if (source === 'not_available') return 'Unavailable';
+      return source.replaceAll('_', ' ');
+    }
+
+    function escapeAttr(val) {
+      return String(val ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('"', '&quot;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;');
+    }
+
+    function getWatchlist() {
+      try {
+        return JSON.parse(localStorage.getItem('edgar_watchlist') || '[]');
+      } catch {
+        return [];
+      }
+    }
+
+    function setWatchlist(items) {
+      localStorage.setItem('edgar_watchlist', JSON.stringify(items));
+    }
+
+    function updateWatchButton() {
+      const btn = document.getElementById('watch-btn');
+      if (!btn || !currentTicker) return;
+      const list = getWatchlist();
+      const exists = list.some(x => x.ticker === currentTicker);
+      btn.textContent = exists ? 'Remove from Watchlist' : 'Add to Watchlist';
+    }
+
+    function toggleWatchlist() {
+      if (!currentTicker || !currentCompany) return;
+      const list = getWatchlist();
+      const idx = list.findIndex(x => x.ticker === currentTicker);
+      if (idx >= 0) {
+        list.splice(idx, 1);
+      } else {
+        list.push({
+          ticker: currentTicker,
+          cik: currentCompany.cik,
+          name: currentCompany.name,
+          last_10q: currentCompany.last_10q || null,
+          saved_at: new Date().toISOString(),
+        });
+      }
+      setWatchlist(list);
+      updateWatchButton();
+    }
+
+    function exportMetrics(format) {
+      if (!currentMetrics?.periods?.length) return;
+      const periods = currentMetrics.periods;
+      const ticker = currentTicker || 'company';
+
+      let content = '';
+      let mime = 'application/json';
+      let ext = 'json';
+
+      if (format === 'csv') {
+        const headers = ['period','revenue','revenue_yoy_pct','gross_margin_pct','operating_margin_pct','net_margin_pct','eps_diluted'];
+        const rows = periods.map(p => headers.map(h => p[h] ?? '').join(','));
+        content = [headers.join(','), ...rows].join('\n');
+        mime = 'text/csv';
+        ext = 'csv';
+      } else {
+        content = JSON.stringify(periods, null, 2);
+      }
+
+      const blob = new Blob([content], { type: `${mime};charset=utf-8` });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${ticker.toLowerCase()}-metrics.${ext}`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function renderTrustPanel(metrics) {
+      const grid = document.getElementById('trust-grid');
+      const latest = metrics?.periods?.[0] || {};
+      const sources = latest.metric_sources || {};
+      const concepts = metrics?.concepts_used || {};
+
+      const rows = [
+        ['Revenue', sources.revenue, concepts.revenue],
+        ['Gross Margin', sources.gross_margin_pct, concepts.gross_profit || concepts.cost_of_revenue],
+        ['Operating Margin', sources.operating_margin_pct, concepts.operating_income],
+        ['Net Margin', sources.net_margin_pct, concepts.net_income],
+        ['EPS', sources.eps_diluted, concepts.eps_diluted],
+      ];
+
+      grid.innerHTML = rows.map(([label, source, concept]) => `
+        <div class="trust-item">
+          <div class="label">${label}</div>
+          <div class="value">${sourceLabel(source)}</div>
+          <div class="muted">Concept: ${concept || 'n/a'}</div>
+        </div>
+      `).join('');
+    }
+
+    function renderProvenance() {
+      const sel = document.getElementById('prov-period');
+      const details = document.getElementById('prov-details');
+      if (!currentMetrics?.periods?.length || !sel || !details) {
+        details.textContent = 'No provenance available.';
+        return;
+      }
+
+      const selected = currentMetrics.periods.find(p => p.period === sel.value) || currentMetrics.periods[0];
+      const dbg = selected.debug || {};
+      const row = dbg.row_context || {};
+
+      details.innerHTML = `
+        <div><span class="muted">Filed:</span>${selected.filed || 'n/a'} <span class="muted">Form:</span>${selected.form || 'n/a'}</div>
+        <div><span class="muted">Context Period:</span>${row.period || 'n/a'} <span class="muted">Start:</span>${row.start || 'n/a'}</div>
+        <div><span class="muted">Fiscal:</span>${row.fy || 'n/a'} ${row.fp || ''} <span class="muted">Duration:</span>${row.duration_days ?? 'n/a'} days</div>
+        <div><span class="muted">Gross Source:</span>${sourceLabel(dbg.gross_profit_source)}</div>
+      `;
+    }
+
+    function suggestPeersFromSic(company) {
+      const sic = String(company?.sic_description || '').toUpperCase();
+      const ticker = String(company?.ticker || '').toUpperCase();
+
+      const rules = [
+        { match: /GRAIN MILL|FOOD|PACKAGED/, peers: ['KHC', 'CAG', 'CPB', 'SJM'] },
+        { match: /BANK|BANC|NATIONAL COMMERCIAL/, peers: ['BAC', 'WFC', 'C', 'USB'] },
+        { match: /SOFTWARE|PREPACKAGED SOFTWARE/, peers: ['MSFT', 'ORCL', 'CRM', 'ADBE'] },
+        { match: /SEMICONDUCTOR|ELECTRONIC/, peers: ['NVDA', 'AMD', 'QCOM', 'AVGO'] },
+        { match: /PETROLEUM|OIL|GAS/, peers: ['XOM', 'CVX', 'COP', 'SLB'] },
+        { match: /RETAIL|DISCOUNT|DEPARTMENT/, peers: ['WMT', 'TGT', 'COST', 'DG'] },
+      ];
+
+      const found = rules.find(r => r.match.test(sic));
+      const base = found ? found.peers : ['AAPL', 'MSFT', 'WMT'];
+      return base.filter(t => t !== ticker);
+    }
+
+    async function comparePeers() {
+      const wrap = document.getElementById('peer-table-wrap');
+      const note = document.getElementById('peer-note');
+      const raw = (document.getElementById('peer-input').value || '').trim();
+      if (!raw) {
+        wrap.textContent = 'Add peer tickers (comma-separated) and click Compare.';
+        return;
+      }
+
+      const tickers = [...new Set(raw.split(',').map(t => t.trim().toUpperCase()).filter(Boolean))].slice(0, 8);
+      const all = currentTicker && !tickers.includes(currentTicker) ? [currentTicker, ...tickers] : tickers;
+
+      const rows = [];
+      for (const t of all) {
+        try {
+          const res = await fetch(`${API}/company/resolve?q=${encodeURIComponent(t)}&suggestions=3`);
+          if (!res.ok) continue;
+          const r = await res.json();
+          const mRes = await fetch(`${API}/company/${r.company.cik}/metrics?quarters=1&debug=true`);
+          if (!mRes.ok) continue;
+          const m = await mRes.json();
+          const p = m.periods?.[0] || {};
+          rows.push({
+            ticker: r.company.ticker,
+            rev_yoy: p.revenue_yoy_pct,
+            gross: p.gross_margin_pct,
+            op: p.operating_margin_pct,
+            source: p.metric_sources?.gross_margin_pct || 'n/a',
+          });
+        } catch {
+          // Skip unavailable peers.
+        }
+      }
+
+      if (!rows.length) {
+        wrap.textContent = 'No peer data available for that input.';
+        return;
+      }
+
+      note.textContent = `Compared ${rows.length} companies using latest available quarter.`;
+      wrap.innerHTML = `
+        <table>
+          <thead><tr><th>Ticker</th><th>Rev YoY</th><th>Gross Margin</th><th>Op Margin</th><th>Gross Source</th></tr></thead>
+          <tbody>
+            ${rows.map(r => `
+              <tr>
+                <td>${r.ticker}</td>
+                <td>${fmtPct(r.rev_yoy)}</td>
+                <td>${r.gross != null ? r.gross.toFixed(1) + '%' : '—'}</td>
+                <td>${r.op != null ? r.op.toFixed(1) + '%' : '—'}</td>
+                <td>${sourceLabel(r.source)}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>`;
+    }
+
+    function renderDashboard(company, metrics, segments, flags, summary, companyObject) {
+      currentCompany = company;
+      currentMetrics = metrics;
+      currentTicker = company?.ticker || null;
+
+      // Company header
+      document.getElementById('co-name').textContent = company.name;
+      const exchanges = (companyObject?.exchanges || []).join('/') || '';
+      const website = companyObject?.website || '';
+      document.getElementById('co-meta').textContent =
+        `${company.ticker} · CIK ${company.cik} · ${company.sic_description || companyObject?.sic_description || ''} · ${company.state || companyObject?.state || ''}` +
+        (exchanges ? ` · ${exchanges}` : '') +
+        (company.last_10q ? ` · Last 10-Q: ${company.last_10q}` : '') +
+        (website ? ` · ${website}` : '');
+      document.getElementById('co-summary').textContent =
+        summary?.summary || 'Summary not available.';
+      updateWatchButton();
+      renderTrustPanel(metrics);
+
+      const peerInput = document.getElementById('peer-input');
+      const peerNote = document.getElementById('peer-note');
+      if (peerInput && !peerInput.value.trim()) {
+        const suggested = suggestPeersFromSic(company);
+        peerInput.value = suggested.join(',');
+        if (peerNote) {
+          peerNote.textContent = `SIC-based suggestions loaded: ${suggested.join(', ')}`;
+        }
+      }
+
+      const provSelect = document.getElementById('prov-period');
+      const provPeriods = metrics?.periods || [];
+      provSelect.innerHTML = provPeriods.map(p => `<option value="${p.period}">${p.period}</option>`).join('');
+      renderProvenance();
+
+      const profileEl = document.getElementById('co-profile');
+      const profile = metrics?.profitability_profile;
+      if (profile?.primary_metric) {
+        profileEl.style.display = 'inline-block';
+        profileEl.textContent = `Primary profitability metric: ${profile.primary_metric.replaceAll('_', ' ')} (${profile.reason.replaceAll('_', ' ')})`;
+      } else {
+        profileEl.style.display = 'none';
+        profileEl.textContent = '';
+      }
+
+      // KPIs from latest period
+      const latest = metrics?.periods?.[0];
+      const src = latest?.metric_sources || {};
+      const kpis = [
+        { label: 'Revenue',        value: fmtCurrency(latest?.revenue),         sub: fmtPct(latest?.revenue_yoy_pct) + ' YoY', subClass: colorClass(latest?.revenue_yoy_pct), source: sourceLabel(src.revenue) },
+        { label: 'Gross Margin',   value: latest?.gross_margin_pct != null ? latest.gross_margin_pct.toFixed(1) + '%' : '—', sub: 'Latest quarter', subClass: 'neu', source: sourceLabel(src.gross_margin_pct) },
+        { label: 'Op. Margin',     value: latest?.operating_margin_pct != null ? latest.operating_margin_pct.toFixed(1) + '%' : '—', sub: 'Latest quarter', subClass: 'neu', source: sourceLabel(src.operating_margin_pct) },
+        { label: 'Net Margin',     value: latest?.net_margin_pct != null ? latest.net_margin_pct.toFixed(1) + '%' : '—', sub: 'Latest quarter', subClass: 'neu', source: sourceLabel(src.net_margin_pct) },
+        { label: 'EPS (Diluted)',  value: latest?.eps_diluted != null ? '$' + latest.eps_diluted.toFixed(2) : '—', sub: 'Latest quarter', subClass: 'neu', source: sourceLabel(src.eps_diluted) },
+        { label: 'Net Income',     value: fmtCurrency(latest?.net_income), sub: fmtCurrency(latest?.revenue) + ' revenue', subClass: 'neu', source: sourceLabel(src.net_income) },
+      ];
+
+      document.getElementById('kpi-grid').innerHTML = kpis.map(k => `
+        <div class="kpi-tile">
+          <div class="kpi-label">${k.label}</div>
+          <div class="kpi-value">${k.value}</div>
+          <div class="kpi-sub ${k.subClass}">${k.sub}</div>
+          <div class="kpi-source">${k.source}</div>
+        </div>`).join('');
+
+      // Flags
+      const flagList = document.getElementById('flag-list');
+      if (!flags?.flags?.length) {
+        flagList.innerHTML = '<div class="flag-clean">✓ No statistical anomalies detected vs. trailing history</div>';
+      } else {
+        flagList.innerHTML = flags.flags.map(f => `
+          <div class="flag-badge ${f.severity}">
+            <div class="flag-dot"></div>
+            <span><strong>${f.metric}</strong> — ${f.note}</span>
+          </div>`).join('');
+      }
+
+      // Charts
+      const periods = (metrics?.periods || []).slice(0, 8).reverse();
+      const labels  = periods.map(p => p.period.slice(0, 7));
+
+      if (revChart) revChart.destroy();
+      revChart = new Chart(document.getElementById('rev-chart'), {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Revenue',
+            data: periods.map(p => p.revenue ? p.revenue / 1e9 : null),
+            backgroundColor: 'rgba(79,142,247,0.7)',
+            borderRadius: 4,
+          }]
+        },
+        options: {
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: '#8b90b8', maxRotation: 45 }, grid: { color: '#2e3352' } },
+            y: { ticks: { color: '#8b90b8', callback: v => '$' + v + 'B' }, grid: { color: '#2e3352' } }
+          }
+        }
+      });
+
+      if (marginChart) marginChart.destroy();
+      marginChart = new Chart(document.getElementById('margin-chart'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Gross', data: periods.map(p => p.gross_margin_pct), borderColor: '#34d399', tension: .3, pointRadius: 3 },
+            { label: 'Operating', data: periods.map(p => p.operating_margin_pct), borderColor: '#4f8ef7', tension: .3, pointRadius: 3 },
+            { label: 'Net', data: periods.map(p => p.net_margin_pct), borderColor: '#fbbf24', tension: .3, pointRadius: 3 },
+          ]
+        },
+        options: {
+          plugins: { legend: { labels: { color: '#8b90b8', boxWidth: 12 } } },
+          scales: {
+            x: { ticks: { color: '#8b90b8', maxRotation: 45 }, grid: { color: '#2e3352' } },
+            y: { ticks: { color: '#8b90b8', callback: v => v + '%' }, grid: { color: '#2e3352' } }
+          }
+        }
+      });
+
+      // Segments
+      const segBody = document.getElementById('seg-body');
+      if (segments?.segments?.length) {
+        const barColors = ['#4f8ef7','#34d399','#fbbf24','#f87171','#a78bfa','#fb923c'];
+        segBody.innerHTML = segments.segments.map((s, i) => `
+          <div class="seg-row">
+            <div class="seg-name" tabindex="0" data-tip="${escapeAttr(`${s.name}: ${fmtCurrency(s.value)} (${s.share_pct?.toFixed(1) ?? '—'}% of reported segment total in the latest quarter).`)}">${s.name}</div>
+            <div class="seg-bar-wrap"><div class="seg-bar" style="width:${s.share_pct}%;background:${barColors[i % barColors.length]}"></div></div>
+            <div class="seg-val">${fmtCurrency(s.value)}</div>
+            <div class="seg-pct">${s.share_pct?.toFixed(1)}%</div>
+          </div>`).join('');
+      } else {
+        segBody.innerHTML = '<div class="seg-na">Segment breakdown not available — company may not report named segments in XBRL</div>';
+      }
+
+      // Quarterly table
+      document.getElementById('tbl-body').innerHTML = (metrics?.periods || []).map(p => `
+        <tr>
+          <td>${p.period}</td>
+          <td>${fmtCurrency(p.revenue)}</td>
+          <td class="${colorClass(p.revenue_yoy_pct)}">${fmtPct(p.revenue_yoy_pct)}</td>
+          <td>${p.gross_margin_pct != null ? p.gross_margin_pct.toFixed(1) + '%' : '—'}</td>
+          <td>${p.operating_margin_pct != null ? p.operating_margin_pct.toFixed(1) + '%' : '—'}</td>
+          <td>${p.net_margin_pct != null ? p.net_margin_pct.toFixed(1) + '%' : '—'}</td>
+          <td>${p.eps_diluted != null ? '$' + p.eps_diluted.toFixed(2) : '—'}</td>
+        </tr>`).join('');
+
+      document.getElementById('dashboard').style.display = 'block';
+      document.getElementById('dashboard').scrollIntoView({ behavior: 'smooth' });
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Notes</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f5f0e8;
+      --paper: #fffdf7;
+      --ink: #1a1a18;
+      --ink-muted: #6b6860;
+      --accent: #c94f2a;
+      --border: #ddd8cc;
+      --shadow: 0 2px 12px rgba(0,0,0,0.08);
+    }
+
+    body {
+      font-family: 'DM Mono', monospace;
+      background: var(--bg);
+      color: var(--ink);
+      min-height: 100vh;
+      padding: 2rem 1rem;
+    }
+
+    header {
+      max-width: 680px;
+      margin: 0 auto 2.5rem;
+      display: flex;
+      align-items: baseline;
+      gap: 0.75rem;
+      border-bottom: 2px solid var(--ink);
+      padding-bottom: 0.75rem;
+    }
+
+    header h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 2.2rem;
+      letter-spacing: -0.5px;
+    }
+
+    header span {
+      font-size: 0.75rem;
+      color: var(--ink-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .container {
+      max-width: 680px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    /* ── Form ── */
+    .note-form {
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1.25rem;
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .note-form input,
+    .note-form textarea {
+      width: 100%;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid var(--border);
+      padding: 0.5rem 0;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.875rem;
+      color: var(--ink);
+      outline: none;
+      transition: border-color 0.15s;
+      resize: none;
+    }
+
+    .note-form input::placeholder,
+    .note-form textarea::placeholder { color: var(--ink-muted); }
+
+    .note-form input:focus,
+    .note-form textarea:focus { border-bottom-color: var(--accent); }
+
+    .note-form input {
+      font-size: 1rem;
+      font-weight: 500;
+    }
+
+    .note-form textarea { min-height: 100px; line-height: 1.6; }
+
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
+      padding-top: 0.25rem;
+    }
+
+    button {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 0.5rem 1.1rem;
+      border-radius: 2px;
+      cursor: pointer;
+      border: 1px solid var(--ink);
+      transition: all 0.15s;
+    }
+
+    .btn-primary {
+      background: var(--ink);
+      color: var(--bg);
+    }
+    .btn-primary:hover { background: var(--accent); border-color: var(--accent); }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--ink-muted);
+      border-color: var(--border);
+    }
+    .btn-ghost:hover { border-color: var(--ink); color: var(--ink); }
+
+    /* ── Status ── */
+    .status {
+      font-size: 0.75rem;
+      color: var(--ink-muted);
+      min-height: 1rem;
+      text-align: right;
+      letter-spacing: 0.03em;
+    }
+    .status.error { color: var(--accent); }
+
+    /* ── Notes list ── */
+    .notes-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--ink-muted);
+    }
+
+    .notes-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .note-card {
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1rem 1.25rem;
+      box-shadow: var(--shadow);
+      animation: slideIn 0.2s ease;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .note-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .note-title {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.05rem;
+    }
+
+    .note-actions { display: flex; gap: 0.4rem; flex-shrink: 0; }
+
+    .btn-icon {
+      border: none;
+      background: none;
+      padding: 0.2rem 0.4rem;
+      font-size: 0.7rem;
+      color: var(--ink-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      border-radius: 2px;
+      transition: color 0.15s;
+    }
+    .btn-icon:hover { color: var(--accent); }
+
+    .note-content {
+      font-size: 0.85rem;
+      line-height: 1.65;
+      color: var(--ink);
+      white-space: pre-wrap;
+    }
+
+    .note-meta {
+      margin-top: 0.75rem;
+      font-size: 0.68rem;
+      color: var(--ink-muted);
+      letter-spacing: 0.04em;
+    }
+
+    .empty {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--ink-muted);
+      font-size: 0.8rem;
+      letter-spacing: 0.05em;
+    }
+
+    /* ── Edit mode ── */
+    .note-edit-input,
+    .note-edit-textarea {
+      width: 100%;
+      font-family: 'DM Mono', monospace;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 0.4rem 0.6rem;
+      font-size: 0.85rem;
+      color: var(--ink);
+      outline: none;
+      resize: none;
+    }
+    .note-edit-input { font-size: 1rem; margin-bottom: 0.5rem; }
+    .note-edit-textarea { min-height: 80px; line-height: 1.6; }
+    .note-edit-input:focus,
+    .note-edit-textarea:focus { border-color: var(--accent); }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Notes</h1>
+  <span>zero-dependency api</span>
+</header>
+
+<div class="container">
+
+  <div class="note-form">
+    <input id="title" type="text" placeholder="Title" autocomplete="off" />
+    <textarea id="content" placeholder="What's on your mind?"></textarea>
+    <div class="form-actions">
+      <button class="btn-ghost" onclick="clearForm()">Clear</button>
+      <button class="btn-primary" onclick="saveNote()">Save note</button>
+    </div>
+  </div>
+
+  <p class="status" id="status"></p>
+
+  <div class="notes-header">
+    <span>Your notes</span>
+    <span id="note-count"></span>
+  </div>
+
+  <div class="notes-list" id="notes-list">
+    <div class="empty">Loading...</div>
+  </div>
+
+</div>
+
+<script>
+  const API = '';
+
+  // ── Helpers ──────────────────────────────────────────────────────────────────
+
+  function setStatus(msg, isError = false) {
+    const el = document.getElementById('status');
+    el.textContent = msg;
+    el.className = 'status' + (isError ? ' error' : '');
+    if (msg) setTimeout(() => el.textContent = '', 3000);
+  }
+
+  function formatDate(iso) {
+    return new Date(iso).toLocaleString('en-US', {
+      month: 'short', day: 'numeric',
+      hour: 'numeric', minute: '2-digit'
+    });
+  }
+
+  function clearForm() {
+    document.getElementById('title').value = '';
+    document.getElementById('content').value = '';
+    document.getElementById('title').focus();
+  }
+
+  // ── Fetch notes ──────────────────────────────────────────────────────────────
+
+  async function loadNotes() {
+    try {
+      const res = await fetch(`${API}/notes`);
+      const notes = await res.json();
+      renderNotes(notes);
+    } catch {
+      setStatus('Could not connect to server.', true);
+    }
+  }
+
+  function renderNotes(notes) {
+    const list = document.getElementById('notes-list');
+    const count = document.getElementById('note-count');
+    count.textContent = notes.length ? `${notes.length} note${notes.length > 1 ? 's' : ''}` : '';
+
+    if (!notes.length) {
+      list.innerHTML = '<div class="empty">No notes yet — write something.</div>';
+      return;
+    }
+
+    // Newest first
+    const sorted = [...notes].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    list.innerHTML = sorted.map(note => noteCardHTML(note)).join('');
+  }
+
+  function noteCardHTML(note) {
+    return `
+      <div class="note-card" id="card-${note.id}">
+        <div class="note-card-header">
+          <div class="note-title">${escapeHTML(note.title)}</div>
+          <div class="note-actions">
+            <button class="btn-icon" onclick="startEdit('${note.id}')">edit</button>
+            <button class="btn-icon" onclick="deleteNote('${note.id}')">delete</button>
+          </div>
+        </div>
+        <div class="note-content">${escapeHTML(note.content)}</div>
+        <div class="note-meta">${formatDate(note.updatedAt || note.createdAt)}${note.updatedAt ? ' · edited' : ''}</div>
+      </div>`;
+  }
+
+  function escapeHTML(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ── Create ───────────────────────────────────────────────────────────────────
+
+  async function saveNote() {
+    const title   = document.getElementById('title').value.trim();
+    const content = document.getElementById('content').value.trim();
+    if (!title || !content) return setStatus('Title and content are required.', true);
+
+    try {
+      const res = await fetch(`${API}/notes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, content })
+      });
+      if (!res.ok) throw new Error();
+      clearForm();
+      setStatus('Note saved.');
+      loadNotes();
+    } catch {
+      setStatus('Failed to save note.', true);
+    }
+  }
+
+  // ── Delete ───────────────────────────────────────────────────────────────────
+
+  async function deleteNote(id) {
+    try {
+      await fetch(`${API}/notes/${id}`, { method: 'DELETE' });
+      setStatus('Note deleted.');
+      loadNotes();
+    } catch {
+      setStatus('Failed to delete.', true);
+    }
+  }
+
+  // ── Edit ─────────────────────────────────────────────────────────────────────
+
+  function startEdit(id) {
+    const card = document.getElementById(`card-${id}`);
+    const titleEl   = card.querySelector('.note-title');
+    const contentEl = card.querySelector('.note-content');
+    const metaEl    = card.querySelector('.note-meta');
+    const actionsEl = card.querySelector('.note-actions');
+
+    const currentTitle   = titleEl.textContent;
+    const currentContent = contentEl.textContent;
+
+    card.innerHTML = `
+      <input class="note-edit-input" id="edit-title-${id}" value="${escapeHTML(currentTitle)}" />
+      <textarea class="note-edit-textarea" id="edit-content-${id}">${escapeHTML(currentContent)}</textarea>
+      <div class="form-actions" style="margin-top:0.5rem">
+        <button class="btn-ghost" onclick="loadNotes()">Cancel</button>
+        <button class="btn-primary" onclick="saveEdit('${id}')">Save</button>
+      </div>`;
+  }
+
+  async function saveEdit(id) {
+    const title   = document.getElementById(`edit-title-${id}`).value.trim();
+    const content = document.getElementById(`edit-content-${id}`).value.trim();
+    if (!title || !content) return setStatus('Title and content are required.', true);
+
+    try {
+      const res = await fetch(`${API}/notes/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, content })
+      });
+      if (!res.ok) throw new Error();
+      setStatus('Note updated.');
+      loadNotes();
+    } catch {
+      setStatus('Failed to update note.', true);
+    }
+  }
+
+  // ── Save on Cmd/Ctrl+Enter ───────────────────────────────────────────────────
+  document.addEventListener('keydown', e => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') saveNote();
+  });
+
+  // ── Init ─────────────────────────────────────────────────────────────────────
+  loadNotes();
+</script>
+
+</body>
+</html>
