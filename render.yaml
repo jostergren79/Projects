@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: edgar-api
+    env: python
+    rootDir: edgar-api
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: CORS_ALLOW_ORIGINS
+        value: https://your-frontend-domain.com
+      - key: SEC_USER_AGENT
+        value: edgar-api/0.1 your-email@example.com
+      - key: SEC_REQUIRE_EXPLICIT_USER_AGENT
+        value: "true"
+      - key: SEC_HTTP_TIMEOUT_SECONDS
+        value: "20"
+      - key: SEC_HTTP_MAX_RETRIES
+        value: "3"
+      - key: SEC_HTTP_RETRY_BASE_SECONDS
+        value: "0.5"
