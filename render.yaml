@@ -2,10 +2,10 @@ services:
   - type: web
     name: edgar-api
     env: python
-    rootDir: edgar-api
+    rootDir: .
     plan: free
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    buildCommand: pip install -r edgar-api/requirements.txt
+    startCommand: cd edgar-api && uvicorn main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     envVars:
       - key: CORS_ALLOW_ORIGINS

@@ -10,9 +10,12 @@ Routes:
 from fastapi import FastAPI
 from fastapi import Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 import httpx
 import os
+import pathlib
+
+_PUBLIC = pathlib.Path(__file__).parent.parent / "notes-api" / "public"
 
 from routers import (
     company_lookup,
@@ -46,6 +49,16 @@ app.include_router(financial_metrics.router)
 app.include_router(segment_breakdown.router)
 app.include_router(anomaly_flags.router)
 app.include_router(narrative_summary.router)
+
+
+@app.get("/")
+def root():
+    return FileResponse(_PUBLIC / "edgar.html")
+
+
+@app.get("/edgar")
+def edgar_page():
+    return FileResponse(_PUBLIC / "edgar.html")
 
 
 @app.get("/health")
