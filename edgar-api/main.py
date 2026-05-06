@@ -14,6 +14,8 @@ from fastapi.responses import FileResponse, JSONResponse
 import httpx
 import os
 import pathlib
+import time
+import collections
 
 _PUBLIC = pathlib.Path(__file__).parent.parent / "notes-api" / "public"
 
@@ -23,9 +25,40 @@ from routers import (
     segment_breakdown,
     anomaly_flags,
     narrative_summary,
+    dashboard,
 )
 
 app = FastAPI(title="EDGAR Financial Metrics API", version="0.1.0")
+
+# ---------------------------------------------------------------------------
+# Per-IP rate limiting middleware
+# Sliding window: max N requests per IP per window_seconds.
+# Configurable via env: APP_RATE_LIMIT_REQUESTS, APP_RATE_LIMIT_WINDOW_SECONDS.
+# Only applies to /company/* routes; health and static pages are exempt.
+# ---------------------------------------------------------------------------
+_RATE_LIMIT_REQUESTS = int(os.getenv("APP_RATE_LIMIT_REQUESTS", "60"))
+_RATE_LIMIT_WINDOW   = float(os.getenv("APP_RATE_LIMIT_WINDOW_SECONDS", "60"))
+_ip_windows: dict[str, collections.deque] = {}
+
+
+@app.middleware("http")
+async def per_ip_rate_limit(request: Request, call_next):
+    if request.url.path.startswith("/company"):
+        ip = request.client.host if request.client else "unknown"
+        now = time.monotonic()
+        window = _ip_windows.setdefault(ip, collections.deque())
+        # Drop timestamps outside the window.
+        while window and now - window[0] > _RATE_LIMIT_WINDOW:
+            window.popleft()
+        if len(window) >= _RATE_LIMIT_REQUESTS:
+            retry_after = int(_RATE_LIMIT_WINDOW - (now - window[0])) + 1
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "Too many requests. Please slow down."},
+                headers={"Retry-After": str(retry_after)},
+            )
+        window.append(now)
+    return await call_next(request)
 
 cors_origins_raw = os.getenv("CORS_ALLOW_ORIGINS", "").strip()
 if not cors_origins_raw:
@@ -49,6 +82,7 @@ app.include_router(financial_metrics.router)
 app.include_router(segment_breakdown.router)
 app.include_router(anomaly_flags.router)
 app.include_router(narrative_summary.router)
+app.include_router(dashboard.router)
 
 
 @app.get("/")

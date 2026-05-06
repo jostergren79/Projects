@@ -378,21 +378,19 @@
         const company = resolved.company;
         const cik = company.cik;
 
-        // Pull a consolidated company object so we can parse/display richer EDGAR fields.
-        const objectRes = await fetch(`${API}/company/object/${cik}`);
-        const companyObject = objectRes.ok ? await objectRes.json() : null;
-
-        const [metricsRes, segmentsRes, flagsRes, summaryRes] = await Promise.all([
-          fetch(`${API}/company/${cik}/metrics?debug=true`),
-          fetch(`${API}/company/${cik}/segments`),
-          fetch(`${API}/company/${cik}/flags`),
-          fetch(`${API}/company/${cik}/summary`),
+        // Single aggregated call replaces the previous 4-5 parallel requests.
+        const [objectRes, dashRes] = await Promise.all([
+          fetch(`${API}/company/object/${cik}`),
+          fetch(`${API}/company/${cik}/dashboard?debug=true`),
         ]);
 
-        const metrics  = metricsRes.ok  ? await metricsRes.json()  : null;
-        const segments = segmentsRes.ok ? await segmentsRes.json() : null;
-        const flags    = flagsRes.ok    ? await flagsRes.json()    : null;
-        const summary  = summaryRes.ok  ? await summaryRes.json()  : null;
+        const companyObject = objectRes.ok ? await objectRes.json() : null;
+        const dash = dashRes.ok ? await dashRes.json() : {};
+
+        const metrics  = dash.metrics  && !dash.metrics.error  ? dash.metrics  : null;
+        const segments = dash.segments && !dash.segments.error ? dash.segments : null;
+        const flags    = dash.flags    && !dash.flags.error    ? dash.flags    : null;
+        const summary  = dash.summary  && !dash.summary.error  ? dash.summary  : null;
 
         renderDashboard(company, metrics, segments, flags, summary, companyObject);
       } catch (e) {
