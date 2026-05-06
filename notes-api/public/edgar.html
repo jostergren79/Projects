@@ -114,7 +114,7 @@
     .trust-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
     .trust-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px; }
     .trust-item .label { color: var(--muted); font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; }
-    .trust-item .value { margin-top: 4px; font-size: .84rem; }
+    .trust-item .value { margin-top: 4px; font-size: .84rem; overflow-wrap: anywhere; word-break: break-word; }
     .muted { color: var(--muted); }
 
     .prov-controls { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
@@ -214,8 +214,22 @@
       .company-header .co-info h2 { font-size: 1.25rem; }
       .company-header .co-info .summary-text { max-width: none; }
 
-      .kpi-grid,
-      .trust-grid { grid-template-columns: 1fr; }
+      .kpi-grid { grid-template-columns: 1fr; }
+
+      /* Keep trust cards usable with long concept labels: swipe left/right on mobile. */
+      .trust-grid {
+        display: flex;
+        grid-template-columns: none;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        gap: 10px;
+        padding-bottom: 4px;
+        scroll-snap-type: x proximity;
+      }
+      .trust-item {
+        flex: 0 0 min(78vw, 280px);
+        scroll-snap-align: start;
+      }
 
       #segments-section,
       #table-section,
