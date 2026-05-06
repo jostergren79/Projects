@@ -9,7 +9,7 @@ services:
     healthCheckPath: /health
     envVars:
       - key: CORS_ALLOW_ORIGINS
-        value: https://your-frontend-domain.com
+        value: https://projects-saae.onrender.com
       - key: SEC_USER_AGENT
         value: edgar-api/0.1 your-email@example.com
       - key: SEC_REQUIRE_EXPLICIT_USER_AGENT
