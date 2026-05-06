@@ -1,0 +1,30 @@
+[build]
+  base = "notes-api"
+  publish = "public"
+  command = ""
+
+[[redirects]]
+  from = "/edgar"
+  to = "/edgar.html"
+  status = 200
+
+[[redirects]]
+  from = "/query"
+  to = "/query.html"
+  status = 200
+
+[[redirects]]
+  from = "/sop"
+  to = "/sop.html"
+  status = 200
+
+[[redirects]]
+  from = "/index"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/edgar-api/*"
+  to = "https://your-render-service.onrender.com/:splat"
+  status = 200
+  force = true

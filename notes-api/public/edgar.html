@@ -312,9 +312,11 @@
   </div>
 
   <script>
-    const API = new URLSearchParams(window.location.search).get('api')
-      || window.EDGAR_API_BASE
-      || 'http://127.0.0.1:8000';
+    const apiOverride = new URLSearchParams(window.location.search).get('api');
+    const inferredApiBase = (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost')
+      ? 'http://127.0.0.1:8000'
+      : '/edgar-api';
+    const API = apiOverride || window.EDGAR_API_BASE || inferredApiBase;
     let revChart, marginChart;
     let currentCompany = null;
     let currentMetrics = null;
