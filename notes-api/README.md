@@ -8,6 +8,8 @@ This folder currently contains the public-facing static pages for the Notes surf
 - public/index.html
 - public/query.html
 - public/sop.html
+- package.json
+- server.js
 - scripts/smoke-public-mode.sh
 
 ## Local Preview
@@ -23,6 +25,20 @@ Open:
 
 - http://127.0.0.1:3001/index.html
 - http://127.0.0.1:3001/edgar.html
+
+Run the lightweight local runtime (used by smoke tests):
+
+```bash
+cd notes-api
+npm run dev
+```
+
+Public-mode smoke check:
+
+```bash
+cd notes-api
+bash scripts/smoke-public-mode.sh
+```
 
 ## Generated (Untracked) Artifacts
 

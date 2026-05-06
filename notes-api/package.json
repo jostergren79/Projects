@@ -1,0 +1,10 @@
+{
+  "name": "notes-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Lightweight public-mode server for notes-api pages",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  }
+}
