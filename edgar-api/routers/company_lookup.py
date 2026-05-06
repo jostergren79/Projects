@@ -17,7 +17,7 @@ import re
 from fastapi import APIRouter, HTTPException, Query
 from edgar_client import get_ticker_map, get_submissions, get_company_facts, pad_cik
 from routers.financial_metrics import (
-    _pick_concept_with_name,
+    _select_best_concept_with_rows,
     REVENUE_CONCEPTS,
     GROSS_PROFIT_CONCEPTS,
     OPERATING_INCOME_CONCEPTS,
@@ -285,11 +285,11 @@ async def company_object(cik: str):
     ]
     concept_coverage = {k: (k in usgaap) for k in key_concepts}
 
-    revenue_concept, _ = _pick_concept_with_name(facts, REVENUE_CONCEPTS)
-    gross_concept, _ = _pick_concept_with_name(facts, GROSS_PROFIT_CONCEPTS)
-    op_concept, _ = _pick_concept_with_name(facts, OPERATING_INCOME_CONCEPTS)
-    net_concept, _ = _pick_concept_with_name(facts, NET_INCOME_CONCEPTS)
-    eps_concept, _ = _pick_concept_with_name(facts, EPS_DILUTED_CONCEPTS)
+    revenue_concept, _ = _select_best_concept_with_rows(facts, REVENUE_CONCEPTS)
+    gross_concept, _ = _select_best_concept_with_rows(facts, GROSS_PROFIT_CONCEPTS)
+    op_concept, _ = _select_best_concept_with_rows(facts, OPERATING_INCOME_CONCEPTS)
+    net_concept, _ = _select_best_concept_with_rows(facts, NET_INCOME_CONCEPTS)
+    eps_concept, _ = _select_best_concept_with_rows(facts, EPS_DILUTED_CONCEPTS)
 
     return {
         "cik": cik10,

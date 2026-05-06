@@ -60,7 +60,7 @@ EPS_DILUTED_CONCEPTS = [
 MAX_CONCEPT_AGE_DAYS = 550
 
 
-def _is_supported_form(form: str) -> bool:
+def _is_quarterly_or_annual_form(form: str) -> bool:
     """Accept base and amended periodic filings (10-Q, 10-Q/A, 10-K, 10-K/A)."""
     if not form:
         return False
@@ -68,7 +68,7 @@ def _is_supported_form(form: str) -> bool:
     return f.startswith("10-Q") or f.startswith("10-K")
 
 
-def _form_base(form: str) -> str:
+def _normalize_form_label(form: str) -> str:
     f = str(form or "").upper()
     if f.startswith("10-Q"):
         return "10-Q"
@@ -77,29 +77,29 @@ def _form_base(form: str) -> str:
     return f
 
 
-def _parse_iso(d: str):
+def _parse_date(d: str):
     try:
         return date.fromisoformat(d)
     except Exception:
         return None
 
 
-def _days_between(start: str, end: str):
-    s = _parse_iso(start)
-    e = _parse_iso(end)
+def _inclusive_day_span(start: str, end: str):
+    s = _parse_date(start)
+    e = _parse_date(end)
     if not s or not e:
         return None
     # Inclusive duration gives closer quarter lengths for SEC contexts.
     return (e - s).days + 1
 
 
-def _is_quarter_duration(days: Optional[int]) -> bool:
+def _looks_like_single_quarter_duration(days: Optional[int]) -> bool:
     if days is None:
         return False
     return 70 <= days <= 120
 
 
-def _pick_latest_by_filed(rows: list[dict]) -> list[dict]:
+def _dedupe_by_context_keep_latest_filing(rows: list[dict]) -> list[dict]:
     """Deduplicate rows by SEC context identity and keep latest filed value."""
     latest = {}
     for r in rows:
@@ -110,7 +110,7 @@ def _pick_latest_by_filed(rows: list[dict]) -> list[dict]:
     return list(latest.values())
 
 
-def _quarter_value_from_row(row: dict, fy_fp_map: dict) -> Optional[float]:
+def _normalize_row_to_quarter_value(row: dict, fy_fp_map: dict) -> Optional[float]:
     """
     Normalize SEC fact rows to quarter-level values.
 
@@ -138,21 +138,21 @@ def _quarter_value_from_row(row: dict, fy_fp_map: dict) -> Optional[float]:
 
     if fp == "FY":
         # FY contexts are typically annual; keep only if duration is clearly quarterly.
-        return val if _is_quarter_duration(days) else None
+        return val if _looks_like_single_quarter_duration(days) else None
 
     # Fallback for missing/odd fp: accept if duration itself is quarter-like.
-    if _is_quarter_duration(days):
+    if _looks_like_single_quarter_duration(days):
         return val
     return None
 
 
-def _concept_score(rows: list[dict]) -> tuple:
+def _score_concept_candidate(rows: list[dict]) -> tuple:
     """Higher is better: prioritize recency, then 10-Q coverage, then volume."""
     if not rows:
         return (0, "0000-00-00", 0, 0)
 
     latest_period = rows[0]["period"]
-    latest_dt = _parse_iso(latest_period)
+    latest_dt = _parse_date(latest_period)
     recent = 0
     if latest_dt is not None:
         recent = 1 if (date.today() - latest_dt).days <= 900 else 0
@@ -161,27 +161,27 @@ def _concept_score(rows: list[dict]) -> tuple:
     return (recent, latest_period, ten_q_count, len(rows))
 
 
-def _latest_period_age_days(rows: list[dict]) -> Optional[int]:
+def _latest_period_age_in_days(rows: list[dict]) -> Optional[int]:
     if not rows:
         return None
-    d = _parse_iso(rows[0].get("period"))
+    d = _parse_date(rows[0].get("period"))
     if d is None:
         return None
     return (date.today() - d).days
 
 
-def _is_fresh_concept(rows: list[dict], max_age_days: int = MAX_CONCEPT_AGE_DAYS) -> bool:
-    age = _latest_period_age_days(rows)
+def _is_recent_concept(rows: list[dict], max_age_days: int = MAX_CONCEPT_AGE_DAYS) -> bool:
+    age = _latest_period_age_in_days(rows)
     if age is None:
         return False
     return age <= max_age_days
 
 
-def _prefer_10q_rows(rows: list[dict]) -> list[dict]:
+def _prefer_quarterly_filing_rows(rows: list[dict]) -> list[dict]:
     ten_q = [r for r in rows if r.get("form") == "10-Q"]
     return ten_q if ten_q else rows
 
-def _extract_quarterly(facts: dict, concept: str) -> list:
+def _extract_quarterly_rows_for_concept(facts: dict, concept: str) -> list:
     """
     Pull and normalize SEC fact rows to quarter-level values for a us-gaap concept.
 
@@ -202,7 +202,7 @@ def _extract_quarterly(facts: dict, concept: str) -> list:
     rows = []
     for item in unit_data:
         form = item.get("form")
-        if not _is_supported_form(form):
+        if not _is_quarterly_or_annual_form(form):
             continue
         period = item.get("end")
         if not period:
@@ -212,19 +212,19 @@ def _extract_quarterly(facts: dict, concept: str) -> list:
             "period": period,
             "start":  start,
             "value":  item.get("val"),
-            "form":   _form_base(form),
+            "form":   _normalize_form_label(form),
             "filed":  item.get("filed"),
             "accn":   item.get("accn"),
             "fy":     item.get("fy"),
             "fp":     item.get("fp"),
             "frame":  item.get("frame"),
-            "duration_days": _days_between(start, period),
+            "duration_days": _inclusive_day_span(start, period),
         })
 
     if not rows:
         return []
 
-    rows = _pick_latest_by_filed(rows)
+    rows = _dedupe_by_context_keep_latest_filing(rows)
 
     # Build lookup for cumulative-to-quarter differencing by fiscal-year period.
     fy_fp_map = {}
@@ -240,7 +240,7 @@ def _extract_quarterly(facts: dict, concept: str) -> list:
 
     normalized = []
     for r in rows:
-        qv = _quarter_value_from_row(r, fy_fp_map)
+        qv = _normalize_row_to_quarter_value(r, fy_fp_map)
         if qv is None:
             continue
         normalized.append({**r, "value": qv})
@@ -266,7 +266,7 @@ def _extract_quarterly(facts: dict, concept: str) -> list:
     return output
 
 
-def _pick_concept_with_name(
+def _select_best_concept_with_rows(
     facts: dict,
     candidates: list,
     prefer_quarterly: bool = True,
@@ -284,16 +284,16 @@ def _pick_concept_with_name(
     stale_best_score = (0, "0000-00-00", 0, 0)
 
     for concept in candidates:
-        rows = _extract_quarterly(facts, concept)
+        rows = _extract_quarterly_rows_for_concept(facts, concept)
         if not rows:
             continue
-        if not _is_fresh_concept(rows, max_age_days=max_age_days):
-            stale_score = _concept_score(rows)
+        if not _is_recent_concept(rows, max_age_days=max_age_days):
+            stale_score = _score_concept_candidate(rows)
             if stale_score > stale_best_score:
                 stale_best = (concept, rows)
                 stale_best_score = stale_score
             continue
-        score = _concept_score(rows)
+        score = _score_concept_candidate(rows)
         if score > best_score:
             best = (concept, rows)
             best_score = score
@@ -308,37 +308,37 @@ def _pick_concept_with_name(
     if not concept:
         return best
 
-    preferred = _prefer_10q_rows(rows)
+    preferred = _prefer_quarterly_filing_rows(rows)
     return concept, preferred
 
 
-def _pick_concept(facts: dict, candidates: list) -> list:
-    _, rows = _pick_concept_with_name(facts, candidates, prefer_quarterly=True)
+def _select_best_concept_rows(facts: dict, candidates: list) -> list:
+    _, rows = _select_best_concept_with_rows(facts, candidates, prefer_quarterly=True)
     return rows
 
 
-def _yoy_growth(current, prior):
+def _calculate_yoy_growth_pct(current, prior):
     if current is None or prior is None or prior == 0:
         return None
     return round((current - prior) / abs(prior) * 100, 2)
 
 
-def _margin(numerator, denominator):
+def _calculate_margin_pct(numerator, denominator):
     if numerator is None or denominator is None or denominator == 0:
         return None
     return round(numerator / denominator * 100, 2)
 
 
-def _index_by_period(rows: list) -> dict:
+def _map_period_to_value(rows: list) -> dict:
     return {r["period"]: r["value"] for r in rows}
 
 
-def _find_prior_period(period: str, periods: list[str], tolerance_days: int = 10) -> Optional[str]:
+def _find_prior_year_comparable_period(period: str, periods: list[str], tolerance_days: int = 10) -> Optional[str]:
     """
     Find the best same-quarter prior-year period key even when fiscal quarter-end
     dates shift by a few days (e.g., 2026-03-28 vs 2025-03-29).
     """
-    d = _parse_iso(period)
+    d = _parse_date(period)
     if d is None:
         return None
 
@@ -352,7 +352,7 @@ def _find_prior_period(period: str, periods: list[str], tolerance_days: int = 10
     best_period = None
     best_delta = None
     for p in periods:
-        pd = _parse_iso(p)
+        pd = _parse_date(p)
         if pd is None:
             continue
 
@@ -371,7 +371,7 @@ def _find_prior_period(period: str, periods: list[str], tolerance_days: int = 10
     return best_period
 
 
-def _debug_row(row: dict) -> dict:
+def _build_row_debug_snapshot(row: dict) -> dict:
     return {
         "period": row.get("period"),
         "start": row.get("start"),
@@ -385,7 +385,7 @@ def _debug_row(row: dict) -> dict:
     }
 
 
-def _concept_diagnostics(
+def _build_concept_diagnostics(
     facts: dict,
     candidates: list,
     selected: Optional[str],
@@ -393,17 +393,17 @@ def _concept_diagnostics(
 ) -> list[dict]:
     diagnostics = []
     for concept in candidates:
-        rows = _extract_quarterly(facts, concept)
-        preferred = _prefer_10q_rows(rows)
-        latest_age_days = _latest_period_age_days(rows)
-        is_fresh = _is_fresh_concept(rows, max_age_days=max_age_days)
+        rows = _extract_quarterly_rows_for_concept(facts, concept)
+        preferred = _prefer_quarterly_filing_rows(rows)
+        latest_age_days = _latest_period_age_in_days(rows)
+        is_fresh = _is_recent_concept(rows, max_age_days=max_age_days)
         rejected_reason = None
         if rows and not is_fresh:
             rejected_reason = "stale_latest_period"
         diagnostics.append({
             "concept": concept,
             "selected": concept == selected,
-            "score": _concept_score(rows),
+            "score": _score_concept_candidate(rows),
             "row_count": len(rows),
             "ten_q_count": sum(1 for r in rows if r.get("form") == "10-Q"),
             "ten_k_count": sum(1 for r in rows if r.get("form") == "10-K"),
@@ -412,18 +412,18 @@ def _concept_diagnostics(
             "latest_age_days": latest_age_days,
             "fresh_under_max_age": is_fresh,
             "selection_rejected_reason": rejected_reason,
-            "sample_rows": [_debug_row(r) for r in preferred[:5]],
+            "sample_rows": [_build_row_debug_snapshot(r) for r in preferred[:5]],
         })
     return diagnostics
 
 
-def _metric_source(value, source_when_present: str = "reported") -> str:
+def _label_metric_source(value, source_when_present: str = "reported") -> str:
     if value is None:
         return "not_available"
     return source_when_present
 
 
-def _profitability_profile(name: Optional[str], latest_gross_margin: Optional[float], has_cost_concept: bool) -> dict:
+def _build_profitability_profile(name: Optional[str], latest_gross_margin: Optional[float], has_cost_concept: bool) -> dict:
     entity = (name or "").upper()
     financial_hint = any(token in entity for token in ["BANK", "BANC", "FINANCIAL", "CAPITAL", "INSURANCE", "TRUST"])
 
@@ -463,46 +463,46 @@ async def company_metrics(
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"EDGAR fetch failed: {e}")
 
-    revenue_concept, revenue_rows = _pick_concept_with_name(facts, REVENUE_CONCEPTS)
-    gross_concept, gross_rows = _pick_concept_with_name(
+    revenue_concept, revenue_rows = _select_best_concept_with_rows(facts, REVENUE_CONCEPTS)
+    gross_concept, gross_rows = _select_best_concept_with_rows(
         facts, GROSS_PROFIT_CONCEPTS, allow_stale_fallback=False
     )
-    cogs_concept, cogs_rows = _pick_concept_with_name(
+    cogs_concept, cogs_rows = _select_best_concept_with_rows(
         facts, COST_OF_REVENUE_CONCEPTS, allow_stale_fallback=False
     )
-    opincome_concept, opincome_rows = _pick_concept_with_name(facts, OPERATING_INCOME_CONCEPTS)
-    netincome_concept, netincome_rows = _pick_concept_with_name(facts, NET_INCOME_CONCEPTS)
-    eps_concept, eps_rows = _pick_concept_with_name(facts, EPS_DILUTED_CONCEPTS)
+    opincome_concept, opincome_rows = _select_best_concept_with_rows(facts, OPERATING_INCOME_CONCEPTS)
+    netincome_concept, netincome_rows = _select_best_concept_with_rows(facts, NET_INCOME_CONCEPTS)
+    eps_concept, eps_rows = _select_best_concept_with_rows(facts, EPS_DILUTED_CONCEPTS)
 
-    rev_q = _prefer_10q_rows(revenue_rows)[:quarters + 4]  # extra for YoY lookback
+    rev_q = _prefer_quarterly_filing_rows(revenue_rows)[:quarters + 4]  # extra for YoY lookback
 
-    gp_q  = _prefer_10q_rows(gross_rows)
-    cogs_q = _prefer_10q_rows(cogs_rows)
-    oi_q  = _prefer_10q_rows(opincome_rows)
-    ni_q  = _prefer_10q_rows(netincome_rows)
-    eps_q = _prefer_10q_rows(eps_rows)
+    gp_q  = _prefer_quarterly_filing_rows(gross_rows)
+    cogs_q = _prefer_quarterly_filing_rows(cogs_rows)
+    oi_q  = _prefer_quarterly_filing_rows(opincome_rows)
+    ni_q  = _prefer_quarterly_filing_rows(netincome_rows)
+    eps_q = _prefer_quarterly_filing_rows(eps_rows)
 
-    rev_idx = _index_by_period(rev_q)
-    gp_idx  = _index_by_period(gp_q)
-    cogs_idx = _index_by_period(cogs_q)
-    oi_idx  = _index_by_period(oi_q)
-    ni_idx  = _index_by_period(ni_q)
-    eps_idx = _index_by_period(eps_q)
+    rev_idx = _map_period_to_value(rev_q)
+    gp_idx  = _map_period_to_value(gp_q)
+    cogs_idx = _map_period_to_value(cogs_q)
+    oi_idx  = _map_period_to_value(oi_q)
+    ni_idx  = _map_period_to_value(ni_q)
+    eps_idx = _map_period_to_value(eps_q)
 
     revenue_source_label = "reported"
-    if revenue_rows and not _is_fresh_concept(revenue_rows):
+    if revenue_rows and not _is_recent_concept(revenue_rows):
         revenue_source_label = "reported_stale"
 
     operating_income_source_label = "reported"
-    if opincome_rows and not _is_fresh_concept(opincome_rows):
+    if opincome_rows and not _is_recent_concept(opincome_rows):
         operating_income_source_label = "reported_stale"
 
     net_income_source_label = "reported"
-    if netincome_rows and not _is_fresh_concept(netincome_rows):
+    if netincome_rows and not _is_recent_concept(netincome_rows):
         net_income_source_label = "reported_stale"
 
     eps_source_label = "reported"
-    if eps_rows and not _is_fresh_concept(eps_rows):
+    if eps_rows and not _is_recent_concept(eps_rows):
         eps_source_label = "reported_stale"
 
     # Build output for most recent `quarters` periods
@@ -521,13 +521,13 @@ async def company_metrics(
             gp = rev - cogs
             gross_profit_source = "derived_from_cost_of_revenue"
 
-        gross_margin = _margin(gp, rev)
-        operating_margin = _margin(oi, rev)
-        net_margin = _margin(ni, rev)
+        gross_margin = _calculate_margin_pct(gp, rev)
+        operating_margin = _calculate_margin_pct(oi, rev)
+        net_margin = _calculate_margin_pct(ni, rev)
 
         # Find same period 1 year prior (subtract ~365 days = period ending ~1yr ago)
         # EDGAR periods are YYYY-MM-DD; YoY = same month 1 year back
-        prior_period = _find_prior_period(period, list(rev_idx.keys()))
+        prior_period = _find_prior_year_comparable_period(period, list(rev_idx.keys()))
         prior_rev = rev_idx.get(prior_period) if prior_period else None
 
         item = {
@@ -542,23 +542,23 @@ async def company_metrics(
             "gross_margin_pct":    gross_margin,
             "operating_margin_pct": operating_margin,
             "net_margin_pct":      net_margin,
-            "revenue_yoy_pct":     _yoy_growth(rev, prior_rev),
+            "revenue_yoy_pct":     _calculate_yoy_growth_pct(rev, prior_rev),
             "metric_sources": {
-                "revenue": _metric_source(rev, revenue_source_label),
-                "gross_profit": _metric_source(gp, gross_profit_source),
-                "gross_margin_pct": _metric_source(gross_margin, gross_profit_source),
-                "operating_income": _metric_source(oi, operating_income_source_label),
-                "operating_margin_pct": _metric_source(operating_margin, operating_income_source_label),
-                "net_income": _metric_source(ni, net_income_source_label),
-                "net_margin_pct": _metric_source(net_margin, net_income_source_label),
-                "eps_diluted": _metric_source(eps, eps_source_label),
+                "revenue": _label_metric_source(rev, revenue_source_label),
+                "gross_profit": _label_metric_source(gp, gross_profit_source),
+                "gross_margin_pct": _label_metric_source(gross_margin, gross_profit_source),
+                "operating_income": _label_metric_source(oi, operating_income_source_label),
+                "operating_margin_pct": _label_metric_source(operating_margin, operating_income_source_label),
+                "net_income": _label_metric_source(ni, net_income_source_label),
+                "net_margin_pct": _label_metric_source(net_margin, net_income_source_label),
+                "eps_diluted": _label_metric_source(eps, eps_source_label),
             },
         }
         if debug:
             item["debug"] = {
                 "prior_period_for_yoy": prior_period,
                 "prior_revenue_for_yoy": prior_rev,
-                "row_context": _debug_row(row),
+                "row_context": _build_row_debug_snapshot(row),
                 "cost_of_revenue": cogs,
                 "gross_profit_source": gross_profit_source,
             }
@@ -579,7 +579,7 @@ async def company_metrics(
             "net_income": netincome_concept,
             "eps_diluted": eps_concept,
         },
-        "profitability_profile": _profitability_profile(
+        "profitability_profile": _build_profitability_profile(
             facts.get("entityName"),
             output[0].get("gross_margin_pct") if output else None,
             cogs_concept is not None,
@@ -595,12 +595,12 @@ async def company_metrics(
                 "max_concept_age_days": MAX_CONCEPT_AGE_DAYS,
             },
             "concept_candidates": {
-                "revenue": _concept_diagnostics(facts, REVENUE_CONCEPTS, revenue_concept),
-                "gross_profit": _concept_diagnostics(facts, GROSS_PROFIT_CONCEPTS, gross_concept),
-                "cost_of_revenue": _concept_diagnostics(facts, COST_OF_REVENUE_CONCEPTS, cogs_concept),
-                "operating_income": _concept_diagnostics(facts, OPERATING_INCOME_CONCEPTS, opincome_concept),
-                "net_income": _concept_diagnostics(facts, NET_INCOME_CONCEPTS, netincome_concept),
-                "eps_diluted": _concept_diagnostics(facts, EPS_DILUTED_CONCEPTS, eps_concept),
+                "revenue": _build_concept_diagnostics(facts, REVENUE_CONCEPTS, revenue_concept),
+                "gross_profit": _build_concept_diagnostics(facts, GROSS_PROFIT_CONCEPTS, gross_concept),
+                "cost_of_revenue": _build_concept_diagnostics(facts, COST_OF_REVENUE_CONCEPTS, cogs_concept),
+                "operating_income": _build_concept_diagnostics(facts, OPERATING_INCOME_CONCEPTS, opincome_concept),
+                "net_income": _build_concept_diagnostics(facts, NET_INCOME_CONCEPTS, netincome_concept),
+                "eps_diluted": _build_concept_diagnostics(facts, EPS_DILUTED_CONCEPTS, eps_concept),
             },
         }
 

@@ -9,10 +9,10 @@ Checks: revenue growth, gross margin, operating margin, net margin.
 from fastapi import APIRouter, HTTPException
 from edgar_client import get_company_facts, pad_cik
 from routers.financial_metrics import (
-    _pick_concept, _index_by_period,
-    _margin,
-    _prefer_10q_rows,
-    _find_prior_period,
+    _select_best_concept_rows, _map_period_to_value,
+    _calculate_margin_pct,
+    _prefer_quarterly_filing_rows,
+    _find_prior_year_comparable_period,
     REVENUE_CONCEPTS,
     GROSS_PROFIT_CONCEPTS,
     OPERATING_INCOME_CONCEPTS,
@@ -69,15 +69,15 @@ async def company_flags(cik: str):
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"EDGAR fetch failed: {e}")
 
-    rev_rows = _prefer_10q_rows(_pick_concept(facts, REVENUE_CONCEPTS))
-    gp_rows  = _prefer_10q_rows(_pick_concept(facts, GROSS_PROFIT_CONCEPTS))
-    oi_rows  = _prefer_10q_rows(_pick_concept(facts, OPERATING_INCOME_CONCEPTS))
-    ni_rows  = _prefer_10q_rows(_pick_concept(facts, NET_INCOME_CONCEPTS))
+    rev_rows = _prefer_quarterly_filing_rows(_select_best_concept_rows(facts, REVENUE_CONCEPTS))
+    gp_rows  = _prefer_quarterly_filing_rows(_select_best_concept_rows(facts, GROSS_PROFIT_CONCEPTS))
+    oi_rows  = _prefer_quarterly_filing_rows(_select_best_concept_rows(facts, OPERATING_INCOME_CONCEPTS))
+    ni_rows  = _prefer_quarterly_filing_rows(_select_best_concept_rows(facts, NET_INCOME_CONCEPTS))
 
-    rev_idx = _index_by_period(rev_rows)
-    gp_idx  = _index_by_period(gp_rows)
-    oi_idx  = _index_by_period(oi_rows)
-    ni_idx  = _index_by_period(ni_rows)
+    rev_idx = _map_period_to_value(rev_rows)
+    gp_idx  = _map_period_to_value(gp_rows)
+    oi_idx  = _map_period_to_value(oi_rows)
+    ni_idx  = _map_period_to_value(ni_rows)
 
     # Build time series of margins across all available quarters
     periods = sorted(rev_idx.keys(), reverse=True)[:LOOKBACK + 4]
@@ -96,12 +96,12 @@ async def company_flags(cik: str):
         if rev is None:
             continue
 
-        gm = _margin(gp, rev)
-        om = _margin(oi, rev)
-        nm = _margin(ni, rev)
+        gm = _calculate_margin_pct(gp, rev)
+        om = _calculate_margin_pct(oi, rev)
+        nm = _calculate_margin_pct(ni, rev)
 
         # YoY revenue growth
-        prior = _find_prior_period(p, list(rev_idx.keys()))
+        prior = _find_prior_year_comparable_period(p, list(rev_idx.keys()))
         prior_rev = rev_idx.get(prior) if prior else None
         rg = round((rev - prior_rev) / abs(prior_rev) * 100, 2) if (prior_rev and prior_rev != 0) else None
 

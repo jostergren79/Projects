@@ -7,6 +7,27 @@ This repository contains two app surfaces:
 
 The repository is intentionally a single Git repo rooted at this folder.
 
+## Start Here
+
+If you are new to this repo, use this path-based guide:
+
+1. Want EDGAR backend API behavior: start in edgar-api/main.py, then edgar-api/routers/.
+2. Want financial metric logic: start in edgar-api/routers/financial_metrics.py.
+3. Want public-facing HTML pages: start in notes-api/public/.
+4. Want smoke validation for public mode: start in notes-api/scripts/smoke-public-mode.sh.
+
+## Folder Naming Decision
+
+For now, keep top-level folder names as edgar-api and notes-api.
+
+Why:
+
+1. They are already accurate and recognizable.
+2. Renaming now creates avoidable path churn across scripts, deploy config, and local muscle memory.
+3. The clearer immediate win is navigation documentation, which this README now provides.
+
+If we later rename folders, do it as a planned migration with path updates in one commit and a short compatibility note.
+
 ## Current Tracked Scope
 
 The tracked source of truth currently includes:

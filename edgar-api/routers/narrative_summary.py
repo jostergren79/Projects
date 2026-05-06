@@ -7,10 +7,10 @@ financial performance based on the metrics data.
 from fastapi import APIRouter, HTTPException
 from edgar_client import get_company_facts, pad_cik
 from routers.financial_metrics import (
-    _pick_concept, _index_by_period,
-    _margin, _yoy_growth,
-    _prefer_10q_rows,
-    _find_prior_period,
+    _select_best_concept_rows, _map_period_to_value,
+    _calculate_margin_pct, _calculate_yoy_growth_pct,
+    _prefer_quarterly_filing_rows,
+    _find_prior_year_comparable_period,
     REVENUE_CONCEPTS,
     GROSS_PROFIT_CONCEPTS,
     OPERATING_INCOME_CONCEPTS,
@@ -75,17 +75,17 @@ async def company_summary(cik: str):
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"EDGAR fetch failed: {e}")
 
-    rev_rows = _prefer_10q_rows(_pick_concept(facts, REVENUE_CONCEPTS))
-    gp_rows  = _prefer_10q_rows(_pick_concept(facts, GROSS_PROFIT_CONCEPTS))
-    oi_rows  = _prefer_10q_rows(_pick_concept(facts, OPERATING_INCOME_CONCEPTS))
-    ni_rows  = _prefer_10q_rows(_pick_concept(facts, NET_INCOME_CONCEPTS))
-    eps_rows = _prefer_10q_rows(_pick_concept(facts, EPS_DILUTED_CONCEPTS))
+    rev_rows = _prefer_quarterly_filing_rows(_select_best_concept_rows(facts, REVENUE_CONCEPTS))
+    gp_rows  = _prefer_quarterly_filing_rows(_select_best_concept_rows(facts, GROSS_PROFIT_CONCEPTS))
+    oi_rows  = _prefer_quarterly_filing_rows(_select_best_concept_rows(facts, OPERATING_INCOME_CONCEPTS))
+    ni_rows  = _prefer_quarterly_filing_rows(_select_best_concept_rows(facts, NET_INCOME_CONCEPTS))
+    eps_rows = _prefer_quarterly_filing_rows(_select_best_concept_rows(facts, EPS_DILUTED_CONCEPTS))
 
-    rev_idx = _index_by_period(rev_rows)
-    gp_idx  = _index_by_period(gp_rows)
-    oi_idx  = _index_by_period(oi_rows)
-    ni_idx  = _index_by_period(ni_rows)
-    eps_idx = _index_by_period(eps_rows)
+    rev_idx = _map_period_to_value(rev_rows)
+    gp_idx  = _map_period_to_value(gp_rows)
+    oi_idx  = _map_period_to_value(oi_rows)
+    ni_idx  = _map_period_to_value(ni_rows)
+    eps_idx = _map_period_to_value(eps_rows)
 
     if not rev_rows:
         raise HTTPException(status_code=404, detail="Insufficient financial data to generate summary")
@@ -101,16 +101,16 @@ async def company_summary(cik: str):
     except Exception:
         period_label = period
 
-    prior_period = _find_prior_period(period, list(rev_idx.keys()))
+    prior_period = _find_prior_year_comparable_period(period, list(rev_idx.keys()))
     prior_rev = rev_idx.get(prior_period) if prior_period else None
     prior_gp  = gp_idx.get(prior_period) if prior_period else None
     prior_oi  = oi_idx.get(prior_period) if prior_period else None
 
-    rev_yoy   = _yoy_growth(rev, prior_rev)
-    gm        = _margin(gp_idx.get(period), rev)
-    prior_gm  = _margin(prior_gp, prior_rev)
-    om        = _margin(oi_idx.get(period), rev)
-    prior_om  = _margin(prior_oi, prior_rev)
+    rev_yoy   = _calculate_yoy_growth_pct(rev, prior_rev)
+    gm        = _calculate_margin_pct(gp_idx.get(period), rev)
+    prior_gm  = _calculate_margin_pct(prior_gp, prior_rev)
+    om        = _calculate_margin_pct(oi_idx.get(period), rev)
+    prior_om  = _calculate_margin_pct(prior_oi, prior_rev)
     ni        = ni_idx.get(period)
     eps       = eps_idx.get(period)
 
