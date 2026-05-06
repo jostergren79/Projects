@@ -72,6 +72,7 @@ dist/
 .env
 .env.*
 !.env.example
+!edgar-api/.env.production.example
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache
