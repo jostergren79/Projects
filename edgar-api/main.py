@@ -11,7 +11,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import os
 
-from routers import lookup, metrics, segments, flags, summary
+from routers import (
+    company_lookup,
+    financial_metrics,
+    segment_breakdown,
+    anomaly_flags,
+    narrative_summary,
+)
 
 app = FastAPI(title="EDGAR Financial Metrics API", version="0.1.0")
 
@@ -32,11 +38,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(lookup.router)
-app.include_router(metrics.router)
-app.include_router(segments.router)
-app.include_router(flags.router)
-app.include_router(summary.router)
+app.include_router(company_lookup.router)
+app.include_router(financial_metrics.router)
+app.include_router(segment_breakdown.router)
+app.include_router(anomaly_flags.router)
+app.include_router(narrative_summary.router)
 
 
 @app.get("/health")

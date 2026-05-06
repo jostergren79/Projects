@@ -6,7 +6,7 @@ financial performance based on the metrics data.
 
 from fastapi import APIRouter, HTTPException
 from edgar_client import get_company_facts, pad_cik
-from routers.metrics import (
+from routers.financial_metrics import (
     _pick_concept, _index_by_period,
     _margin, _yoy_growth,
     _prefer_10q_rows,

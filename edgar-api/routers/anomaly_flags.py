@@ -8,7 +8,7 @@ Checks: revenue growth, gross margin, operating margin, net margin.
 
 from fastapi import APIRouter, HTTPException
 from edgar_client import get_company_facts, pad_cik
-from routers.metrics import (
+from routers.financial_metrics import (
     _pick_concept, _index_by_period,
     _margin,
     _prefer_10q_rows,

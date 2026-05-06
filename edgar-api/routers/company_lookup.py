@@ -16,7 +16,7 @@ Lookup endpoints:
 import re
 from fastapi import APIRouter, HTTPException, Query
 from edgar_client import get_ticker_map, get_submissions, get_company_facts, pad_cik
-from routers.metrics import (
+from routers.financial_metrics import (
     _pick_concept_with_name,
     REVENUE_CONCEPTS,
     GROSS_PROFIT_CONCEPTS,
