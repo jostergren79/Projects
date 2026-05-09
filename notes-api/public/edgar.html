@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; font-src 'self'" />
   <title>SEC Filing Metrics</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230f1117'/%3E%3Cpath d='M18 18h28v6H24v10h18v6H24v16h-6z' fill='%234f8ef7'/%3E%3C/svg%3E" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -203,10 +204,49 @@
     tbody tr:last-child td { border-bottom: none; }
     tbody tr:hover td { background: var(--surface2); }
 
+    /* Back bar */
+    #back-bar { display: none; max-width: 1100px; margin: 20px auto 0; padding: 0 20px; }
+    #back-bar button { background: none; border: none; color: var(--accent); font-size: .85rem; cursor: pointer; padding: 0; display: flex; align-items: center; gap: 6px; }
+    #back-bar button:hover { text-decoration: underline; }
+
     /* Loading */
     .loading { display: none; text-align: center; padding: 48px; color: var(--muted); }
     .spinner { display: inline-block; width: 28px; height: 28px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; margin-bottom: 12px; }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Signal Board */
+    #signal-board { max-width: 960px; margin: 36px auto 60px; padding: 0 20px; }
+    #signal-board .board-heading { font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 4px; text-align: center; }
+    #signal-board .board-subtitle { font-size: .8rem; color: var(--muted); margin-bottom: 8px; text-align: center; }
+    .board-status { font-size: .78rem; color: var(--muted); margin-bottom: 16px; min-height: 1.2em; text-align: center; }
+    .board-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .board-col-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .board-col-head .col-title { font-size: .82rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+    .board-col-head .col-title.up { color: var(--green); }
+    .board-col-head .col-title.down { color: var(--red); }
+    .board-col-head .col-count { font-size: .75rem; color: var(--muted); }
+    .board-col-empty { color: var(--muted); font-size: .82rem; padding: 10px 0; }
+    /* Column containers use gap instead of per-card margin so spacing is identical */
+    #col-up, #col-down { display: flex; flex-direction: column; gap: 8px; }
+    .sig-row { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; cursor: pointer; transition: border-color .15s, background .15s; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+    .sig-row:hover { border-color: var(--accent); background: var(--surface2); }
+    .sig-row:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .sig-row-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
+    .sig-row-name { font-size: .86rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1; }
+    .sig-score { font-size: .72rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; white-space: nowrap; flex-shrink: 0; }
+    .sig-score.up { background: #162a1e; color: var(--green); border: 1px solid var(--green); }
+    .sig-score.down { background: #2d1a1a; color: var(--red); border: 1px solid var(--red); }
+    .sig-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+    .sig-chip { font-size: .72rem; display: flex; align-items: center; gap: 2px; color: var(--muted); white-space: nowrap; }
+    .sig-chip .arrow.up { color: var(--green); }
+    .sig-chip .arrow.down { color: var(--red); }
+    .sig-meta { font-size: .7rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .board-loading { display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--muted); padding: 16px 0; font-size: .85rem; }
+    .board-loading .spinner { margin: 0; width: 18px; height: 18px; border-width: 2px; }
+    @media (max-width: 700px) {
+      #signal-board { padding: 0 14px; margin-top: 24px; }
+      .board-grid { grid-template-columns: 1fr; }
+    }
 
     @media (max-width: 700px) {
       header { padding: 14px 16px; }
@@ -284,9 +324,35 @@
     <div id="error-msg"></div>
   </div>
 
+  <div id="signal-board" style="display:none;">
+    <div class="board-heading">Signal Board</div>
+    <div class="board-subtitle">Companies that recently filed with SEC — scored on revenue growth and margin trends. Click any row to load the full dashboard.</div>
+    <div class="board-status" id="board-status"></div>
+    <div class="board-grid">
+      <div>
+        <div class="board-col-head">
+          <span class="col-title up">&#x2191; Strengthening</span>
+          <span class="col-count" id="up-count"></span>
+        </div>
+        <div id="col-up"></div>
+      </div>
+      <div>
+        <div class="board-col-head">
+          <span class="col-title down">&#x2193; Weakening</span>
+          <span class="col-count" id="down-count"></span>
+        </div>
+        <div id="col-down"></div>
+      </div>
+    </div>
+  </div>
+
   <div class="loading" id="loading">
     <div class="spinner"></div>
     <div>Fetching SEC EDGAR data…</div>
+  </div>
+
+  <div id="back-bar">
+    <button onclick="goBack()">&#x2190; Back to Signal Board</button>
   </div>
 
   <div id="dashboard">
@@ -394,6 +460,218 @@
     let currentCompany = null;
     let currentMetrics = null;
     let currentTicker = null;
+
+    // ── Signal Board ─────────────────────────────────────────────────────────
+    //
+    // Scoring model (3 signals, each votes +1 or −1):
+    //   1. Revenue YoY growth    — latest quarter revenue_yoy_pct >= 0 → +1
+    //   2. Gross margin trend    — gross_margin_pct rose vs prior quarter → +1
+    //   3. Operating margin trend — operating_margin_pct rose vs prior quarter → +1
+    //
+    // Net score > 0 → STRENGTHENING column
+    // Net score < 0 → WEAKENING column
+    // Net score = 0 → excluded (mixed signals)
+    //
+    // Source: fresh filers are discovered via GET /feed/recent (SEC EFTS API).
+    // See edgar-api/README.md § "Derived Signal Logic" for full methodology.
+
+    function scoreCompany(periods) {
+      if (!periods || !periods.length) return null;
+      const q0 = periods[0];
+      const q1 = periods[1] || null;
+      const signals = [];
+
+      if (q0.revenue_yoy_pct != null) {
+        const dir = q0.revenue_yoy_pct >= 0 ? 1 : -1;
+        signals.push({ label: 'Rev YoY', value: fmtPct(q0.revenue_yoy_pct), dir });
+      }
+      if (q1 && q0.gross_margin_pct != null && q1.gross_margin_pct != null) {
+        const delta = q0.gross_margin_pct - q1.gross_margin_pct;
+        signals.push({ label: 'Gross Margin', value: (delta >= 0 ? '+' : '') + delta.toFixed(1) + 'pp', dir: delta >= 0 ? 1 : -1 });
+      }
+      if (q1 && q0.operating_margin_pct != null && q1.operating_margin_pct != null) {
+        const delta = q0.operating_margin_pct - q1.operating_margin_pct;
+        signals.push({ label: 'Op Margin', value: (delta >= 0 ? '+' : '') + delta.toFixed(1) + 'pp', dir: delta >= 0 ? 1 : -1 });
+      }
+
+      if (!signals.length) return null;
+      const score = signals.reduce((s, x) => s + x.dir, 0);
+      return { score, signals };
+    }
+
+    function buildSigRow(entry) {
+      const { cik, name, form, filed, scored } = entry;
+      const dir = scored.score > 0 ? 'up' : 'down';
+      const scoreLabel = (scored.score > 0 ? '+' : '') + scored.score + '/' + scored.signals.length;
+      const chips = scored.signals.map(s => {
+        const ac = s.dir > 0 ? 'up' : 'down';
+        const arrow = s.dir > 0 ? '&#x2191;' : '&#x2193;';
+        return `<span class="sig-chip"><span class="arrow ${ac}">${arrow}</span>${escapeAttr(s.label)}: ${escapeAttr(s.value)}</span>`;
+      }).join('');
+      const metaParts = [];
+      if (form)  metaParts.push(form);
+      if (filed) metaParts.push('Filed ' + filed);
+      return `
+        <div class="sig-row" role="button" tabindex="0"
+             onclick="loadByCik('${cik}','${escapeAttr(name)}')"
+             onkeydown="if(event.key==='Enter'||event.key===' ')loadByCik('${cik}','${escapeAttr(name)}')">
+          <div class="sig-row-top">
+            <div class="sig-row-name" title="${escapeAttr(name)}">${escapeAttr(name)}</div>
+            <span class="sig-score ${dir}">${scoreLabel}</span>
+          </div>
+          <div class="sig-chips">${chips}</div>
+          <div class="sig-meta">${metaParts.join(' · ')}</div>
+        </div>`;
+    }
+
+    const BOARD_MAX_PER_COL = 4; // 4 per column = 8 total
+
+    function renderSignalColumns(up, down, done, total) {
+      // Sort each column by filing date descending (most recently filed first),
+      // then cap at BOARD_MAX_PER_COL so the board always renders at a consistent height.
+      const byDate = (a, b) => (b.filed || '').localeCompare(a.filed || '');
+      const upSorted   = [...up].sort(byDate).slice(0, BOARD_MAX_PER_COL);
+      const downSorted = [...down].sort(byDate).slice(0, BOARD_MAX_PER_COL);
+
+      document.getElementById('col-up').innerHTML   = upSorted.length   ? upSorted.map(buildSigRow).join('')   : '<div class="board-col-empty">No strengthening signals yet.</div>';
+      document.getElementById('col-down').innerHTML = downSorted.length ? downSorted.map(buildSigRow).join('') : '<div class="board-col-empty">No weakening signals yet.</div>';
+      document.getElementById('up-count').textContent   = upSorted.length   ? `${upSorted.length} most recent` : '';
+      document.getElementById('down-count').textContent = downSorted.length ? `${downSorted.length} most recent` : '';
+
+      if (done < total) {
+        document.getElementById('board-status').textContent = `Scoring companies from recent SEC filings… (${done}/${total})`;
+      } else {
+        const shown = upSorted.length + downSorted.length;
+        document.getElementById('board-status').textContent = `Showing ${shown} most recently filed · ${total} filers scored · click any row to load full dashboard`;
+      }
+    }
+
+    async function loadSignalBoard() {
+      const board = document.getElementById('signal-board');
+      board.style.display = 'block';
+      document.getElementById('board-status').innerHTML = '<div class="board-loading"><div class="spinner"></div><div>Fetching recent SEC filings…</div></div>';
+      document.getElementById('col-up').innerHTML = '';
+      document.getElementById('col-down').innerHTML = '';
+
+      let filings = [];
+      try {
+        const res = await fetch(`${API}/feed/recent?days=14&limit=40`);
+        if (!res.ok) throw new Error('feed unavailable');
+        filings = (await res.json()).filings || [];
+      } catch {
+        document.getElementById('board-status').textContent = 'Could not load recent SEC filings.';
+        return;
+      }
+
+      if (!filings.length) {
+        document.getElementById('board-status').textContent = 'No recent filings found for this window.';
+        return;
+      }
+
+      const up = [], down = [];
+      let done = 0;
+
+      await Promise.allSettled(
+        filings.map(async (filer) => {
+          try {
+            const res = await fetch(`${API}/company/${filer.cik}/metrics?quarters=2`);
+            if (!res.ok) return;
+            const metrics = await res.json();
+            const scored = scoreCompany(metrics.periods);
+            if (!scored || scored.score === 0) return;
+            const entry = { cik: filer.cik, name: metrics.name || filer.name || filer.cik, form: filer.form, filed: filer.filed, scored };
+            if (scored.score > 0) up.push(entry);
+            else down.push(entry);
+          } catch { /* skip unavailable companies */ } finally {
+            done++;
+            renderSignalColumns(up, down, done, filings.length);
+          }
+        })
+      );
+    }
+
+    function goBack() {
+      if (new URLSearchParams(window.location.search).get('cik')) {
+        // Company tab opened via ?cik= — return to the main page.
+        window.location.href = window.location.pathname;
+      } else {
+        // Inline search on main page — hide dashboard, reveal signal board.
+        document.getElementById('back-bar').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'none';
+        document.getElementById('signal-board').style.display = 'block';
+        document.getElementById('signal-board').scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+
+    // Open a company in its own tab by encoding the CIK in the URL.
+    // The new tab detects ?cik= on load and calls _loadByCikInline directly.
+    function loadByCik(cik, displayName) {
+      const url = new URL(window.location.href);
+      url.search = '';
+      url.searchParams.set('cik', cik);
+      window.open(url.toString(), '_blank');
+    }
+
+    async function _loadByCikInline(cik, displayName) {
+      hideError();
+      setInputError(false);
+      document.getElementById('dashboard').style.display = 'none';
+      document.getElementById('loading').style.display = 'block';
+      document.getElementById('search-btn').disabled = true;
+
+      try {
+        const [objectRes, dashRes] = await Promise.all([
+          fetch(`${API}/company/object/${cik}`),
+          fetch(`${API}/company/${cik}/dashboard?debug=true`),
+        ]);
+        const companyObject = objectRes.ok ? await objectRes.json() : null;
+        const dash = dashRes.ok ? await dashRes.json() : {};
+
+        const recentFilings = companyObject?.recent_filings || [];
+        const last10q = recentFilings.find(f => f.form === '10-Q');
+        const company = {
+          ticker: companyObject?.tickers?.[0] || '',
+          cik,
+          name: companyObject?.name || displayName,
+          sic_description: companyObject?.sic_description || '',
+          state: companyObject?.state || '',
+          last_10q: last10q?.date || null,
+        };
+
+        const metrics   = dash.metrics   && !dash.metrics.error   ? dash.metrics   : null;
+        const segments  = dash.segments  && !dash.segments.error  ? dash.segments  : null;
+        const flags     = dash.flags     && !dash.flags.error     ? dash.flags     : null;
+        const summary   = dash.summary   && !dash.summary.error   ? dash.summary   : null;
+        const anomalies = dash.anomalies && !dash.anomalies.error ? dash.anomalies : null;
+
+        renderDashboard(company, metrics, segments, flags, summary, companyObject, anomalies);
+      } catch (e) {
+        showError(e.message || 'Failed to load company data.');
+      } finally {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('search-btn').disabled = false;
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const params  = new URLSearchParams(window.location.search);
+      const cikParam = params.get('cik');
+      const qParam   = params.get('q') || params.get('ticker');
+
+      if (cikParam) {
+        // Company view: hide signal board, auto-load this CIK.
+        document.getElementById('signal-board').style.display = 'none';
+        _loadByCikInline(cikParam, '');
+      } else if (qParam) {
+        // Direct ticker/name link: hide signal board, auto-search.
+        document.getElementById('signal-board').style.display = 'none';
+        document.getElementById('ticker-input').value = qParam;
+        search();
+      } else {
+        // Discovery view: show signal board.
+        loadSignalBoard();
+      }
+    });
 
     function quickSearch(ticker) {
       document.getElementById('ticker-input').value = ticker;
@@ -900,8 +1178,9 @@
           <td>${p.eps_diluted != null ? '$' + p.eps_diluted.toFixed(2) : '—'}</td>
         </tr>`).join('');
 
+      document.getElementById('back-bar').style.display = 'block';
       document.getElementById('dashboard').style.display = 'block';
-      document.getElementById('dashboard').scrollIntoView({ behavior: 'smooth' });
+      document.getElementById('back-bar').scrollIntoView({ behavior: 'smooth' });
     }
   </script>
 
@@ -910,7 +1189,10 @@
       <strong>Disclaimer:</strong> This tool displays publicly available financial data sourced from SEC filings. It is provided for informational purposes only and does not constitute investment advice. Always verify data independently before making financial decisions.
     </div>
     <div>
-      Data sourced from <a href="https://www.sec.gov/search-filings" target="_blank" rel="noopener">SEC EDGAR</a> — U.S. Securities and Exchange Commission public filing database.
+      Some metrics — including margin calculations, year-over-year growth rates, gross profit derivations, exception flags, trend signals, and the Strengthening / Weakening classifications — are <strong>computed by this application</strong> using its own methodology, not reported directly by SEC filers. Fields labeled <em>Derived</em> or <em>Stale</em> in the Metric Trust panel are subject to this. Full methodology is documented in METHODOLOGY.md in the project repository.
+    </div>
+    <div>
+      Raw data sourced from <a href="https://www.sec.gov/search-filings" target="_blank" rel="noopener">SEC EDGAR</a> — U.S. Securities and Exchange Commission public filing database.
     </div>
     <div class="footer-meta">
       Questions or feedback? <a href="mailto:jason.ostergren79@gmail.com">jason.ostergren79@gmail.com</a>

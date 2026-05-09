@@ -35,6 +35,7 @@ curl http://127.0.0.1:8000/health
 ## Endpoints
 
 - GET /health
+- GET / and GET /edgar — serves edgar.html frontend directly from FastAPI
 - GET /company?ticker=AAPL
 - GET /company/search?name=apple&limit=10
 - GET /company/resolve?q=nike&suggestions=5
@@ -43,6 +44,8 @@ curl http://127.0.0.1:8000/health
 - GET /company/{cik}/segments
 - GET /company/{cik}/flags
 - GET /company/{cik}/summary
+- GET /company/{cik}/anomalies — filing cadence and XBRL anomaly signals with upheaval score
+- GET /company/{cik}/dashboard — aggregated single call: metrics + segments + flags + summary + anomalies
 
 ## Metrics behavior highlights
 
@@ -84,6 +87,35 @@ Use [edgar-api/.env.production.example](edgar-api/.env.production.example) as th
 
 - SEC_HTTP_RETRY_BASE_SECONDS
   - Base delay for exponential backoff between retries.
+
+- SEC_RATE_LIMIT_RPS
+  - Outbound SEC request rate cap in requests per second (token-bucket).
+  - Stay well below SEC's 10 req/s ceiling. Default: 4.
+
+- SEC_429_COOLDOWN_SECONDS
+  - Seconds to pause all outbound SEC fetches after receiving a 429 response.
+  - Default: 30.
+
+- APP_RATE_LIMIT_REQUESTS
+  - Per-IP sliding window request cap for /company/* routes.
+  - Default: 60.
+
+- APP_RATE_LIMIT_WINDOW_SECONDS
+  - Duration of the per-IP sliding window in seconds.
+  - Default: 60.
+
+## Derived Metric Methodology
+
+This service applies its own logic to transform, derive, and classify financial data
+in several places. The full methodology — including every formula, heuristic, and
+limitation — is documented in:
+
+**[METHODOLOGY.md](../METHODOLOGY.md)**
+
+That document covers: XBRL concept selection, quarterly normalization, gross profit
+derivation, margin calculations, YoY matching, profitability profile classification,
+metric source labels, z-score exception flags, upheaval score, natural language
+summary rules, recent filers discovery, and the signal board scoring model.
 
 ## Upstream resilience behavior
 

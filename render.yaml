@@ -11,7 +11,7 @@ services:
       - key: CORS_ALLOW_ORIGINS
         value: https://sectracker.onrender.com
       - key: SEC_USER_AGENT
-        value: edgar-api/0.1 your-email@example.com
+        value: edgar-api/0.1 jason.ostergren79@gmail.com
       - key: SEC_REQUIRE_EXPLICIT_USER_AGENT
         value: "true"
       - key: SEC_HTTP_TIMEOUT_SECONDS

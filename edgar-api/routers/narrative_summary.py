@@ -4,6 +4,8 @@ Generates a rules-based natural language summary of the latest quarter's
 financial performance based on the metrics data.
 """
 
+import logging
+import re
 from fastapi import APIRouter, HTTPException
 from edgar_client import fetch_company_facts, normalize_cik_to_10_digits
 from routers.financial_metrics import (
@@ -20,6 +22,12 @@ from routers.financial_metrics import (
 from datetime import date
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
+
+
+def _validate_cik(cik: str) -> None:
+    if not re.match(r"^\d{1,10}$", cik.strip()):
+        raise HTTPException(status_code=400, detail=f"Invalid CIK '{cik}': must be 1–10 digits")
 
 
 def _fmt_currency(val, unit="M"):
@@ -69,10 +77,13 @@ def _margin_commentary(current, prior):
 
 @router.get("/company/{cik}/summary")
 async def company_summary(cik: str):
+    _validate_cik(cik)
     cik10 = normalize_cik_to_10_digits(cik)
+    logger.info("Summary request for CIK %s", cik10)
     try:
         facts = await fetch_company_facts(cik10)
     except Exception as e:
+        logger.error("EDGAR facts fetch failed for CIK %s: %s", cik10, e)
         raise HTTPException(status_code=502, detail=f"EDGAR fetch failed: {e}")
 
     rev_rows = _prefer_quarterly_filing_rows(_select_best_concept_rows(facts, REVENUE_CONCEPTS))

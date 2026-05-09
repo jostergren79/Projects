@@ -6,6 +6,8 @@ own trailing history (z-score > 2.0 or < -2.0 = flagged).
 Checks: revenue growth, gross margin, operating margin, net margin.
 """
 
+import logging
+import re
 from fastapi import APIRouter, HTTPException
 from edgar_client import fetch_company_facts, normalize_cik_to_10_digits
 from routers.financial_metrics import (
@@ -21,8 +23,14 @@ from routers.financial_metrics import (
 import statistics
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 LOOKBACK = 8   # quarters of history to establish baseline
+
+
+def _validate_cik(cik: str) -> None:
+    if not re.match(r"^\d{1,10}$", cik.strip()):
+        raise HTTPException(status_code=400, detail=f"Invalid CIK '{cik}': must be 1–10 digits")
 
 
 def _zscore(value, history):
@@ -63,10 +71,13 @@ def _flag(metric: str, period: str, value: float, z) -> dict:
 
 @router.get("/company/{cik}/flags")
 async def company_flags(cik: str):
+    _validate_cik(cik)
     cik10 = normalize_cik_to_10_digits(cik)
+    logger.info("Flags request for CIK %s", cik10)
     try:
         facts = await fetch_company_facts(cik10)
     except Exception as e:
+        logger.error("EDGAR facts fetch failed for CIK %s: %s", cik10, e)
         raise HTTPException(status_code=502, detail=f"EDGAR fetch failed: {e}")
 
     rev_rows = _prefer_quarterly_filing_rows(_select_best_concept_rows(facts, REVENUE_CONCEPTS))

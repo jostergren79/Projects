@@ -13,8 +13,11 @@ If you are new to this repo, use this path-based guide:
 
 1. Want EDGAR backend API behavior: start in edgar-api/main.py, then edgar-api/routers/.
 2. Want financial metric logic: start in edgar-api/routers/financial_metrics.py.
-3. Want public-facing HTML pages: start in notes-api/public/.
-4. Want smoke validation for public mode: start in notes-api/scripts/smoke-public-mode.sh.
+3. Want anomaly signals or filing cadence logic: start in edgar-api/routers/anomaly_flags.py and edgar-api/routers/company_lookup.py (_build_anomaly_signals).
+4. Want the aggregated dashboard endpoint: start in edgar-api/routers/dashboard.py.
+5. Want the natural language summary: start in edgar-api/routers/narrative_summary.py.
+6. Want public-facing HTML pages: start in notes-api/public/.
+7. Want smoke validation for public mode: start in notes-api/scripts/smoke-public-mode.sh.
 
 ## Folder Naming Decision
 

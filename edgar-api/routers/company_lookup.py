@@ -13,6 +13,7 @@ Lookup endpoints:
         Consolidated company object (metadata + filing snapshot + fact coverage).
 """
 
+import logging
 import re
 from datetime import date, timedelta
 from fastapi import APIRouter, HTTPException, Query
@@ -32,6 +33,7 @@ from routers.financial_metrics import (
 )
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 LEGAL_SUFFIXES = {
     "INC", "INCORPORATED", "CORP", "CORPORATION", "CO", "COMPANY", "PLC",
@@ -293,7 +295,7 @@ async def _company_payload(entry: dict) -> dict:
 @router.get("/company")
 async def company_lookup(ticker: str = Query(..., description="Stock ticker symbol, e.g. AAPL")):
     ticker = ticker.upper().strip()
-
+    logger.info("Ticker lookup: %s", ticker)
     tickers = await fetch_company_ticker_index()
     if ticker not in tickers:
         raise HTTPException(status_code=404, detail=f"Ticker '{ticker}' not found in SEC EDGAR")
@@ -381,11 +383,15 @@ async def company_resolve(
 
 @router.get("/company/object/{cik}")
 async def company_object(cik: str):
+    if not re.match(r"^\d{1,10}$", cik.strip()):
+        raise HTTPException(status_code=400, detail=f"Invalid CIK '{cik}': must be 1–10 digits")
     cik10 = normalize_cik_to_10_digits(cik)
+    logger.info("Company object request for CIK %s", cik10)
     try:
         subs = await fetch_company_submissions(cik10)
         facts = await fetch_company_facts(cik10)
     except Exception as e:
+        logger.error("EDGAR fetch failed for CIK %s: %s", cik10, e)
         raise HTTPException(status_code=502, detail=f"EDGAR fetch failed: {e}")
 
     filings = subs.get("filings", {}).get("recent", {})
@@ -454,12 +460,16 @@ async def company_object(cik: str):
 
 @router.get("/company/{cik}/anomalies")
 async def company_anomalies(cik: str):
+    if not re.match(r"^\d{1,10}$", cik.strip()):
+        raise HTTPException(status_code=400, detail=f"Invalid CIK '{cik}': must be 1–10 digits")
     cik10 = normalize_cik_to_10_digits(cik)
+    logger.info("Anomalies request for CIK %s", cik10)
     try:
         company_obj = await company_object(cik10)
     except HTTPException:
         raise
     except Exception as e:
+        logger.error("Anomaly analysis failed for CIK %s: %s", cik10, e)
         raise HTTPException(status_code=502, detail=f"EDGAR anomaly analysis failed: {e}")
 
     return _build_anomaly_signals(company_obj)

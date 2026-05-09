@@ -2,9 +2,10 @@
 edgar_client.py — thin async wrapper around the SEC EDGAR APIs.
 
 Endpoints used:
-  - https://www.sec.gov/files/company_tickers.json      (ticker → CIK map)
-  - https://data.sec.gov/submissions/{CIK10}.json       (company metadata + filings)
-  - https://data.sec.gov/api/xbrl/companyfacts/{CIK10}.json  (all XBRL financial facts)
+  - https://www.sec.gov/files/company_tickers.json                 (ticker → CIK map)
+  - https://data.sec.gov/submissions/{CIK10}.json                  (company metadata + filings)
+  - https://data.sec.gov/api/xbrl/companyfacts/{CIK10}.json        (all XBRL financial facts)
+  - https://efts.sec.gov/LATEST/search-index?forms=10-Q,10-K&...   (recent filers feed)
 
 SEC rate-limit guidance: max 10 req/s, identify yourself via User-Agent.
 
@@ -17,10 +18,13 @@ Protections implemented here:
 """
 
 import httpx
+import logging
 import os
 import asyncio
 import time
-from cache import load_cached_json, store_cached_json
+from cache import load_cached_json, load_stale_cached_json, store_cached_json
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -58,6 +62,7 @@ HEADERS = {
 
 BASE_DATA = "https://data.sec.gov"
 BASE_WWW  = "https://www.sec.gov"
+BASE_EFTS = "https://efts.sec.gov"
 
 HTTP_TIMEOUT_SECONDS      = float(os.getenv("SEC_HTTP_TIMEOUT_SECONDS", "20"))
 HTTP_MAX_RETRIES          = max(0, int(os.getenv("SEC_HTTP_MAX_RETRIES", "3")))
@@ -169,6 +174,13 @@ async def fetch_json_with_optional_cache(url: str, cache_key=None) -> dict:
         future.set_result(data)
         return data
     except Exception as exc:
+        # Stale-cache fallback: serve expired data rather than fail hard when SEC is unreachable.
+        if cache_key:
+            stale = load_stale_cached_json(cache_key)
+            if stale is not None:
+                logger.warning("SEC fetch failed for %s; serving stale cache. Error: %s", cache_key, exc)
+                future.set_result(stale)
+                return stale
         future.set_exception(exc)
         raise
     finally:
@@ -186,14 +198,18 @@ async def _do_fetch(url: str) -> dict:
                 response.raise_for_status()
                 return response.json()
             except httpx.HTTPStatusError as exc:
-                if exc.response.status_code == 429:
+                status = exc.response.status_code
+                if status == 429:
+                    logger.warning("SEC returned 429 for %s; entering %ss cooldown", url, SEC_429_COOLDOWN_SECONDS)
                     _rate_limiter.notify_429()
-                if attempt < HTTP_MAX_RETRIES and _is_retryable_status_code(exc.response.status_code):
+                if attempt < HTTP_MAX_RETRIES and _is_retryable_status_code(status):
+                    logger.info("Retryable HTTP %d for %s; attempt %d/%d", status, url, attempt + 1, HTTP_MAX_RETRIES)
                     await asyncio.sleep(_retry_delay_seconds(attempt))
                     continue
                 raise
-            except (httpx.TimeoutException, httpx.RequestError):
+            except (httpx.TimeoutException, httpx.RequestError) as exc:
                 if attempt < HTTP_MAX_RETRIES:
+                    logger.info("Transient error for %s (%s); attempt %d/%d", url, type(exc).__name__, attempt + 1, HTTP_MAX_RETRIES)
                     await asyncio.sleep(_retry_delay_seconds(attempt))
                     continue
                 raise
@@ -225,6 +241,73 @@ async def fetch_company_facts(cik10: str) -> dict:
     return await fetch_json_with_optional_cache(
         f"{BASE_DATA}/api/xbrl/companyfacts/CIK{cik10}.json", cache_key=f"facts:{cik10}"
     )
+
+
+async def fetch_recent_filers(days: int = 14, limit: int = 30) -> list:
+    """
+    Returns companies that recently filed 10-Q or 10-K with SEC EDGAR.
+
+    Source: SEC EDGAR full-text search API (EFTS).
+    Accession number format XXXXXXXXXX-YY-NNNNNN; the first 10 digits are the CIK.
+    Results are deduplicated by CIK so each company appears at most once.
+    """
+    from datetime import date, timedelta
+    end_dt   = date.today()
+    start_dt = end_dt - timedelta(days=days)
+
+    url = (
+        f"{BASE_EFTS}/LATEST/search-index"
+        f"?q=%22%22"
+        f"&forms=10-Q%2C10-K"
+        f"&dateRange=custom"
+        f"&startdt={start_dt.isoformat()}"
+        f"&enddt={end_dt.isoformat()}"
+    )
+
+    # Cache keyed by date window + limit so changing the limit never serves stale results.
+    from cache import load_cached_json, store_cached_json
+    cache_key = f"feed:{start_dt}:{end_dt}:n{limit}"
+    cached = load_cached_json(cache_key)
+    if cached is not None:
+        return cached
+
+    raw = await _do_fetch(url)
+    hits = (raw.get("hits") or {}).get("hits") or []
+
+    seen: set[str] = set()
+    result: list[dict] = []
+
+    for hit in hits:
+        src = hit.get("_source") or {}
+
+        # CIK: EFTS returns a `ciks` list; take the first entry.
+        cik_list = src.get("ciks") or []
+        cik10 = str(cik_list[0]).zfill(10) if cik_list else ""
+        if not cik10 or cik10 == "0000000000" or cik10 in seen:
+            continue
+        seen.add(cik10)
+
+        # Company name: EFTS `display_names` format is "Name  (TICKER)  (CIK XXXXXXXXXX)"
+        raw_name = (src.get("display_names") or [""])[0]
+        name = raw_name.split("  (")[0].strip() if raw_name else ""
+
+        # Form type: use root_forms (the parent filing type) rather than `form`
+        # which may be an exhibit code like "EX-31.4".
+        form = ((src.get("root_forms") or []) + [""])[0]
+
+        result.append({
+            "cik":    cik10,
+            "name":   name,
+            "form":   form,
+            "filed":  src.get("file_date", ""),
+            "period": src.get("period_ending", ""),
+        })
+
+        if len(result) >= limit:
+            break
+
+    store_cached_json(cache_key, result)
+    return result
 
 
 def normalize_cik_to_10_digits(cik) -> str:

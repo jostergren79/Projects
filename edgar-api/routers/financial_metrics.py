@@ -11,12 +11,20 @@ XBRL concept mapping (us-gaap):
   EPS diluted:     EarningsPerShareDiluted
 """
 
+import logging
+import re
 from fastapi import APIRouter, HTTPException, Query
 from edgar_client import fetch_company_facts, normalize_cik_to_10_digits
 from datetime import date
 from typing import Optional
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
+
+
+def _validate_cik(cik: str) -> None:
+    if not re.match(r"^\d{1,10}$", cik.strip()):
+        raise HTTPException(status_code=400, detail=f"Invalid CIK '{cik}': must be 1–10 digits")
 
 # Ordered preference list — first concept that has data wins.
 # This list is intentionally broad because filers vary by preferred XBRL tags.
@@ -457,10 +465,13 @@ async def company_metrics(
     quarters: int = 8,
     debug: bool = Query(False, description="Include concept/normalization diagnostics"),
 ):
+    _validate_cik(cik)
     cik10 = normalize_cik_to_10_digits(cik)
+    logger.info("Metrics request for CIK %s (quarters=%d)", cik10, quarters)
     try:
         facts = await fetch_company_facts(cik10)
     except Exception as e:
+        logger.error("EDGAR facts fetch failed for CIK %s: %s", cik10, e)
         raise HTTPException(status_code=502, detail=f"EDGAR fetch failed: {e}")
 
     revenue_concept, revenue_rows = _select_best_concept_with_rows(facts, REVENUE_CONCEPTS)

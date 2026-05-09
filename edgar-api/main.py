@@ -1,23 +1,43 @@
 """
 edgar-api — main FastAPI application
 Routes:
+  GET /                            → serves edgar.html frontend
+  GET /edgar                       → serves edgar.html frontend
+  GET /health                      → health check
   GET /company?ticker=AAPL         → CIK lookup + company metadata
+  GET /company/search?name=apple   → company name search
+  GET /company/resolve?q=nike      → smart ticker-or-name resolver
+  GET /company/object/{cik}        → consolidated company object + XBRL coverage
   GET /company/{cik}/metrics       → 8-quarter financial metrics
   GET /company/{cik}/segments      → segment revenue breakdown
   GET /company/{cik}/flags         → exception flags (metrics outside historical norms)
+  GET /company/{cik}/summary       → rules-based natural language summary
+  GET /company/{cik}/anomalies     → filing cadence + XBRL anomaly signals
+  GET /company/{cik}/dashboard     → all of the above in one aggregated call
+  GET /feed/recent                 → recent 10-Q / 10-K filers for signal board discovery
 """
 
-from fastapi import FastAPI
-from fastapi import Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
-import httpx
+import logging
+import collections
 import os
 import pathlib
 import time
-import collections
+
+import httpx
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, JSONResponse
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s %(message)s",
+    datefmt="%Y-%m-%dT%H:%M:%S",
+)
+logger = logging.getLogger(__name__)
 
 _PUBLIC = pathlib.Path(__file__).parent.parent / "notes-api" / "public"
+
+from cache import cache_health_check
 
 from routers import (
     company_lookup,
@@ -26,6 +46,7 @@ from routers import (
     anomaly_flags,
     narrative_summary,
     dashboard,
+    feed,
 )
 
 app = FastAPI(title="EDGAR Financial Metrics API", version="0.1.0")
@@ -42,8 +63,18 @@ _ip_windows: dict[str, collections.deque] = {}
 
 
 @app.middleware("http")
+async def request_logger(request: Request, call_next):
+    start = time.monotonic()
+    response = await call_next(request)
+    elapsed = time.monotonic() - start
+    logger.info("%s %s %d %.3fs", request.method, request.url.path, response.status_code, elapsed)
+    return response
+
+
+@app.middleware("http")
 async def per_ip_rate_limit(request: Request, call_next):
-    if request.url.path.startswith("/company"):
+    path = request.url.path
+    if path.startswith("/company") or path.startswith("/feed"):
         ip = request.client.host if request.client else "unknown"
         now = time.monotonic()
         window = _ip_windows.setdefault(ip, collections.deque())
@@ -52,6 +83,7 @@ async def per_ip_rate_limit(request: Request, call_next):
             window.popleft()
         if len(window) >= _RATE_LIMIT_REQUESTS:
             retry_after = int(_RATE_LIMIT_WINDOW - (now - window[0])) + 1
+            logger.warning("Rate limit hit for IP %s on %s", ip, path)
             return JSONResponse(
                 status_code=429,
                 content={"detail": "Too many requests. Please slow down."},
@@ -83,6 +115,7 @@ app.include_router(segment_breakdown.router)
 app.include_router(anomaly_flags.router)
 app.include_router(narrative_summary.router)
 app.include_router(dashboard.router)
+app.include_router(feed.router)
 
 
 @app.get("/")
@@ -97,7 +130,9 @@ def edgar_page():
 
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    cache = cache_health_check()
+    status = "ok" if cache["healthy"] else "degraded"
+    return {"status": status, "cache": cache}
 
 
 @app.exception_handler(httpx.TimeoutException)
