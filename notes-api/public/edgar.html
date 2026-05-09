@@ -294,7 +294,19 @@
       .seg-pct { min-width: 0; }
 
       footer { margin-top: auto; padding: 20px 14px; }
+      #watchlist-panel { padding: 0 14px; margin-top: 16px; }
     }
+
+    /* Watchlist panel */
+    #watchlist-panel { max-width: 960px; margin: 24px auto 0; padding: 0 20px; display: none; }
+    #watchlist-panel .wl-heading { font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 8px; }
+    .wl-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+    .wl-chip { display: flex; align-items: center; gap: 6px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; font-size: .82rem; cursor: pointer; transition: border-color .15s; max-width: 220px; }
+    .wl-chip:hover { border-color: var(--accent); }
+    .wl-chip-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+    .wl-chip-ticker { color: var(--muted); font-size: .75rem; white-space: nowrap; }
+    .wl-chip-remove { color: var(--muted); font-size: 1rem; line-height: 1; padding: 0 2px; border: none; background: none; cursor: pointer; flex-shrink: 0; }
+    .wl-chip-remove:hover { color: var(--red); }
   </style>
 </head>
 <body>
@@ -322,6 +334,11 @@
       <span onclick="quickSearch('CAG')">CAG</span>
     </div>
     <div id="error-msg"></div>
+  </div>
+
+  <div id="watchlist-panel">
+    <div class="wl-heading">Watchlist</div>
+    <div class="wl-grid" id="wl-grid"></div>
   </div>
 
   <div id="signal-board" style="display:none;">
@@ -460,6 +477,8 @@
     let currentCompany = null;
     let currentMetrics = null;
     let currentTicker = null;
+    let currentCik = null;
+    let openedWithCikParam = false;
 
     // ── Signal Board ─────────────────────────────────────────────────────────
     //
@@ -591,15 +610,17 @@
     }
 
     function goBack() {
-      if (new URLSearchParams(window.location.search).get('cik')) {
-        // Company tab opened via ?cik= — return to the main page.
+      if (openedWithCikParam) {
+        // Tab was opened directly via ?cik= — navigate home cleanly.
         window.location.href = window.location.pathname;
       } else {
-        // Inline search on main page — hide dashboard, reveal signal board.
+        // Inline search — hide dashboard, clear URL, restore signal board + watchlist.
+        history.pushState({}, '', window.location.pathname);
         document.getElementById('back-bar').style.display = 'none';
         document.getElementById('dashboard').style.display = 'none';
         document.getElementById('signal-board').style.display = 'block';
         document.getElementById('signal-board').scrollIntoView({ behavior: 'smooth' });
+        renderWatchlistPanel();
       }
     }
 
@@ -654,12 +675,13 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-      const params  = new URLSearchParams(window.location.search);
+      const params   = new URLSearchParams(window.location.search);
       const cikParam = params.get('cik');
       const qParam   = params.get('q') || params.get('ticker');
 
       if (cikParam) {
-        // Company view: hide signal board, auto-load this CIK.
+        // Tab opened directly with ?cik= — mark so goBack() does a full nav home.
+        openedWithCikParam = true;
         document.getElementById('signal-board').style.display = 'none';
         _loadByCikInline(cikParam, '');
       } else if (qParam) {
@@ -668,7 +690,8 @@
         document.getElementById('ticker-input').value = qParam;
         search();
       } else {
-        // Discovery view: show signal board.
+        // Discovery view: show signal board + watchlist.
+        renderWatchlistPanel();
         loadSignalBoard();
       }
     });
@@ -745,6 +768,9 @@
         const anomalies = dash.anomalies && !dash.anomalies.error ? dash.anomalies : null;
 
         renderDashboard(company, metrics, segments, flags, summary, companyObject, anomalies);
+        // Update URL so this page is shareable and the back button works cleanly.
+        history.pushState({}, '', '?cik=' + cik);
+        document.getElementById('back-bar').style.display = 'block';
       } catch (e) {
         showError(e.message);
       } finally {
@@ -801,29 +827,54 @@
 
     function updateWatchButton() {
       const btn = document.getElementById('watch-btn');
-      if (!btn || !currentTicker) return;
+      if (!btn || !currentCik) return;
       const list = getWatchlist();
-      const exists = list.some(x => x.ticker === currentTicker);
-      btn.textContent = exists ? 'Remove from Watchlist' : 'Add to Watchlist';
+      const exists = list.some(x => x.cik === currentCik);
+      btn.textContent = exists ? '★ Watchlist' : '☆ Add to Watchlist';
     }
 
     function toggleWatchlist() {
-      if (!currentTicker || !currentCompany) return;
+      if (!currentCik || !currentCompany) return;
       const list = getWatchlist();
-      const idx = list.findIndex(x => x.ticker === currentTicker);
+      const idx = list.findIndex(x => x.cik === currentCik);
       if (idx >= 0) {
         list.splice(idx, 1);
       } else {
         list.push({
-          ticker: currentTicker,
-          cik: currentCompany.cik,
+          cik: currentCik,
+          ticker: currentTicker || '',
           name: currentCompany.name,
-          last_10q: currentCompany.last_10q || null,
           saved_at: new Date().toISOString(),
         });
       }
       setWatchlist(list);
       updateWatchButton();
+      renderWatchlistPanel();
+    }
+
+    function renderWatchlistPanel() {
+      const panel = document.getElementById('watchlist-panel');
+      const grid  = document.getElementById('wl-grid');
+      const list  = getWatchlist();
+      const dashVisible = document.getElementById('dashboard').style.display !== 'none';
+      if (!list.length || dashVisible) {
+        panel.style.display = 'none';
+        return;
+      }
+      panel.style.display = 'block';
+      grid.innerHTML = list.map(item => `
+        <div class="wl-chip" onclick="loadByCik('${escapeAttr(item.cik)}', '${escapeAttr(item.name)}')">
+          ${item.ticker ? `<span class="wl-chip-ticker">${escapeAttr(item.ticker)}</span>` : ''}
+          <span class="wl-chip-name">${escapeAttr(item.name)}</span>
+          <button class="wl-chip-remove" onclick="event.stopPropagation();removeFromWatchlist('${escapeAttr(item.cik)}')" title="Remove">×</button>
+        </div>
+      `).join('');
+    }
+
+    function removeFromWatchlist(cik) {
+      setWatchlist(getWatchlist().filter(x => x.cik !== cik));
+      renderWatchlistPanel();
+      if (currentCik === cik) updateWatchButton();
     }
 
     function exportMetrics(format) {
@@ -1033,6 +1084,8 @@
       currentCompany = company;
       currentMetrics = metrics;
       currentTicker = company?.ticker || null;
+      currentCik = company?.cik || null;
+      document.getElementById('watchlist-panel').style.display = 'none';
 
       // Company header
       document.getElementById('co-name').textContent = company.name;
