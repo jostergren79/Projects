@@ -480,6 +480,17 @@
     let currentCik = null;
     let openedWithCikParam = false;
 
+    function trackEvent(name, props = {}) {
+      try {
+        fetch(`${API}/analytics/event`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ event: name, props }),
+          keepalive: true,
+        }).catch(() => {});
+      } catch (_) {}
+    }
+
     // ── Signal Board ─────────────────────────────────────────────────────────
     //
     // Scoring model (3 signals, each votes +1 or −1):
@@ -627,6 +638,7 @@
     // Open a company in its own tab by encoding the CIK in the URL.
     // The new tab detects ?cik= on load and calls _loadByCikInline directly.
     function loadByCik(cik, displayName) {
+      trackEvent('signal_board_click', { cik, name: displayName });
       const url = new URL(window.location.href);
       url.search = '';
       url.searchParams.set('cik', cik);
@@ -666,6 +678,7 @@
         const anomalies = dash.anomalies && !dash.anomalies.error ? dash.anomalies : null;
 
         renderDashboard(company, metrics, segments, flags, summary, companyObject, anomalies);
+        trackEvent('company_view', { cik, name: company.name });
       } catch (e) {
         showError(e.message || 'Failed to load company data.');
       } finally {
@@ -682,15 +695,18 @@
       if (cikParam) {
         // Tab opened directly with ?cik= — mark so goBack() does a full nav home.
         openedWithCikParam = true;
+        trackEvent('page_view', { source: 'direct_cik' });
         document.getElementById('signal-board').style.display = 'none';
         _loadByCikInline(cikParam, '');
       } else if (qParam) {
         // Direct ticker/name link: hide signal board, auto-search.
+        trackEvent('page_view', { source: 'query_param' });
         document.getElementById('signal-board').style.display = 'none';
         document.getElementById('ticker-input').value = qParam;
         search();
       } else {
         // Discovery view: show signal board + watchlist.
+        trackEvent('page_view', { source: 'signal_board' });
         renderWatchlistPanel();
         loadSignalBoard();
       }
@@ -768,6 +784,7 @@
         const anomalies = dash.anomalies && !dash.anomalies.error ? dash.anomalies : null;
 
         renderDashboard(company, metrics, segments, flags, summary, companyObject, anomalies);
+        trackEvent('search', { query, cik, name: company.name });
         // Update URL so this page is shareable and the back button works cleanly.
         history.pushState({}, '', '?cik=' + cik);
         document.getElementById('back-bar').style.display = 'block';
@@ -846,6 +863,7 @@
           name: currentCompany.name,
           saved_at: new Date().toISOString(),
         });
+        trackEvent('watchlist_add', { cik: currentCik, name: currentCompany.name });
       }
       setWatchlist(list);
       updateWatchButton();
@@ -879,6 +897,7 @@
 
     function exportMetrics(format) {
       if (!currentMetrics?.periods?.length) return;
+      trackEvent('export', { format, cik: currentCik || '' });
       const periods = currentMetrics.periods;
       const ticker = currentTicker || 'company';
 

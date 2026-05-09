@@ -47,6 +47,7 @@ from routers import (
     narrative_summary,
     dashboard,
     feed,
+    analytics,
 )
 
 app = FastAPI(title="EDGAR Financial Metrics API", version="0.1.0")
@@ -74,7 +75,7 @@ async def request_logger(request: Request, call_next):
 @app.middleware("http")
 async def per_ip_rate_limit(request: Request, call_next):
     path = request.url.path
-    if path.startswith("/company") or path.startswith("/feed"):
+    if path.startswith("/company") or path.startswith("/feed") or path.startswith("/analytics"):
         ip = request.client.host if request.client else "unknown"
         now = time.monotonic()
         window = _ip_windows.setdefault(ip, collections.deque())
@@ -116,6 +117,7 @@ app.include_router(anomaly_flags.router)
 app.include_router(narrative_summary.router)
 app.include_router(dashboard.router)
 app.include_router(feed.router)
+app.include_router(analytics.router)
 
 
 @app.get("/")
