@@ -97,6 +97,16 @@
     .neg { color: var(--red); }
     .neu { color: var(--muted); }
 
+    .anomaly-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 16px; }
+    .signal-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+    .signal-card.low { border-color: var(--green); }
+    .signal-card.moderate { border-color: var(--yellow); }
+    .signal-card.high { border-color: var(--red); }
+    .signal-card .label { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; }
+    .signal-card .value { font-size: 1.35rem; font-weight: 700; line-height: 1.2; }
+    .signal-card .detail { font-size: .84rem; color: var(--text); line-height: 1.5; }
+    .anomaly-summary { font-size: .88rem; color: var(--muted); margin-bottom: 12px; }
+
     /* Flags */
     #flags-section { margin-bottom: 24px; }
     #flags-section h3 { font-size: .9rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 10px; }
@@ -297,6 +307,12 @@
     <!-- KPI tiles -->
     <div class="kpi-grid" id="kpi-grid"></div>
 
+    <div class="panel" id="anomaly-panel">
+      <h3>Anomaly Signals</h3>
+      <div class="anomaly-summary" id="anomaly-summary"></div>
+      <div class="anomaly-grid" id="anomaly-grid"></div>
+    </div>
+
     <div class="panel" id="trust-panel">
       <h3>Metric Trust & Sources</h3>
       <div class="trust-grid" id="trust-grid"></div>
@@ -445,10 +461,11 @@
 
         const metrics  = dash.metrics  && !dash.metrics.error  ? dash.metrics  : null;
         const segments = dash.segments && !dash.segments.error ? dash.segments : null;
-        const flags    = dash.flags    && !dash.flags.error    ? dash.flags    : null;
-        const summary  = dash.summary  && !dash.summary.error  ? dash.summary  : null;
+        const flags     = dash.flags     && !dash.flags.error     ? dash.flags     : null;
+        const summary   = dash.summary   && !dash.summary.error   ? dash.summary   : null;
+        const anomalies = dash.anomalies && !dash.anomalies.error ? dash.anomalies : null;
 
-        renderDashboard(company, metrics, segments, flags, summary, companyObject);
+        renderDashboard(company, metrics, segments, flags, summary, companyObject, anomalies);
       } catch (e) {
         showError(e.message);
       } finally {
@@ -581,6 +598,54 @@
       `).join('');
     }
 
+    function renderAnomalyPanel(anomalies) {
+      const summary = document.getElementById('anomaly-summary');
+      const grid = document.getElementById('anomaly-grid');
+      if (!anomalies) {
+        if (summary) summary.textContent = 'Anomaly analysis unavailable.';
+        if (grid) grid.innerHTML = '';
+        return;
+      }
+
+      if (summary) {
+        summary.textContent = anomalies.overview_note || 'Heuristic anomaly indicators derived from filing cadence, XBRL coverage, normalized concept mapping, and peer metadata.';
+      }
+
+      const cards = [];
+      if (typeof anomalies.upheaval_score === 'number') {
+        cards.push({
+          label: 'Upheaval Score',
+          value: `${anomalies.upheaval_score}/100`,
+          detail: `Signal level: ${anomalies.status || 'UNKNOWN'}`,
+          severity: anomalies.status?.toLowerCase() || 'low',
+        });
+      }
+
+      for (const signal of anomalies.signals || []) {
+        const severityKey = (signal.severity || signal.status || 'low').toLowerCase();
+        let severity = 'low';
+        if (['elevated', 'high', 'incomplete'].includes(severityKey)) {
+          severity = 'high';
+        } else if (['moderate', 'complete'].includes(severityKey)) {
+          severity = 'moderate';
+        }
+        cards.push({
+          label: signal.label,
+          value: signal.value,
+          detail: signal.detail,
+          severity,
+        });
+      }
+
+      grid.innerHTML = cards.map(c => `
+        <div class="signal-card ${c.severity}">
+          <div class="label">${escapeAttr(c.label)}</div>
+          <div class="value">${escapeAttr(c.value)}</div>
+          <div class="detail">${escapeAttr(c.detail)}</div>
+        </div>
+      `).join('');
+    }
+
     function renderProvenance() {
       const sel = document.getElementById('prov-period');
       const details = document.getElementById('prov-details');
@@ -675,7 +740,7 @@
         </table>`;
     }
 
-    function renderDashboard(company, metrics, segments, flags, summary, companyObject) {
+    function renderDashboard(company, metrics, segments, flags, summary, companyObject, anomalies) {
       currentCompany = company;
       currentMetrics = metrics;
       currentTicker = company?.ticker || null;
@@ -693,6 +758,7 @@
         summary?.summary || 'Summary not available.';
       updateWatchButton();
       renderTrustPanel(metrics);
+      renderAnomalyPanel(anomalies);
 
       const peerInput = document.getElementById('peer-input');
       const peerNote = document.getElementById('peer-note');

@@ -14,6 +14,7 @@ Lookup endpoints:
 """
 
 import re
+from datetime import date, timedelta
 from fastapi import APIRouter, HTTPException, Query
 from edgar_client import (
     fetch_company_ticker_index,
@@ -54,6 +55,133 @@ def _normalize_with_hyphens(text: str) -> str:
 
 def _tokens(text: str) -> list:
     return [t for t in _normalize(text).split() if t and t not in LEGAL_SUFFIXES]
+
+
+def _parse_edgar_date(value: str):
+    if not value:
+        return None
+    try:
+        return date.fromisoformat(value)
+    except ValueError:
+        return None
+
+
+def _days_between(d1, d2):
+    if d1 is None or d2 is None:
+        return None
+    return abs((d1 - d2).days)
+
+
+def _build_anomaly_signals(company_object: dict) -> dict:
+    filings = company_object.get('recent_filings', []) or []
+    xbrl = company_object.get('xbrl', {}) or {}
+    normalized = xbrl.get('normalized_concepts', {}) or {}
+    key_coverage = xbrl.get('key_concept_coverage', {}) or {}
+
+    parsed_filings = []
+    for item in filings:
+        dt = _parse_edgar_date(item.get('date') or '')
+        if dt:
+            parsed_filings.append({
+                'form': item.get('form'),
+                'date': dt,
+                'accession': item.get('accession'),
+            })
+
+    parsed_filings.sort(key=lambda x: x['date'], reverse=True)
+    latest_date = parsed_filings[0]['date'] if parsed_filings else None
+    last_8k = next((f for f in parsed_filings if f['form'] == '8-K'), None)
+    last_10q = next((f for f in parsed_filings if f['form'] == '10-Q'), None)
+
+    recent_8k = [f for f in parsed_filings if f['form'] == '8-K' and latest_date and _days_between(latest_date, f['date']) <= 90]
+    filing_burst = False
+    burst_detail = 'No unusual filing cadence detected in the latest filing snapshot.'
+    if len(recent_8k) >= 2:
+        for i in range(len(recent_8k) - 1):
+            gap = _days_between(recent_8k[i]['date'], recent_8k[i + 1]['date'])
+            if gap is not None and gap <= 10:
+                filing_burst = True
+                burst_detail = f'{len(recent_8k)} 8-K filings occurred within {gap} days of one another in the recent filing window.'
+                break
+
+    if not filing_burst and last_8k and last_10q:
+        gap = _days_between(last_10q['date'], last_8k['date'])
+        if gap is not None and 0 <= gap <= 14:
+            filing_burst = True
+            burst_detail = f'The most recent 8-K was filed {gap} days before the latest 10-Q.'
+
+    filing_note = burst_detail if filing_burst else 'Filing cadence is within expected bounds for the most recent filings.'
+    filing_status = 'ELEVATED' if filing_burst else 'LOW'
+
+    concept_count = xbrl.get('us_gaap_concepts_count') or 0
+    missing_keys = [k for k, v in key_coverage.items() if not v]
+    coverage_status = 'COMPLETE' if not missing_keys else 'INCOMPLETE'
+    coverage_note = (
+        'All core GAAP concepts are present in the latest XBRL snapshot.'
+        if not missing_keys
+        else f'Missing core concept coverage: {", ".join(missing_keys)}.'
+    )
+
+    normalized_keys = [k for k, v in normalized.items() if v]
+    normalized_complete = len(normalized_keys) >= 4
+    normalized_note = (
+        'Normalized concept mapping is strong, enabling consistent trend comparison.'
+        if normalized_complete
+        else f'Partial normalized mapping found: {len(normalized_keys)}/5 concepts mapped.'
+    )
+
+    peer_context = bool(company_object.get('sic')) and bool(company_object.get('exchanges'))
+    peer_note = (
+        f"Peer baseline available for SIC {company_object.get('sic')} on {', '.join(company_object.get('exchanges', []))}."
+        if peer_context
+        else 'Peer context is limited because SIC or exchange metadata is missing.'
+    )
+
+    score = 20
+    if filing_burst:
+        score += 30
+    if concept_count >= 450:
+        score += 10
+    elif concept_count >= 300:
+        score += 5
+    score += 15 if not missing_keys else 7
+    score += 15 if normalized_complete else 6
+    score += 10 if peer_context else 0
+    score = max(0, min(100, score))
+
+    status = 'ELEVATED' if score >= 70 else 'MODERATE' if score >= 40 else 'LOW'
+
+    return {
+        'upheaval_score': score,
+        'status': status,
+        'overview_note': 'Derived anomaly signals from filing cadence, XBRL coverage, normalized concept mapping, and peer metadata.',
+        'signals': [
+            {
+                'label': 'Filing Velocity',
+                'value': filing_status,
+                'detail': filing_note,
+                'severity': filing_status,
+            },
+            {
+                'label': 'XBRL Structure',
+                'value': f'{concept_count} concepts',
+                'detail': coverage_note,
+                'severity': coverage_status,
+            },
+            {
+                'label': 'Normalized Mapping',
+                'value': f'{len(normalized_keys)}/5 mapped',
+                'detail': normalized_note,
+                'severity': 'MODERATE' if normalized_complete else 'LOW',
+            },
+            {
+                'label': 'Peer Context',
+                'value': 'Available' if peer_context else 'Limited',
+                'detail': peer_note,
+                'severity': 'MODERATE' if peer_context else 'LOW',
+            },
+        ],
+    }
 
 
 def _levenshtein_distance(s1: str, s2: str) -> int:
@@ -322,3 +450,16 @@ async def company_object(cik: str):
             },
         },
     }
+
+
+@router.get("/company/{cik}/anomalies")
+async def company_anomalies(cik: str):
+    cik10 = normalize_cik_to_10_digits(cik)
+    try:
+        company_object = await company_object(cik10)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"EDGAR anomaly analysis failed: {e}")
+
+    return _build_anomaly_signals(company_object)

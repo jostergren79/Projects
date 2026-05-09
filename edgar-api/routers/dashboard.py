@@ -20,6 +20,7 @@ from fastapi.responses import JSONResponse
 from routers.financial_metrics import company_metrics
 from routers.segment_breakdown import company_segments
 from routers.anomaly_flags import company_flags
+from routers.company_lookup import company_anomalies
 from routers.narrative_summary import company_summary
 
 router = APIRouter()
@@ -39,19 +40,21 @@ async def company_dashboard(
     quarters: int = Query(8, ge=1, le=20),
     debug: bool = Query(False),
 ):
-    metrics_task  = _safe(company_metrics(cik=cik, quarters=quarters, debug=debug))
-    segments_task = _safe(company_segments(cik=cik))
-    flags_task    = _safe(company_flags(cik=cik))
-    summary_task  = _safe(company_summary(cik=cik))
+    metrics_task   = _safe(company_metrics(cik=cik, quarters=quarters, debug=debug))
+    segments_task  = _safe(company_segments(cik=cik))
+    flags_task     = _safe(company_flags(cik=cik))
+    summary_task   = _safe(company_summary(cik=cik))
+    anomalies_task = _safe(company_anomalies(cik=cik))
 
-    metrics, segments, flags, summary = await asyncio.gather(
-        metrics_task, segments_task, flags_task, summary_task
+    metrics, segments, flags, summary, anomalies = await asyncio.gather(
+        metrics_task, segments_task, flags_task, summary_task, anomalies_task
     )
 
     return {
-        "cik":      cik,
-        "metrics":  metrics,
-        "segments": segments,
-        "flags":    flags,
-        "summary":  summary,
+        "cik":       cik,
+        "metrics":   metrics,
+        "segments":  segments,
+        "flags":     flags,
+        "summary":   summary,
+        "anomalies": anomalies,
     }
