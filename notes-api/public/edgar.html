@@ -88,23 +88,23 @@
 
     /* KPI tiles */
     .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 24px; }
-    .kpi-tile { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
+    .kpi-tile { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; display: flex; flex-direction: column; word-break: break-word; overflow-wrap: break-word; }
     .kpi-tile .kpi-label { font-size: .75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; }
-    .kpi-tile .kpi-value { font-size: 1.6rem; font-weight: 700; }
-    .kpi-tile .kpi-sub { font-size: .8rem; margin-top: 4px; }
-    .kpi-tile .kpi-source { font-size: .73rem; color: var(--muted); margin-top: 6px; text-transform: uppercase; letter-spacing: .04em; }
+    .kpi-tile .kpi-value { font-size: 1.6rem; font-weight: 700; word-break: break-word; overflow-wrap: break-word; }
+    .kpi-tile .kpi-sub { font-size: .8rem; margin-top: 4px; word-break: break-word; }
+    .kpi-tile .kpi-source { font-size: .73rem; color: var(--muted); margin-top: 6px; text-transform: uppercase; letter-spacing: .04em; word-break: break-word; }
     .pos { color: var(--green); }
     .neg { color: var(--red); }
     .neu { color: var(--muted); }
 
     .anomaly-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 16px; }
-    .signal-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+    .signal-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; gap: 8px; word-break: break-word; overflow-wrap: break-word; }
     .signal-card.low { border-color: var(--green); }
     .signal-card.moderate { border-color: var(--yellow); }
     .signal-card.high { border-color: var(--red); }
     .signal-card .label { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; }
-    .signal-card .value { font-size: 1.35rem; font-weight: 700; line-height: 1.2; }
-    .signal-card .detail { font-size: .84rem; color: var(--text); line-height: 1.5; }
+    .signal-card .value { font-size: 1.35rem; font-weight: 700; line-height: 1.2; word-break: break-word; overflow-wrap: break-word; }
+    .signal-card .detail { font-size: .84rem; color: var(--text); line-height: 1.5; word-break: break-word; }
     .anomaly-summary { font-size: .88rem; color: var(--muted); margin-bottom: 12px; }
 
     /* Flags */
@@ -122,9 +122,9 @@
     .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 20px; }
     .panel h3 { font-size: .82rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px; }
     .trust-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
-    .trust-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px; }
+    .trust-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px; word-break: break-word; overflow-wrap: break-word; }
     .trust-item .label { color: var(--muted); font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; }
-    .trust-item .value { margin-top: 4px; font-size: .84rem; overflow-wrap: anywhere; word-break: break-word; }
+    .trust-item .value { margin-top: 4px; font-size: .84rem; overflow-wrap: break-word; word-break: break-word; line-height: 1.4; }
     .muted { color: var(--muted); }
 
     .prov-controls { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
