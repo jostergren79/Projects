@@ -456,10 +456,10 @@ async def company_object(cik: str):
 async def company_anomalies(cik: str):
     cik10 = normalize_cik_to_10_digits(cik)
     try:
-        company_object = await company_object(cik10)
+        company_obj = await company_object(cik10)
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"EDGAR anomaly analysis failed: {e}")
 
-    return _build_anomaly_signals(company_object)
+    return _build_anomaly_signals(company_obj)
