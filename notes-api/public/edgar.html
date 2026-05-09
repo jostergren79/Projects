@@ -123,8 +123,9 @@
     .panel h3 { font-size: .82rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px; }
     .trust-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
     .trust-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px; word-break: break-word; overflow-wrap: break-word; }
-    .trust-item .label { color: var(--muted); font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; }
-    .trust-item .value { margin-top: 4px; font-size: .84rem; overflow-wrap: break-word; word-break: break-word; line-height: 1.4; }
+    .trust-item .label { color: var(--muted); font-size: .68rem; text-transform: uppercase; letter-spacing: .03em; font-weight: 600; margin-bottom: 6px; }
+    .trust-item .value { margin-top: 2px; font-size: .75rem; overflow-wrap: break-word; word-break: break-word; line-height: 1.3; color: var(--text); }
+    .trust-item .muted { color: var(--muted); font-size: .68rem; margin-top: 4px; line-height: 1.3; }
     .muted { color: var(--muted); }
 
     .prov-controls { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
@@ -599,13 +600,16 @@
     }
 
     function renderAnomalyPanel(anomalies) {
+      const panel = document.getElementById('anomaly-panel');
       const summary = document.getElementById('anomaly-summary');
       const grid = document.getElementById('anomaly-grid');
-      if (!anomalies) {
-        if (summary) summary.textContent = 'Anomaly analysis unavailable.';
-        if (grid) grid.innerHTML = '';
+      
+      if (!anomalies || anomalies.error) {
+        if (panel) panel.style.display = 'none';
         return;
       }
+      
+      if (panel) panel.style.display = 'block';
 
       if (summary) {
         summary.textContent = anomalies.overview_note || 'Heuristic anomaly indicators derived from filing cadence, XBRL coverage, normalized concept mapping, and peer metadata.';
@@ -613,11 +617,16 @@
 
       const cards = [];
       if (typeof anomalies.upheaval_score === 'number') {
+        const statusLower = (anomalies.status || 'LOW').toLowerCase();
+        let severity = 'low';
+        if (['elevated', 'high'].includes(statusLower)) severity = 'high';
+        else if (statusLower === 'moderate') severity = 'moderate';
+        
         cards.push({
           label: 'Upheaval Score',
           value: `${anomalies.upheaval_score}/100`,
-          detail: `Signal level: ${anomalies.status || 'UNKNOWN'}`,
-          severity: anomalies.status?.toLowerCase() || 'low',
+          detail: `Signal: ${anomalies.status || 'UNKNOWN'}`,
+          severity: severity,
         });
       }
 
@@ -637,13 +646,15 @@
         });
       }
 
-      grid.innerHTML = cards.map(c => `
-        <div class="signal-card ${c.severity}">
-          <div class="label">${escapeAttr(c.label)}</div>
-          <div class="value">${escapeAttr(c.value)}</div>
-          <div class="detail">${escapeAttr(c.detail)}</div>
-        </div>
-      `).join('');
+      if (grid) {
+        grid.innerHTML = cards.map(c => `
+          <div class="signal-card ${c.severity}">
+            <div class="label">${escapeAttr(c.label)}</div>
+            <div class="value">${escapeAttr(c.value)}</div>
+            <div class="detail">${escapeAttr(c.detail)}</div>
+          </div>
+        `).join('');
+      }
     }
 
     function renderProvenance() {
