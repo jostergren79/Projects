@@ -19,7 +19,7 @@ SEC EDGAR financial data and anomaly detection tool. Pulls data directly from pu
 - Metric Trust panel (reported vs. derived vs. stale labeling)
 - Natural language summary (rules-based, not AI-generated)
 - Analytics event tracking (log-based via Render logs, 8 events including upgrade_modal_open, checkout_start)
-- Stripe payment integration — Pro $19/mo, Pro+ $99/mo (LIVE)
+- Stripe payment integration — Pro $19.99/mo, Pro+ $99/mo (LIVE)
 - Email alerts — NOT YET BUILT (next major feature after usage gating)
 
 **Stack:** FastAPI (Python) backend + static HTML/JS frontend, single Render service
@@ -60,7 +60,7 @@ SEC EDGAR financial data and anomaly detection tool. Pulls data directly from pu
 | Tier | Price | Features |
 |------|-------|----------|
 | Standard | $0 | Signal board (20 companies), company search, KPI grid (latest quarter), narrative summary, 8-quarter charts, quarterly data table. Unlimited lookups. |
-| Pro | $19/month | Everything free + Exception Flags (z-score), Filing Stress Score, Filing Signals, peer comparison, segment breakdown, source filing, watchlist, CSV/JSON export. |
+| Pro | $19.99/month | Everything free + Exception Flags (z-score), Filing Stress Score, Filing Signals, peer comparison, segment breakdown, source filing, watchlist, CSV/JSON export. |
 | Pro+ | $99/month | Everything in Pro + email alerts (not yet built — the main differentiator for this tier). |
 
 **Feature gating is LIVE** as of May 10, 2026. Frontend gates Pro sections with upgrade cards. No backend lookup limit — differentiation is purely by feature depth, not access.
@@ -127,7 +127,7 @@ _Replace completed items each session. Keep this list short._
 
 _Running log of important decisions so we don't relitigate them._
 
-- **Pricing:** $99/month justified only once email alerts are live. Without alerts it's a $19/month product.
+- **Pricing:** $99/month justified only once email alerts are live. Without alerts it's a $19.99/month product.
 - **No CRM yet:** Spreadsheet is sufficient until 80+ users. CRM is premature.
 - **No scaling/automation yet:** First 30 days is manual everything. Find 10 paying users by hand before building infrastructure.
 - **Filing Stress Score:** Renamed from "Upheaval Score" — better resonance with finance audience.
@@ -171,7 +171,7 @@ _Running log of important decisions so we don't relitigate them._
 - Header badge shows ✓ Pro (blue) or ✓ Pro+ (green) after verification; Standard shows Upgrade button
 - Stripe env vars in Render: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET (both sync:false / set manually)
 - Stripe webhook endpoint registered at https://www.edgarwolf.com/webhook/stripe
-- Price IDs: Pro = price_1TVNeQ1C3cijZqBOkOX1IoJj ($19/mo), Pro+ = price_1TVNfH1C3cijZqBOyp7Y5qJH ($99/mo)
+- Price IDs: Pro = price_1TVNeQ1C3cijZqBOkOX1IoJj ($19.99/mo), Pro+ = price_1TVNfH1C3cijZqBOyp7Y5qJH ($99/mo)
 
 **Feature gating (LIVE as of May 10, 2026):**
 - Frontend: `applyTierGating()` runs after every dashboard render, gates 6 sections for Standard users
