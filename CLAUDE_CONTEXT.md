@@ -18,13 +18,16 @@ SEC EDGAR financial data and anomaly detection tool. Pulls data directly from pu
 - Peer comparison, CSV/JSON export
 - Metric Trust panel (reported vs. derived vs. stale labeling)
 - Natural language summary (rules-based, not AI-generated)
-- Analytics event tracking (log-based via Render logs, 6 events)
-- Email alerts — NOT YET BUILT (next major feature)
+- Analytics event tracking (log-based via Render logs, 8 events including upgrade_modal_open, checkout_start)
+- Stripe payment integration — Pro $19/mo, Pro+ $99/mo (LIVE)
+- Email alerts — NOT YET BUILT (next major feature after usage gating)
 
 **Stack:** FastAPI (Python) backend + static HTML/JS frontend, single Render service
 **Live URL:** https://www.edgarwolf.com
 **Repo:** github.com/jostergren79/Projects
 **Render service:** sectracker.onrender.com (internal), www.edgarwolf.com (public)
+**Email:** jason@edgarwolf.com (Microsoft 365 via GoDaddy)
+
 **Key files:**
 - `edgar-api/main.py` — FastAPI app, middleware, routing
 - `edgar-api/edgar_client.py` — SEC EDGAR HTTP client, rate limiter, stale cache fallback
@@ -34,6 +37,7 @@ SEC EDGAR financial data and anomaly detection tool. Pulls data directly from pu
 - `edgar-api/routers/anomaly_flags.py` — z-score exception flags
 - `edgar-api/routers/feed.py` — recent SEC filers for signal board
 - `edgar-api/routers/analytics.py` — event logging endpoint
+- `edgar-api/routers/checkout.py` — Stripe checkout, webhook, subscription status
 - `notes-api/public/edgar.html` — entire frontend (single file)
 - `METHODOLOGY.md` — documents every derived metric and scoring formula
 
@@ -55,11 +59,11 @@ SEC EDGAR financial data and anomaly detection tool. Pulls data directly from pu
 
 | Tier | Price | Features |
 |------|-------|----------|
-| Free | $0 | 5 lookups/day |
-| Pro | $19/month | Unlimited lookups + watchlist |
-| Pro+ | $99/month | Everything + email alerts |
+| Standard | $0 | Currently fully open — no hard limits enforced yet |
+| Pro | $19/month | Stripe live, checkout works, no feature gating yet |
+| Pro+ | $99/month | Stripe live, checkout works, no feature gating yet |
 
-Note: Stripe and usage limits are NOT yet implemented. The app is currently fully open.
+**Important:** Stripe checkout and subscription verification are LIVE but feature gating (e.g. rate limits per tier, locked endpoints) is NOT yet implemented. Anyone can use everything for free right now. Enforcement is the next technical priority after marketing push.
 
 ---
 
@@ -69,9 +73,9 @@ _Update these at the end of every session._
 
 | Metric | Value | Updated |
 |--------|-------|---------|
-| MRR | $0 | May 9, 2026 |
-| Paying users | 0 | May 9, 2026 |
-| Free signups | 0 | May 9, 2026 |
+| MRR | $0 | May 10, 2026 |
+| Paying users | 0 | May 10, 2026 |
+| Free signups | 0 | May 10, 2026 |
 
 ---
 
@@ -100,12 +104,15 @@ _Update these at the end of every session._
 
 _Replace completed items each session. Keep this list short._
 
-- [ ] Ship email alerts — watchlist + z-score threshold triggers email notification
-- [ ] Get Stripe live — three tiers, payment link on site
-- [ ] Set up domain email (hello@edgarwolf.com) — remove Gmail from public site
+**Immediate (next session):**
 - [ ] Post on r/SecurityAnalysis — CAG + GIS examples with screenshots
-- [ ] Send beta invites to 2–3 crypto friends
+- [ ] Send beta invites to 2–3 crypto friends with free Pro access
+- [ ] Add feature gating — enforce tier limits (free gets N lookups/day, Pro+ gets everything)
+- [ ] Build email alerts — watchlist + z-score threshold triggers email notification (Pro+ differentiator)
+
+**Soon:**
 - [ ] Identify 10 finance Substack writers and send personal outreach emails
+- [ ] Add user login / account system (required for proper per-user subscription enforcement)
 
 ---
 
@@ -119,19 +126,20 @@ _Running log of important decisions so we don't relitigate them._
 - **Upheaval Score rename:** Consider renaming to "Filing Stress Score" for finance audience.
 - **Distribution first:** Product is good enough to charge for. Distribution is the only job right now.
 - **Sale target ($500k) is not realistic short term.** Realistic near-term goal is replacing income.
-- **Render-only deployment:** Netlify removed. FastAPI serves the frontend directly from Render. No separate static host needed.
+- **Render-only deployment:** Netlify removed. FastAPI serves the frontend directly from Render.
 - **Analytics via Render logs:** Events emitted as structured log lines (grep 'EVENT' in Render log tab). No external analytics service needed.
 - **Watchlist keyed by CIK:** Ticker is unreliable (empty for many EDGAR companies). CIK is always present.
 - **Domain:** edgarwolf.com purchased, www.edgarwolf.com live via CNAME to sectracker.onrender.com.
+- **Email:** jason@edgarwolf.com via Microsoft 365 + GoDaddy. All public-facing email references updated.
+- **Stripe session-based auth:** Without user login, subscription status is verified by storing the Stripe session_id in localStorage and checking it against the Stripe API on load (cached 1 hour). This breaks if user clears localStorage or switches browsers. Full per-user auth is needed to solve this properly.
+- **Feature gating deferred:** Stripe is live but no limits are enforced yet. Ship marketing first, gate features after first paying users.
 
 ---
 
-## 8. Technical State (as of last session)
-
-All production hardening complete. App is deployment-ready.
+## 8. Technical State (as of May 10, 2026)
 
 **What's solid:**
-- Rate limiting (per-IP sliding window on /company/*, /feed/*, /analytics/*)
+- Rate limiting: 200 req/min per IP on /company/* and /feed/* (analytics excluded)
 - Stale cache fallback (SEC outage serves expired data instead of 502)
 - Cache thread-safety (WAL + threading.Lock)
 - CIK input validation on all endpoints
@@ -140,11 +148,23 @@ All production hardening complete. App is deployment-ready.
 - Content-Security-Policy header on frontend
 - Health endpoint probes SQLite cache
 
+**Stripe integration (LIVE):**
+- `POST /checkout/session` — creates Stripe Checkout session, returns redirect URL
+- `POST /webhook/stripe` — handles checkout.session.completed, customer.subscription.deleted, invoice.payment_failed
+- `GET /subscription/status?session_id=...` — verifies active subscription against Stripe API, returns tier/label
+- `GET /success` — post-payment HTML page, stores tier in localStorage
+- Upgrade modal in header: Pro card (blue) and Pro+ card (green), selectable, defaults to Pro
+- Header badge shows ✓ Pro (blue) or ✓ Pro+ (green) after verification; Standard shows Upgrade button
+- Stripe env vars in Render: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET (both sync:false / set manually)
+- Stripe webhook endpoint registered at https://www.edgarwolf.com/webhook/stripe
+- Price IDs: Pro = price_1TVNfH1C3cijZqBOyp7Y5qJH, Pro+ = price_1TVNeQ1C3cijZqBOkOX1IoJj
+
 **Known limitations (acceptable for now):**
-- SQLite cache resets on Render redeploy (ephemeral filesystem on free tier) — app recovers automatically, just slower on cold start
-- No user authentication or usage limits yet (Stripe/auth is next after email alerts)
+- SQLite cache resets on Render redeploy (ephemeral filesystem on free tier) — recovers automatically
+- No user authentication — subscription status tied to localStorage session_id only
+- No feature gating yet — all tiers can access everything
 - Render free tier spins down after inactivity — first request after sleep is slow
 
 ---
 
-_Last updated: May 9, 2026_
+_Last updated: May 10, 2026_
