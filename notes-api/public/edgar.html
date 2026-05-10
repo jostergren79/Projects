@@ -43,8 +43,9 @@
     .modal-close { position: absolute; top: 14px; right: 16px; background: none; border: none; color: var(--muted); font-size: 1.5rem; cursor: pointer; line-height: 1; }
     .modal-close:hover { color: var(--text); }
     .plan-cards { display: flex; gap: 20px; }
-    .plan-card { flex: 1; background: var(--surface2); border: 2px solid var(--border); border-radius: 10px; padding: 24px; display: flex; flex-direction: column; }
-    .plan-card.highlighted { border-color: var(--accent); }
+    .plan-card { flex: 1; background: var(--surface2); border: 2px solid var(--border); border-radius: 10px; padding: 24px; display: flex; flex-direction: column; cursor: pointer; transition: border-color .15s; }
+    .plan-card:hover { border-color: var(--muted); }
+    .plan-card.selected { border-color: var(--accent); }
     .plan-card .plan-name { font-weight: 700; text-transform: uppercase; letter-spacing: .06em; font-size: .72rem; color: var(--muted); margin-bottom: 6px; }
     .plan-card .plan-price { font-size: 2rem; font-weight: 700; margin-bottom: 2px; }
     .plan-card .plan-price span { font-size: .85rem; font-weight: 400; color: var(--muted); }
@@ -53,8 +54,8 @@
     .plan-card ul li { font-size: .85rem; color: var(--text); display: flex; gap: 8px; align-items: flex-start; }
     .plan-card ul li::before { content: '✓'; color: var(--green); font-weight: 700; flex-shrink: 0; }
     .plan-btn { width: 100%; padding: 12px; border-radius: var(--radius); border: none; font-size: .95rem; font-weight: 600; cursor: pointer; }
-    .plan-card.highlighted .plan-btn { background: var(--accent); color: #fff; }
-    .plan-card:not(.highlighted) .plan-btn { background: var(--surface); border: 1px solid var(--border); color: var(--text); }
+    .plan-card.selected .plan-btn { background: var(--accent); color: #fff; }
+    .plan-card:not(.selected) .plan-btn { background: var(--surface); border: 1px solid var(--border); color: var(--text); }
     .plan-btn:hover { filter: brightness(1.1); }
     .plan-btn:disabled { opacity: .6; cursor: default; filter: none; }
     /* ── Footer ── */
@@ -510,7 +511,7 @@
       <h2>Upgrade EdgarWolf</h2>
       <p class="modal-sub">Support independent research tooling. Cancel anytime.</p>
       <div class="plan-cards">
-        <div class="plan-card highlighted">
+        <div id="plan-card-pro" class="plan-card" onclick="selectPlan('pro')">
           <div class="plan-name">Pro</div>
           <div class="plan-price">$19<span>/mo</span></div>
           <div class="plan-tagline">For individual investors</div>
@@ -522,9 +523,9 @@
             <li>Signal board discovery</li>
             <li>Watchlist tracking</li>
           </ul>
-          <button id="checkout-btn-pro" class="plan-btn" onclick="startCheckout('pro')">Get Pro &rarr;</button>
+          <button id="checkout-btn-pro" class="plan-btn" onclick="event.stopPropagation();startCheckout('pro')">Get Pro &rarr;</button>
         </div>
-        <div class="plan-card">
+        <div id="plan-card-pro_plus" class="plan-card" onclick="selectPlan('pro_plus')">
           <div class="plan-name">Pro+</div>
           <div class="plan-price">$99<span>/mo</span></div>
           <div class="plan-tagline">For serious analysts</div>
@@ -536,7 +537,7 @@
             <li>API access</li>
             <li>Early feature access</li>
           </ul>
-          <button id="checkout-btn-pro_plus" class="plan-btn" onclick="startCheckout('pro_plus')">Get Pro+ &rarr;</button>
+          <button id="checkout-btn-pro_plus" class="plan-btn" onclick="event.stopPropagation();startCheckout('pro_plus')">Get Pro+ &rarr;</button>
         </div>
       </div>
       <div id="upgrade-cancel-note" style="display:none;margin-top:16px;padding:10px 14px;background:var(--surface2);border-radius:var(--radius);font-size:.82rem;color:var(--muted);text-align:center">
@@ -571,8 +572,15 @@
 
     // ── Upgrade / Checkout ────────────────────────────────────────────────────
 
+    function selectPlan(tier) {
+      document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('selected'));
+      const card = document.getElementById(`plan-card-${tier}`);
+      if (card) card.classList.add('selected');
+    }
+
     function openUpgradeModal() {
       document.getElementById('upgrade-modal').classList.add('open');
+      selectPlan('pro');
       trackEvent('upgrade_modal_open');
     }
 
