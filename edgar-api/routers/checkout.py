@@ -103,6 +103,74 @@ async def subscription_status(session_id: str = ""):
         return {"tier": "standard", "label": "Standard"}
 
 
+@router.get("/subscription/restore")
+async def restore_subscription(email: str = ""):
+    """
+    Look up an active subscription by customer email.
+    Returns {tier, label, customer_id} so the frontend can store the customer_id
+    and re-verify on future loads without the original checkout session_id.
+    """
+    if not email or not stripe.api_key:
+        return {"tier": "standard", "label": "Standard", "customer_id": ""}
+
+    try:
+        customers = stripe.Customer.search(query=f"email:'{email.strip()}'", limit=5)
+        results = customers.get("data", []) if isinstance(customers, dict) else customers.data
+        if not results:
+            return {"tier": "standard", "label": "Standard", "customer_id": ""}
+
+        for customer in results:
+            customer_id = customer.get("id") if isinstance(customer, dict) else customer.id
+            subs = stripe.Subscription.list(customer=customer_id, status="active", limit=5,
+                                            expand=["data.items.data.price"])
+            sub_list = subs.get("data", []) if isinstance(subs, dict) else subs.data
+            for sub in sub_list:
+                items = (sub.get("items", {}).get("data", []) if isinstance(sub, dict)
+                         else sub.items.data)
+                if not items:
+                    continue
+                p = items[0].get("price", {}) if isinstance(items[0], dict) else items[0].price
+                price_id = p.get("id", "") if isinstance(p, dict) else p.id
+                if price_id == PRICE_IDS["pro_plus"]:
+                    return {"tier": "pro_plus", "label": "Pro+", "customer_id": customer_id}
+                if price_id == PRICE_IDS["pro"]:
+                    return {"tier": "pro", "label": "Pro", "customer_id": customer_id}
+
+        return {"tier": "standard", "label": "Standard", "customer_id": ""}
+
+    except stripe.StripeError as e:
+        logger.error("Stripe error restoring subscription: %s", e)
+        return {"tier": "standard", "label": "Standard", "customer_id": ""}
+
+
+@router.get("/subscription/status-by-customer")
+async def subscription_status_by_customer(customer_id: str = ""):
+    """Verify an active subscription by Stripe customer ID (used after email-based restore)."""
+    if not customer_id or not stripe.api_key:
+        return {"tier": "standard", "label": "Standard"}
+
+    try:
+        subs = stripe.Subscription.list(customer=customer_id, status="active", limit=5,
+                                        expand=["data.items.data.price"])
+        sub_list = subs.get("data", []) if isinstance(subs, dict) else subs.data
+        for sub in sub_list:
+            items = (sub.get("items", {}).get("data", []) if isinstance(sub, dict)
+                     else sub.items.data)
+            if not items:
+                continue
+            p = items[0].get("price", {}) if isinstance(items[0], dict) else items[0].price
+            price_id = p.get("id", "") if isinstance(p, dict) else p.id
+            if price_id == PRICE_IDS["pro_plus"]:
+                return {"tier": "pro_plus", "label": "Pro+"}
+            if price_id == PRICE_IDS["pro"]:
+                return {"tier": "pro", "label": "Pro"}
+        return {"tier": "standard", "label": "Standard"}
+
+    except stripe.StripeError as e:
+        logger.error("Stripe error checking status by customer: %s", e)
+        return {"tier": "standard", "label": "Standard"}
+
+
 @router.post("/webhook/stripe")
 async def stripe_webhook(request: Request):
     payload = await request.body()

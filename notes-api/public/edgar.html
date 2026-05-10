@@ -686,33 +686,37 @@
       }
     }
 
-    function showRestoreAccess() {
-      const modal = document.getElementById('upgrade-modal');
-      modal.classList.remove('open');
+    async function showRestoreAccess() {
+      document.getElementById('upgrade-modal').classList.remove('open');
 
-      const sid = prompt('Paste your Stripe session ID to restore Pro access.\n\nYou can find this in your confirmation email or browser URL after checkout (starts with "cs_").');
-      if (!sid || !sid.trim().startsWith('cs_')) {
-        if (sid !== null) alert('That doesn\'t look like a valid session ID. It should start with "cs_".');
+      const email = prompt('Enter the email address you used when subscribing to Pro:');
+      if (!email || !email.trim()) return;
+
+      const trimmed = email.trim().toLowerCase();
+      if (!trimmed.includes('@')) {
+        alert('Please enter a valid email address.');
         return;
       }
 
-      const sessionId = sid.trim();
-      localStorage.setItem('edgarwolf_session', sessionId);
-      // Clear cached tier so it re-verifies against Stripe on next check
-      localStorage.removeItem('edgarwolf_tier');
-      localStorage.removeItem('edgarwolf_tier_label');
-      localStorage.removeItem('edgarwolf_tier_checked_at');
+      try {
+        const res = await fetch(`${API}/subscription/restore?email=${encodeURIComponent(trimmed)}`);
+        if (!res.ok) throw new Error('lookup_failed');
+        const data = await res.json();
 
-      checkSubscriptionStatus().then(() => {
-        const tier = localStorage.getItem('edgarwolf_tier');
-        if (tier && tier !== 'standard') {
+        if (data.tier && data.tier !== 'standard') {
+          localStorage.removeItem('edgarwolf_session');
+          if (data.customer_id) localStorage.setItem('edgarwolf_customer', data.customer_id);
+          localStorage.setItem('edgarwolf_tier', data.tier);
+          localStorage.setItem('edgarwolf_tier_label', data.label);
+          localStorage.setItem('edgarwolf_tier_checked_at', String(Date.now()));
           alert('Pro access restored! Reloading…');
           window.location.reload();
         } else {
-          alert('We couldn\'t verify an active Pro subscription for that session ID. If you need help, email jason@edgarwolf.com.');
-          localStorage.removeItem('edgarwolf_session');
+          alert('No active Pro subscription found for that email. If you need help, email jason@edgarwolf.com.');
         }
-      });
+      } catch (_) {
+        alert('Something went wrong. Please try again or email jason@edgarwolf.com.');
+      }
     }
 
     async function startCheckout(tier) {
@@ -753,21 +757,28 @@
     }
 
     async function checkSubscriptionStatus() {
-      const sessionId = localStorage.getItem('edgarwolf_session');
-      const cachedTier = localStorage.getItem('edgarwolf_tier');
+      const sessionId   = localStorage.getItem('edgarwolf_session');
+      const customerId  = localStorage.getItem('edgarwolf_customer');
+      const cachedTier  = localStorage.getItem('edgarwolf_tier');
       const cachedLabel = localStorage.getItem('edgarwolf_tier_label');
-      const cachedAt = parseInt(localStorage.getItem('edgarwolf_tier_checked_at') || '0');
+      const cachedAt    = parseInt(localStorage.getItem('edgarwolf_tier_checked_at') || '0');
 
-      // Use cache if it's under 1 hour old and shows a paid tier
+      // Use cache if under 1 hour old and shows a paid tier
       if (cachedTier && cachedTier !== 'standard' && (Date.now() - cachedAt) < 3_600_000) {
         applyTierBadge(cachedTier, cachedLabel);
         return;
       }
 
-      if (!sessionId) return;
+      if (!sessionId && !customerId) return;
 
       try {
-        const res = await fetch(`${API}/subscription/status?session_id=${encodeURIComponent(sessionId)}`);
+        let url;
+        if (customerId) {
+          url = `${API}/subscription/status-by-customer?customer_id=${encodeURIComponent(customerId)}`;
+        } else {
+          url = `${API}/subscription/status?session_id=${encodeURIComponent(sessionId)}`;
+        }
+        const res = await fetch(url);
         if (!res.ok) return;
         const data = await res.json();
         localStorage.setItem('edgarwolf_tier', data.tier);
@@ -775,7 +786,6 @@
         localStorage.setItem('edgarwolf_tier_checked_at', String(Date.now()));
         applyTierBadge(data.tier, data.label);
       } catch (_) {
-        // Network error — fall back to cached value
         if (cachedTier && cachedTier !== 'standard') applyTierBadge(cachedTier, cachedLabel);
       }
     }
