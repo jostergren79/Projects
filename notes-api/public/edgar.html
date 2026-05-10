@@ -26,9 +26,37 @@
     body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
 
     /* ── Header ── */
-    header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 18px 28px; display: flex; align-items: center; justify-content: center; gap: 16px; text-align: center; }
+    header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 18px 28px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
     header h1 { font-size: 1.1rem; font-weight: 700; letter-spacing: -.02em; }
     header .subtitle { font-size: .8rem; color: var(--muted); }
+    .header-brand { flex: 1; text-align: center; }
+    .header-actions { display: flex; gap: 10px; flex-shrink: 0; }
+    .btn-upgrade { background: transparent; border: 1px solid var(--accent); color: var(--accent); border-radius: var(--radius); padding: 7px 16px; font-size: .8rem; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background .15s, color .15s; }
+    .btn-upgrade:hover { background: var(--accent); color: #fff; }
+    .btn-upgrade.active { border-color: var(--green); color: var(--green); }
+    /* ── Upgrade Modal ── */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 1000; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(4px); }
+    .modal-overlay.open { display: flex; }
+    .modal-box { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 36px; max-width: 700px; width: 100%; position: relative; max-height: 90vh; overflow-y: auto; }
+    .modal-box h2 { font-size: 1.4rem; font-weight: 700; margin-bottom: 6px; }
+    .modal-sub { color: var(--muted); font-size: .9rem; margin-bottom: 28px; }
+    .modal-close { position: absolute; top: 14px; right: 16px; background: none; border: none; color: var(--muted); font-size: 1.5rem; cursor: pointer; line-height: 1; }
+    .modal-close:hover { color: var(--text); }
+    .plan-cards { display: flex; gap: 20px; }
+    .plan-card { flex: 1; background: var(--surface2); border: 2px solid var(--border); border-radius: 10px; padding: 24px; display: flex; flex-direction: column; }
+    .plan-card.highlighted { border-color: var(--accent); }
+    .plan-card .plan-name { font-weight: 700; text-transform: uppercase; letter-spacing: .06em; font-size: .72rem; color: var(--muted); margin-bottom: 6px; }
+    .plan-card .plan-price { font-size: 2rem; font-weight: 700; margin-bottom: 2px; }
+    .plan-card .plan-price span { font-size: .85rem; font-weight: 400; color: var(--muted); }
+    .plan-card .plan-tagline { color: var(--muted); font-size: .82rem; margin-bottom: 20px; }
+    .plan-card ul { list-style: none; margin-bottom: 24px; flex: 1; display: flex; flex-direction: column; gap: 9px; }
+    .plan-card ul li { font-size: .85rem; color: var(--text); display: flex; gap: 8px; align-items: flex-start; }
+    .plan-card ul li::before { content: '✓'; color: var(--green); font-weight: 700; flex-shrink: 0; }
+    .plan-btn { width: 100%; padding: 12px; border-radius: var(--radius); border: none; font-size: .95rem; font-weight: 600; cursor: pointer; }
+    .plan-card.highlighted .plan-btn { background: var(--accent); color: #fff; }
+    .plan-card:not(.highlighted) .plan-btn { background: var(--surface); border: 1px solid var(--border); color: var(--text); }
+    .plan-btn:hover { filter: brightness(1.1); }
+    .plan-btn:disabled { opacity: .6; cursor: default; filter: none; }
     /* ── Footer ── */
     footer { background: var(--surface); border-top: 1px solid var(--border); margin-top: auto; padding: 28px 24px; text-align: center; font-size: .78rem; color: var(--muted); line-height: 1.7; }
     footer a { color: var(--accent); text-decoration: none; }
@@ -248,6 +276,10 @@
       .board-grid { grid-template-columns: 1fr; }
     }
 
+    @media (max-width: 580px) {
+      .plan-cards { flex-direction: column; }
+      .header-actions { display: none; }
+    }
     @media (max-width: 700px) {
       header { padding: 14px 16px; }
       header h1 { font-size: 1rem; }
@@ -311,9 +343,13 @@
 </head>
 <body>
   <header>
-    <div>
+    <div style="width:80px"></div>
+    <div class="header-brand">
       <h1>EdgarWolf</h1>
       <div class="subtitle">Real financial data from SEC EDGAR — any US public company</div>
+    </div>
+    <div class="header-actions">
+      <button id="upgrade-header-btn" class="btn-upgrade" onclick="openUpgradeModal()">Upgrade</button>
     </div>
   </header>
 
@@ -467,6 +503,48 @@
     </div>
   </div>
 
+  <!-- Upgrade modal -->
+  <div id="upgrade-modal" class="modal-overlay" onclick="if(event.target===this)closeUpgradeModal()">
+    <div class="modal-box">
+      <button class="modal-close" onclick="closeUpgradeModal()" aria-label="Close">&times;</button>
+      <h2>Upgrade EdgarWolf</h2>
+      <p class="modal-sub">Support independent research tooling. Cancel anytime.</p>
+      <div class="plan-cards">
+        <div class="plan-card highlighted">
+          <div class="plan-name">Pro</div>
+          <div class="plan-price">$19<span>/mo</span></div>
+          <div class="plan-tagline">For individual investors</div>
+          <ul>
+            <li>8-quarter financial history</li>
+            <li>Segment revenue breakdown</li>
+            <li>Export CSV &amp; JSON</li>
+            <li>Filing anomaly signals</li>
+            <li>Signal board discovery</li>
+            <li>Watchlist tracking</li>
+          </ul>
+          <button id="checkout-btn-pro" class="plan-btn" onclick="startCheckout('pro')">Get Pro &rarr;</button>
+        </div>
+        <div class="plan-card">
+          <div class="plan-name">Pro+</div>
+          <div class="plan-price">$99<span>/mo</span></div>
+          <div class="plan-tagline">For serious analysts</div>
+          <ul>
+            <li>Everything in Pro</li>
+            <li>Peer comparison</li>
+            <li>Email filing alerts</li>
+            <li>Priority data refresh</li>
+            <li>API access</li>
+            <li>Early feature access</li>
+          </ul>
+          <button id="checkout-btn-pro_plus" class="plan-btn" onclick="startCheckout('pro_plus')">Get Pro+ &rarr;</button>
+        </div>
+      </div>
+      <div id="upgrade-cancel-note" style="display:none;margin-top:16px;padding:10px 14px;background:var(--surface2);border-radius:var(--radius);font-size:.82rem;color:var(--muted);text-align:center">
+        Checkout was cancelled &mdash; no charge was made.
+      </div>
+    </div>
+  </div>
+
   <script>
     const apiOverride = new URLSearchParams(window.location.search).get('api');
     const inferredApiBase = (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost')
@@ -489,6 +567,52 @@
           keepalive: true,
         }).catch(() => {});
       } catch (_) {}
+    }
+
+    // ── Upgrade / Checkout ────────────────────────────────────────────────────
+
+    function openUpgradeModal() {
+      document.getElementById('upgrade-modal').classList.add('open');
+      trackEvent('upgrade_modal_open');
+    }
+
+    function closeUpgradeModal() {
+      document.getElementById('upgrade-modal').classList.remove('open');
+      const url = new URL(window.location.href);
+      if (url.searchParams.has('upgrade')) {
+        url.searchParams.delete('upgrade');
+        history.replaceState({}, '', url.pathname + (url.search !== '?' ? url.search : ''));
+      }
+    }
+
+    async function startCheckout(tier) {
+      const btn = document.getElementById(`checkout-btn-${tier}`);
+      const origText = btn ? btn.textContent : '';
+      if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
+      trackEvent('checkout_start', { tier });
+      try {
+        const res = await fetch(`${API}/checkout/session`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tier }),
+        });
+        if (!res.ok) throw new Error('checkout_failed');
+        const { url } = await res.json();
+        window.location.href = url;
+      } catch (e) {
+        if (btn) { btn.disabled = false; btn.textContent = origText; }
+        alert('Unable to start checkout. Please try again or contact jason@edgarwolf.com.');
+      }
+    }
+
+    function updateTierBadge() {
+      const tierLabel = localStorage.getItem('edgarwolf_tier_label');
+      if (!tierLabel) return;
+      const btn = document.getElementById('upgrade-header-btn');
+      if (btn) {
+        btn.textContent = '✓ ' + tierLabel;
+        btn.classList.add('active');
+      }
     }
 
     // ── Signal Board ─────────────────────────────────────────────────────────
@@ -694,9 +818,16 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
+      updateTierBadge();
       const params   = new URLSearchParams(window.location.search);
       const cikParam = params.get('cik');
       const qParam   = params.get('q') || params.get('ticker');
+      const upgradeParam = params.get('upgrade');
+
+      if (upgradeParam === 'cancelled') {
+        openUpgradeModal();
+        document.getElementById('upgrade-cancel-note').style.display = 'block';
+      }
 
       if (cikParam) {
         // Tab opened directly with ?cik= — mark so goBack() does a full nav home.

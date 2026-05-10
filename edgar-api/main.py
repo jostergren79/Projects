@@ -48,6 +48,7 @@ from routers import (
     dashboard,
     feed,
     analytics,
+    checkout,
 )
 
 app = FastAPI(title="EDGAR Financial Metrics API", version="0.1.0")
@@ -118,6 +119,7 @@ app.include_router(narrative_summary.router)
 app.include_router(dashboard.router)
 app.include_router(feed.router)
 app.include_router(analytics.router)
+app.include_router(checkout.router)
 
 
 @app.get("/")

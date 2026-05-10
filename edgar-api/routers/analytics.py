@@ -24,6 +24,8 @@ _ALLOWED_EVENTS = {
     "signal_board_skip",
     "watchlist_add",
     "export",
+    "upgrade_modal_open",
+    "checkout_start",
 }
 
 

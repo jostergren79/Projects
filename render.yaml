@@ -20,3 +20,13 @@ services:
         value: "3"
       - key: SEC_HTTP_RETRY_BASE_SECONDS
         value: "0.5"
+      - key: APP_URL
+        value: https://www.edgarwolf.com
+      - key: STRIPE_PRO_PRICE_ID
+        value: price_1TVNfH1C3cijZqBOyp7Y5qJH
+      - key: STRIPE_PRO_PLUS_PRICE_ID
+        value: price_1TVNeQ1C3cijZqBOkOX1IoJj
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
