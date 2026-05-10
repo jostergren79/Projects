@@ -1272,7 +1272,7 @@
         ['EPS', sources.eps_diluted, concepts.eps_diluted],
       ];
 
-      grid.innerHTML = rows.map(([label, source, concept]) => `
+      if (grid) grid.innerHTML = rows.map(([label, source, concept]) => `
         <div class="trust-item">
           <div class="label">${label}</div>
           <div class="value">${sourceLabel(source)}</div>
@@ -1343,7 +1343,7 @@
       const sel = document.getElementById('prov-period');
       const details = document.getElementById('prov-details');
       if (!currentMetrics?.periods?.length || !sel || !details) {
-        details.textContent = 'No provenance available.';
+        if (details) details.textContent = 'No provenance available.';
         return;
       }
 
