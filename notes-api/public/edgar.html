@@ -1039,17 +1039,14 @@
       const name = companyObject.name || 'This company';
       const isForeign = companyObject.mailing_address?.isForeignLocation === 1
         || companyObject.business_address?.isForeignLocation === 1;
-      const hasNoQuarterlyFilings = !companyObject.recent_filings?.some(f => f.form === '10-Q' || f.form === '10-K');
       const isEmptySic = !companyObject.sic;
+      const hasNoFilingsAtAll = !companyObject.recent_filings?.length;
 
       if (isForeign) {
         return `${name} is a foreign private issuer and files 20-F/6-K with the SEC instead of 10-K/10-Q. EdgarWolf covers US domestic filers only — XBRL financial data is not available for this company.`;
       }
-      if (isEmptySic && hasNoQuarterlyFilings) {
+      if (isEmptySic && hasNoFilingsAtAll) {
         return `${name} appears to be an ETF, fund, or investment trust. EdgarWolf covers operating companies that file 10-K/10-Q — financial metrics are not available for this entity type.`;
-      }
-      if (hasNoQuarterlyFilings) {
-        return `${name} has no 10-K or 10-Q filings on record. This may be a SPAC, shell company, or recently registered entity with no operating history filed yet.`;
       }
       return null;
     }
