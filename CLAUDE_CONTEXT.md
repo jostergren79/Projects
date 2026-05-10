@@ -93,10 +93,17 @@ _Update these at the end of every session._
 - Revenue declining from $5.2B to $3.8B over 8 quarters
 - Margins showing cliff drop in most recent quarters
 
+**Example 3 — $STEM (Stem Inc, CIK 0001758766)**
+- Net revenue $29M Q1 2026, down -10.8% YoY
+- Gross margin expanded 5.0pp YoY to 37.4%
+- Good "here's the data, Pro shows why" upgrade hook
+
 **Target channels:**
-- r/SecurityAnalysis — Reddit post with CAG + GIS screenshots
+- r/SecurityAnalysis — post drafted and ready, waiting on mod approval (requested May 10)
+- X (Twitter) — 4 replies posted May 10 on active $GIS/$CPB/$CAG threads
 - Finance Substack writers — free Pro access in exchange for a mention
 - Crypto friends — free beta access, honest feedback
+- StockTwits — not yet done
 
 ---
 
@@ -105,7 +112,8 @@ _Update these at the end of every session._
 _Replace completed items each session. Keep this list short._
 
 **Immediate (next session):**
-- [ ] Post on r/SecurityAnalysis — CAG + GIS examples with screenshots
+- [ ] Post on r/SecurityAnalysis when mod approval comes through
+- [ ] Post on StockTwits using $GIS cashtag
 - [ ] Send beta invites to 2–3 crypto friends with free Pro access
 - [ ] Build email alerts — watchlist + z-score threshold triggers email notification (Pro+ differentiator)
 
@@ -149,6 +157,10 @@ _Running log of important decisions so we don't relitigate them._
 - Dashboard returns HTTP 207 + has_errors flag on partial failures
 - Content-Security-Policy header on frontend
 - Health endpoint probes SQLite cache
+- UptimeRobot pinging /health every 5 min — Render stays warm
+- Entity type detection: foreign filers (20-F/6-K) and ETFs show friendly unsupported messages instead of empty dashboards
+- Loading spinner scrolls into view on search (no more hunting below signal board)
+- Null guards on all gated section renders (renderTrustPanel, renderProvenance, renderAnomalyPanel, flagList, segBody, tblBody)
 
 **Stripe integration (LIVE):**
 - `POST /checkout/session` — creates Stripe Checkout session, returns redirect URL
@@ -175,4 +187,4 @@ _Running log of important decisions so we don't relitigate them._
 
 ---
 
-_Last updated: May 10, 2026 (free tier redesign — charts/table unlocked, unlimited lookups, 20-company signal board, summary CTA)_
+_Last updated: May 10, 2026 (entity detection, null guard fixes, loading UX, UptimeRobot live, 4 X replies posted on $GIS threads)_
