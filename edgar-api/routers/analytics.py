@@ -26,6 +26,7 @@ _ALLOWED_EVENTS = {
     "export",
     "upgrade_modal_open",
     "checkout_start",
+    "pro_gate_hit",
 }
 
 

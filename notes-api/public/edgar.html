@@ -5,6 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; connect-src 'self' https://cdn.jsdelivr.net; img-src 'self' data:; font-src 'self'" />
   <title>EdgarWolf — SEC Filing Metrics</title>
+  <meta name="description" content="Spot financial anomalies before the crowd. EdgarWolf surfaces z-score exceptions, Filing Stress Scores, and margin signals from live SEC EDGAR filings for any US public company." />
+  <meta property="og:title" content="EdgarWolf — SEC Filing Metrics" />
+  <meta property="og:description" content="Spot financial anomalies before the crowd. Z-score exception flags, Filing Stress Scores, and 8-quarter trend analysis pulled directly from SEC EDGAR filings." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://www.edgarwolf.com" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="EdgarWolf — SEC Filing Metrics" />
+  <meta name="twitter:description" content="Spot financial anomalies before the crowd. Z-score exception flags, Filing Stress Scores, and 8-quarter trend analysis pulled directly from SEC EDGAR filings." />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230f1117'/%3E%3Cpath d='M18 18h28v6H24v10h18v6H24v16h-6z' fill='%234f8ef7'/%3E%3C/svg%3E" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
@@ -60,6 +68,14 @@
     .plan-btn:hover { filter: brightness(1.1); }
     .plan-btn:disabled { opacity: .6; cursor: default; filter: none; }
     /* ── Footer ── */
+    /* ── Pro gate ── */
+    .pro-gate-card { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 28px 20px; text-align: center; }
+    .pro-gate-card .gate-label { font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 700; }
+    .pro-gate-card .gate-title { font-size: .95rem; font-weight: 700; color: var(--text); }
+    .pro-gate-card .gate-desc { font-size: .82rem; color: var(--muted); }
+    .pro-gate-card .gate-btn { background: var(--accent); border: none; border-radius: var(--radius); padding: 9px 20px; color: #fff; font-size: .85rem; font-weight: 600; cursor: pointer; margin-top: 4px; }
+    .pro-gate-card .gate-btn:hover { filter: brightness(1.1); }
+
     footer { background: var(--surface); border-top: 1px solid var(--border); margin-top: auto; padding: 28px 24px; text-align: center; font-size: .78rem; color: var(--muted); line-height: 1.7; }
     footer a { color: var(--accent); text-decoration: none; }
     footer a:hover { text-decoration: underline; }
@@ -104,6 +120,9 @@
     .company-header .co-info h2 { font-size: 1.5rem; font-weight: 700; }
     .company-header .co-info .co-meta { color: var(--muted); font-size: .85rem; margin-top: 4px; }
     .company-header .co-info .summary-text { color: var(--text); font-size: .9rem; margin-top: 10px; line-height: 1.6; max-width: 720px; background: var(--surface2); border-left: 3px solid var(--accent); padding: 10px 14px; border-radius: 0 var(--radius) var(--radius) 0; }
+    #summary-cta { display:none; margin-top: 10px; max-width: 720px; background: var(--surface2); border-left: 3px solid var(--yellow); padding: 10px 14px; border-radius: 0 var(--radius) var(--radius) 0; font-size: .85rem; line-height: 1.5; color: var(--muted); }
+    #summary-cta strong { color: var(--text); }
+    #summary-cta .cta-link { color: var(--accent); cursor: pointer; text-decoration: underline; white-space: nowrap; }
     .company-header .co-info .profile-chip { display: inline-block; margin-top: 10px; font-size: .76rem; color: var(--muted); border: 1px solid var(--border); background: var(--surface); border-radius: 999px; padding: 5px 10px; }
     .action-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
     .action-row button {
@@ -418,6 +437,9 @@
         <h2 id="co-name"></h2>
         <div class="co-meta" id="co-meta"></div>
         <div class="summary-text" id="co-summary"></div>
+        <div id="summary-cta">
+          <strong>Want to know what's driving this?</strong> See Exception Flags, Filing Stress Score, and anomaly signals that put these numbers in statistical context. <span class="cta-link" onclick="openUpgradeModal()">Upgrade to Pro &rarr;</span>
+        </div>
         <div class="profile-chip" id="co-profile" style="display:none;"></div>
         <div class="action-row">
           <button id="watch-btn" onclick="toggleWatchlist()">Add to Watchlist</button>
@@ -430,24 +452,7 @@
     <!-- KPI tiles -->
     <div class="kpi-grid" id="kpi-grid"></div>
 
-    <div class="panel" id="anomaly-panel">
-      <h3>Anomaly Signals</h3>
-      <div class="anomaly-summary" id="anomaly-summary"></div>
-      <div class="anomaly-grid" id="anomaly-grid"></div>
-    </div>
-
-    <div class="panel" id="trust-panel">
-      <h3>Metric Trust & Sources</h3>
-      <div class="trust-grid" id="trust-grid"></div>
-    </div>
-
-    <!-- Exception flags -->
-    <div id="flags-section">
-      <h3>Exception Flags</h3>
-      <div class="flag-list" id="flag-list"></div>
-    </div>
-
-    <!-- Charts row -->
+    <!-- Charts row — free tier -->
     <div class="charts-row">
       <div class="chart-card">
         <h3>Revenue (8 Quarters)</h3>
@@ -459,32 +464,7 @@
       </div>
     </div>
 
-    <div class="panel" id="peers-section">
-      <h3>Peer Snapshot</h3>
-      <div class="prov-controls">
-        <input id="peer-input" type="text" placeholder="Tickers, e.g. KHC,CAG,CPB" />
-        <button onclick="comparePeers()">Compare</button>
-        <span class="muted" id="peer-note">Uses latest quarter revenue growth and margins.</span>
-      </div>
-      <div id="peer-table-wrap" class="muted">Add peer tickers and click Compare.</div>
-    </div>
-
-    <!-- Segment breakdown -->
-    <div id="segments-section">
-      <h3>Segment Revenue Breakdown</h3>
-      <div id="seg-body"></div>
-    </div>
-
-    <div class="panel" id="provenance-panel">
-      <h3>Filing Provenance</h3>
-      <div class="prov-controls">
-        <label for="prov-period" class="muted">Period</label>
-        <select id="prov-period" onchange="renderProvenance()"></select>
-      </div>
-      <div class="prov-details" id="prov-details"></div>
-    </div>
-
-    <!-- Quarterly data table -->
+    <!-- Quarterly data table — free tier -->
     <div id="table-section">
       <h3>Quarterly Data</h3>
       <div style="overflow-x:auto">
@@ -504,46 +484,84 @@
         </table>
       </div>
     </div>
+
+    <!-- Pro Analytics divider -->
+    <div id="pro-divider" style="display:none;margin:32px 0 20px;align-items:center;gap:12px">
+      <div style="flex:1;height:1px;background:var(--border)"></div>
+      <span style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)">Pro Analytics</span>
+      <div style="flex:1;height:1px;background:var(--border)"></div>
+    </div>
+
+    <!-- Exception flags -->
+    <div class="panel" id="flags-section">
+      <h3>Exception Flags</h3>
+      <div class="flag-list" id="flag-list"></div>
+    </div>
+
+    <div class="panel" id="anomaly-panel">
+      <h3>Filing Signals</h3>
+      <div class="anomaly-summary" id="anomaly-summary"></div>
+      <div class="anomaly-grid" id="anomaly-grid"></div>
+    </div>
+
+    <div class="panel" id="peers-section">
+      <h3>Peer Snapshot</h3>
+      <div class="prov-controls">
+        <input id="peer-input" type="text" placeholder="Tickers, e.g. KHC,CAG,CPB" />
+        <button onclick="comparePeers()">Compare</button>
+        <span class="muted" id="peer-note">Uses latest quarter revenue growth and margins.</span>
+      </div>
+      <div id="peer-table-wrap" class="muted">Add peer tickers and click Compare.</div>
+    </div>
+
+    <!-- Segment breakdown -->
+    <div id="segments-section">
+      <h3>Segment Revenue Breakdown</h3>
+      <div id="seg-body"></div>
+    </div>
+
+    <div class="panel" id="provenance-panel">
+      <h3>Source Filing</h3>
+      <div class="prov-controls">
+        <label for="prov-period" class="muted">Period</label>
+        <select id="prov-period" onchange="renderProvenance()"></select>
+      </div>
+      <div class="prov-details" id="prov-details"></div>
+    </div>
+
+    <div class="panel" id="trust-panel">
+      <h3>Data Quality & Sources</h3>
+      <div class="trust-grid" id="trust-grid"></div>
+    </div>
   </div>
 
   <!-- Upgrade modal -->
   <div id="upgrade-modal" class="modal-overlay" onclick="if(event.target===this)closeUpgradeModal()">
-    <div class="modal-box">
+    <div class="modal-box" style="max-width:480px">
       <button class="modal-close" onclick="closeUpgradeModal()" aria-label="Close">&times;</button>
-      <h2>Upgrade EdgarWolf</h2>
-      <p class="modal-sub">Support independent research tooling. Cancel anytime.</p>
-      <div class="plan-cards">
-        <div id="plan-card-pro" class="plan-card" onclick="selectPlan('pro')">
-          <div class="plan-name">Pro</div>
-          <div class="plan-price">$19<span>/mo</span></div>
-          <div class="plan-tagline">For individual investors</div>
-          <ul>
-            <li>8-quarter financial history</li>
-            <li>Segment revenue breakdown</li>
-            <li>Export CSV &amp; JSON</li>
-            <li>Filing anomaly signals</li>
-            <li>Signal board discovery</li>
-            <li>Watchlist tracking</li>
-          </ul>
-          <button id="checkout-btn-pro" class="plan-btn" onclick="event.stopPropagation();startCheckout('pro')">Get Pro &rarr;</button>
-        </div>
-        <div id="plan-card-pro_plus" class="plan-card" onclick="selectPlan('pro_plus')">
-          <div class="plan-name">Pro+</div>
-          <div class="plan-price">$99<span>/mo</span></div>
-          <div class="plan-tagline">For serious analysts</div>
-          <ul>
-            <li>Everything in Pro</li>
-            <li>Peer comparison</li>
-            <li>Email filing alerts</li>
-            <li>Priority data refresh</li>
-            <li>API access</li>
-            <li>Early feature access</li>
-          </ul>
-          <button id="checkout-btn-pro_plus" class="plan-btn" onclick="event.stopPropagation();startCheckout('pro_plus')">Get Pro+ &rarr;</button>
-        </div>
+      <h2>Upgrade to Pro</h2>
+      <p class="modal-sub">Full access to every signal. Cancel anytime.</p>
+      <div id="plan-card-pro" class="plan-card selected" style="cursor:default">
+        <div class="plan-name">Pro</div>
+        <div class="plan-price">$19<span>/mo</span></div>
+        <div class="plan-tagline">For individual investors and analysts</div>
+        <ul>
+          <li>Unlimited company lookups</li>
+          <li>Exception flags (z-score alerts)</li>
+          <li>Filing Stress Score &amp; Filing Signals</li>
+          <li>Peer comparison</li>
+          <li>Segment breakdown</li>
+          <li>Source Filing provenance</li>
+          <li>Export CSV &amp; JSON</li>
+          <li>Watchlist tracking</li>
+        </ul>
+        <button id="checkout-btn-pro" class="plan-btn" onclick="startCheckout('pro')">Get Pro &rarr;</button>
       </div>
       <div id="upgrade-cancel-note" style="display:none;margin-top:16px;padding:10px 14px;background:var(--surface2);border-radius:var(--radius);font-size:.82rem;color:var(--muted);text-align:center">
         Checkout was cancelled &mdash; no charge was made.
+      </div>
+      <div style="margin-top:14px;text-align:center;font-size:.75rem;color:var(--muted)">
+        Already subscribed? <span style="color:var(--accent);cursor:pointer;text-decoration:underline" onclick="showRestoreAccess()">Restore access</span>
       </div>
     </div>
   </div>
@@ -560,6 +578,77 @@
     let currentTicker = null;
     let currentCik = null;
     let openedWithCikParam = false;
+
+    // ── Tier gating helpers ───────────────────────────────────────────────────
+
+    function getCurrentTier() {
+      return localStorage.getItem('edgarwolf_tier') || 'standard';
+    }
+
+    function isProUser() {
+      const t = getCurrentTier();
+      return t === 'pro' || t === 'pro_plus';
+    }
+
+    function requirePro(action, featureName) {
+      if (isProUser()) {
+        action();
+      } else {
+        trackEvent('pro_gate_hit', { feature: featureName });
+        openUpgradeModal();
+      }
+    }
+
+    function showProGate(containerId, featureName, desc) {
+      const el = document.getElementById(containerId);
+      if (!el) return;
+      el.innerHTML = `
+        <div class="pro-gate-card">
+          <div class="gate-label">Pro feature</div>
+          <div class="gate-title">${featureName}</div>
+          <div class="gate-desc">${desc}</div>
+          <button class="gate-btn" onclick="openUpgradeModal()">Upgrade to Pro &rarr;</button>
+        </div>`;
+    }
+
+    function applyTierGating() {
+      const isPro = isProUser();
+
+      // Summary CTA — visible for free users only
+      const summaryCta = document.getElementById('summary-cta');
+      if (summaryCta) summaryCta.style.display = isPro ? 'none' : 'block';
+
+      // "Pro Analytics" divider
+      const divider = document.getElementById('pro-divider');
+      if (divider) divider.style.display = isPro ? 'none' : 'flex';
+
+      if (isPro) return;
+
+      showProGate('flags-section',    'Exception Flags',  'Z-score flags when margins or revenue deviate from trailing history.');
+      showProGate('anomaly-panel',    'Filing Signals',   'Filing cadence, XBRL structure, and normalized mapping signals.');
+      showProGate('peers-section',    'Peer Comparison',  'Side-by-side margin and growth comparison across peer companies.');
+      showProGate('segments-section', 'Segment Breakdown','Revenue breakdown by reported business segment.');
+      showProGate('provenance-panel', 'Source Filing',    'Which specific 10-Q or 10-K each data point was pulled from.');
+      showProGate('trust-panel',      'Data Quality',     'Per-metric source labels showing reported, derived, or stale data.');
+
+      // Export buttons — prompt upgrade on click
+      document.querySelectorAll('[onclick*="exportMetrics"]').forEach(btn => {
+        btn.onclick = () => requirePro(() => {}, 'Export');
+        btn.title = 'Pro feature';
+      });
+
+      // Watchlist button
+      const watchBtn = document.getElementById('watch-btn');
+      if (watchBtn) {
+        watchBtn.onclick = () => requirePro(() => {}, 'Watchlist');
+        watchBtn.textContent = 'Watchlist (Pro)';
+      }
+    }
+
+    function sessionHeaders() {
+      const sid = localStorage.getItem('edgarwolf_session') || '';
+      return sid ? { 'X-Session-Id': sid } : {};
+    }
 
     function trackEvent(name, props = {}) {
       try {
@@ -593,6 +682,35 @@
         url.searchParams.delete('upgrade');
         history.replaceState({}, '', url.pathname + (url.search !== '?' ? url.search : ''));
       }
+    }
+
+    function showRestoreAccess() {
+      const modal = document.getElementById('upgrade-modal');
+      modal.classList.remove('open');
+
+      const sid = prompt('Paste your Stripe session ID to restore Pro access.\n\nYou can find this in your confirmation email or browser URL after checkout (starts with "cs_").');
+      if (!sid || !sid.trim().startsWith('cs_')) {
+        if (sid !== null) alert('That doesn\'t look like a valid session ID. It should start with "cs_".');
+        return;
+      }
+
+      const sessionId = sid.trim();
+      localStorage.setItem('edgarwolf_session', sessionId);
+      // Clear cached tier so it re-verifies against Stripe on next check
+      localStorage.removeItem('edgarwolf_tier');
+      localStorage.removeItem('edgarwolf_tier_label');
+      localStorage.removeItem('edgarwolf_tier_checked_at');
+
+      checkSubscriptionStatus().then(() => {
+        const tier = localStorage.getItem('edgarwolf_tier');
+        if (tier && tier !== 'standard') {
+          alert('Pro access restored! Reloading…');
+          window.location.reload();
+        } else {
+          alert('We couldn\'t verify an active Pro subscription for that session ID. If you need help, email jason@edgarwolf.com.');
+          localStorage.removeItem('edgarwolf_session');
+        }
+      });
     }
 
     async function startCheckout(tier) {
@@ -723,7 +841,7 @@
         </div>`;
     }
 
-    const BOARD_MAX_PER_COL = 4; // 4 per column = 8 total
+    const BOARD_MAX_PER_COL = 10;
 
     function renderSignalColumns(up, down, done, total) {
       // Sort each column by filing date descending (most recently filed first),
@@ -754,7 +872,7 @@
 
       let filings = [];
       try {
-        const res = await fetch(`${API}/feed/recent?days=14&limit=40`);
+        const res = await fetch(`${API}/feed/recent?days=14&limit=80`);
         if (!res.ok) throw new Error('feed unavailable');
         filings = (await res.json()).filings || [];
       } catch {
@@ -830,7 +948,7 @@
       try {
         const [objectRes, dashRes] = await Promise.all([
           fetch(`${API}/company/object/${cik}`),
-          fetch(`${API}/company/${cik}/dashboard?debug=true`),
+          fetch(`${API}/company/${cik}/dashboard?debug=true`, { headers: sessionHeaders() }),
         ]);
         const companyObject = objectRes.ok ? await objectRes.json() : null;
         const dash = dashRes.ok ? await dashRes.json() : {};
@@ -953,7 +1071,7 @@
         // Single aggregated call replaces the previous 4-5 parallel requests.
         const [objectRes, dashRes] = await Promise.all([
           fetch(`${API}/company/object/${cik}`),
-          fetch(`${API}/company/${cik}/dashboard?debug=true`),
+          fetch(`${API}/company/${cik}/dashboard?debug=true`, { headers: sessionHeaders() }),
         ]);
 
         const companyObject = objectRes.ok ? await objectRes.json() : null;
@@ -1146,15 +1264,15 @@
       }
 
       const cards = [];
-      if (typeof anomalies.upheaval_score === 'number') {
+      if (typeof anomalies.filing_stress_score === 'number') {
         const statusLower = (anomalies.status || 'LOW').toLowerCase();
         let severity = 'low';
         if (['elevated', 'high'].includes(statusLower)) severity = 'high';
         else if (statusLower === 'moderate') severity = 'moderate';
-        
+
         cards.push({
-          label: 'Upheaval Score',
-          value: `${anomalies.upheaval_score}/100`,
+          label: 'Filing Stress Score',
+          value: `${anomalies.filing_stress_score}/100`,
           detail: `Signal: ${anomalies.status || 'UNKNOWN'}`,
           severity: severity,
         });
@@ -1286,6 +1404,7 @@
       currentMetrics = metrics;
       currentTicker = company?.ticker || null;
       currentCik = company?.cik || null;
+      document.getElementById('signal-board').style.display = 'none';
       document.getElementById('watchlist-panel').style.display = 'none';
 
       // Company header
@@ -1314,9 +1433,11 @@
       }
 
       const provSelect = document.getElementById('prov-period');
-      const provPeriods = metrics?.periods || [];
-      provSelect.innerHTML = provPeriods.map(p => `<option value="${p.period}">${p.period}</option>`).join('');
-      renderProvenance();
+      if (provSelect) {
+        const provPeriods = metrics?.periods || [];
+        provSelect.innerHTML = provPeriods.map(p => `<option value="${p.period}">${p.period}</option>`).join('');
+        renderProvenance();
+      }
 
       const profileEl = document.getElementById('co-profile');
       const profile = metrics?.profitability_profile;
@@ -1350,21 +1471,25 @@
 
       // Flags
       const flagList = document.getElementById('flag-list');
-      if (!flags?.flags?.length) {
-        flagList.innerHTML = '<div class="flag-clean">✓ No statistical anomalies detected vs. trailing history</div>';
-      } else {
-        flagList.innerHTML = flags.flags.map(f => `
-          <div class="flag-badge ${f.severity}">
-            <div class="flag-dot"></div>
-            <span><strong>${f.metric}</strong> — ${f.note}</span>
-          </div>`).join('');
+      if (flagList) {
+        if (!flags?.flags?.length) {
+          flagList.innerHTML = '<div class="flag-clean">✓ No statistical anomalies detected vs. trailing history</div>';
+        } else {
+          flagList.innerHTML = flags.flags.map(f => `
+            <div class="flag-badge ${f.severity}">
+              <div class="flag-dot"></div>
+              <span><strong>${f.metric}</strong> — ${f.note}</span>
+            </div>`).join('');
+        }
       }
 
-      // Charts
+      // Charts — free tier, always render
+      try { if (revChart)    { revChart.destroy();    revChart    = null; } } catch (_) {}
+      try { if (marginChart) { marginChart.destroy(); marginChart = null; } } catch (_) {}
+
       const periods = (metrics?.periods || []).slice(0, 8).reverse();
       const labels  = periods.map(p => p.period.slice(0, 7));
 
-      if (revChart) revChart.destroy();
       revChart = new Chart(document.getElementById('rev-chart'), {
         type: 'bar',
         data: {
@@ -1385,15 +1510,14 @@
         }
       });
 
-      if (marginChart) marginChart.destroy();
       marginChart = new Chart(document.getElementById('margin-chart'), {
         type: 'line',
         data: {
           labels,
           datasets: [
-            { label: 'Gross', data: periods.map(p => p.gross_margin_pct), borderColor: '#34d399', tension: .3, pointRadius: 3 },
+            { label: 'Gross',     data: periods.map(p => p.gross_margin_pct),     borderColor: '#34d399', tension: .3, pointRadius: 3 },
             { label: 'Operating', data: periods.map(p => p.operating_margin_pct), borderColor: '#4f8ef7', tension: .3, pointRadius: 3 },
-            { label: 'Net', data: periods.map(p => p.net_margin_pct), borderColor: '#fbbf24', tension: .3, pointRadius: 3 },
+            { label: 'Net',       data: periods.map(p => p.net_margin_pct),       borderColor: '#fbbf24', tension: .3, pointRadius: 3 },
           ]
         },
         options: {
@@ -1407,21 +1531,24 @@
 
       // Segments
       const segBody = document.getElementById('seg-body');
-      if (segments?.segments?.length) {
-        const barColors = ['#4f8ef7','#34d399','#fbbf24','#f87171','#a78bfa','#fb923c'];
-        segBody.innerHTML = segments.segments.map((s, i) => `
-          <div class="seg-row">
-            <div class="seg-name" tabindex="0" data-tip="${escapeAttr(`${s.name}: ${fmtCurrency(s.value)} (${s.share_pct?.toFixed(1) ?? '—'}% of reported segment total in the latest quarter).`)}">${s.name}</div>
-            <div class="seg-bar-wrap"><div class="seg-bar" style="width:${s.share_pct}%;background:${barColors[i % barColors.length]}"></div></div>
-            <div class="seg-val">${fmtCurrency(s.value)}</div>
-            <div class="seg-pct">${s.share_pct?.toFixed(1)}%</div>
-          </div>`).join('');
-      } else {
-        segBody.innerHTML = '<div class="seg-na">Segment breakdown not available — company may not report named segments in XBRL</div>';
+      if (segBody) {
+        if (segments?.segments?.length) {
+          const barColors = ['#4f8ef7','#34d399','#fbbf24','#f87171','#a78bfa','#fb923c'];
+          segBody.innerHTML = segments.segments.map((s, i) => `
+            <div class="seg-row">
+              <div class="seg-name" tabindex="0" data-tip="${escapeAttr(`${s.name}: ${fmtCurrency(s.value)} (${s.share_pct?.toFixed(1) ?? '—'}% of reported segment total in the latest quarter).`)}">${s.name}</div>
+              <div class="seg-bar-wrap"><div class="seg-bar" style="width:${s.share_pct}%;background:${barColors[i % barColors.length]}"></div></div>
+              <div class="seg-val">${fmtCurrency(s.value)}</div>
+              <div class="seg-pct">${s.share_pct?.toFixed(1)}%</div>
+            </div>`).join('');
+        } else {
+          segBody.innerHTML = '<div class="seg-na">Segment breakdown not available — company may not report named segments in XBRL</div>';
+        }
       }
 
       // Quarterly table
-      document.getElementById('tbl-body').innerHTML = (metrics?.periods || []).map(p => `
+      const tblBody = document.getElementById('tbl-body');
+      if (tblBody) tblBody.innerHTML = (metrics?.periods || []).map(p => `
         <tr>
           <td>${p.period}</td>
           <td>${fmtCurrency(p.revenue)}</td>
@@ -1435,6 +1562,8 @@
       document.getElementById('back-bar').style.display = 'block';
       document.getElementById('dashboard').style.display = 'block';
       document.getElementById('back-bar').scrollIntoView({ behavior: 'smooth' });
+
+      applyTierGating();
     }
   </script>
 
@@ -1443,7 +1572,7 @@
       <strong>Disclaimer:</strong> This tool displays publicly available financial data sourced from SEC filings. It is provided for informational purposes only and does not constitute investment advice. Always verify data independently before making financial decisions.
     </div>
     <div>
-      Some metrics — including margin calculations, year-over-year growth rates, gross profit derivations, exception flags, trend signals, and the Strengthening / Weakening classifications — are <strong>computed by this application</strong> using its own methodology, not reported directly by SEC filers. Fields labeled <em>Derived</em> or <em>Stale</em> in the Metric Trust panel are subject to this. Full methodology is documented in METHODOLOGY.md in the project repository.
+      Some metrics — including margin calculations, year-over-year growth rates, gross profit derivations, exception flags, filing stress scores, trend signals, and the Strengthening / Weakening classifications — are <strong>computed by this application</strong> using its own methodology, not reported directly by SEC filers. Fields labeled <em>Derived</em> or <em>Stale</em> in the Data Quality panel are subject to this. Full methodology is documented in METHODOLOGY.md in the project repository.
     </div>
     <div>
       Raw data sourced from <a href="https://www.sec.gov/search-filings" target="_blank" rel="noopener">SEC EDGAR</a> — U.S. Securities and Exchange Commission public filing database.

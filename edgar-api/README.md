@@ -44,7 +44,7 @@ curl http://127.0.0.1:8000/health
 - GET /company/{cik}/segments
 - GET /company/{cik}/flags
 - GET /company/{cik}/summary
-- GET /company/{cik}/anomalies — filing cadence and XBRL anomaly signals with upheaval score
+- GET /company/{cik}/anomalies — filing cadence and XBRL anomaly signals with Filing Stress Score
 - GET /company/{cik}/dashboard — aggregated single call: metrics + segments + flags + summary + anomalies
 
 ## Metrics behavior highlights
@@ -114,7 +114,7 @@ limitation — is documented in:
 
 That document covers: XBRL concept selection, quarterly normalization, gross profit
 derivation, margin calculations, YoY matching, profitability profile classification,
-metric source labels, z-score exception flags, upheaval score, natural language
+metric source labels, z-score exception flags, Filing Stress Score, natural language
 summary rules, recent filers discovery, and the signal board scoring model.
 
 ## Upstream resilience behavior

@@ -181,7 +181,7 @@ quarter is an unusual result for *this company*, not necessarily for its sector.
 
 ---
 
-## 9. Upheaval Score
+## 9. Filing Stress Score
 
 **File:** `edgar-api/routers/company_lookup.py` — `_build_anomaly_signals()`
 
@@ -251,8 +251,11 @@ pages, etc.), so results are deduplicated by CIK. Company name is extracted from
 the `display_names` field which takes the form `"Company Name  (TICKER)  (CIK XXXXXXXXXX)"` —
 we split on `"  ("` and take the first segment.
 
+The frontend requests up to 80 candidates (`limit=80`) to ensure enough companies
+are available to fill both signal board columns.
+
 **Limitation:** EFTS returns up to 100 records per request. With deduplication the
-practical limit is roughly 30–60 unique companies per 14-day window depending on
+practical limit is roughly 30–80 unique companies per 14-day window depending on
 filing volume. High-volume filing periods (e.g., earnings season) will surface more.
 
 ---
@@ -289,12 +292,11 @@ cyclical or seasonal patterns.
 
 **Display cap and ordering:**
 
-The board fetches up to 40 recent filers from `/feed/recent`. Within each column,
+The board fetches up to 80 recent filers from `/feed/recent`. Within each column,
 companies are sorted by filing date descending (most recently filed first) and
-capped at **4 per column**, giving a maximum of 8 rows total. This cap is applied
-so the board always renders at a consistent, readable height regardless of how many
-companies score in a given direction. If fewer than 4 companies score into a column
-during a quiet filing period, all available entries are shown.
+capped at **10 per column**, giving a maximum of 20 rows total. If fewer than 10
+companies score into a column during a quiet filing period, all available entries
+are shown.
 
 The chronological ordering means the board reflects the freshest available filings,
 not the highest-scoring ones. Score magnitude is shown on each row for reference

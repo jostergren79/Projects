@@ -12,11 +12,13 @@ import sqlite3
 import json
 import time
 import threading
+from typing import Optional
 import os
 from pathlib import Path
 
 CACHE_PATH = Path(__file__).parent / "data" / "edgar_cache.db"
 TTL_SECONDS = 6 * 60 * 60  # 6 hours
+SESSION_TTL_SECONDS = 60 * 60  # 1 hour
 
 _write_lock = threading.Lock()
 
@@ -30,6 +32,13 @@ def open_cache_connection() -> sqlite3.Connection:
             key       TEXT PRIMARY KEY,
             value     TEXT NOT NULL,
             cached_at INTEGER NOT NULL
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS session_tier_cache (
+            session_id TEXT PRIMARY KEY,
+            tier       TEXT NOT NULL,
+            cached_at  INTEGER NOT NULL
         )
     """)
     conn.commit()
@@ -110,3 +119,36 @@ def cache_set(key: str, value: dict) -> None:
 
 def cache_clear(key: str) -> None:
     clear_cached_json(key)
+
+
+# ── Session tier cache (Stripe verification result, 1-hour TTL) ─────────────
+
+def get_cached_session_tier(session_id: str) -> Optional[str]:
+    conn = open_cache_connection()
+    try:
+        row = conn.execute(
+            "SELECT tier, cached_at FROM session_tier_cache WHERE session_id = ?",
+            (session_id,),
+        ).fetchone()
+    finally:
+        conn.close()
+    if not row:
+        return None
+    tier, cached_at = row
+    if time.time() - cached_at > SESSION_TTL_SECONDS:
+        return None
+    return tier
+
+
+def store_cached_session_tier(session_id: str, tier: str) -> None:
+    with _write_lock:
+        conn = open_cache_connection()
+        try:
+            conn.execute(
+                """INSERT OR REPLACE INTO session_tier_cache (session_id, tier, cached_at)
+                   VALUES (?, ?, ?)""",
+                (session_id, tier, int(time.time())),
+            )
+            conn.commit()
+        finally:
+            conn.close()

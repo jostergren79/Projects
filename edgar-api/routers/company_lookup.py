@@ -154,9 +154,9 @@ def _build_anomaly_signals(company_object: dict) -> dict:
     status = 'ELEVATED' if score >= 70 else 'MODERATE' if score >= 40 else 'LOW'
 
     return {
-        'upheaval_score': score,
+        'filing_stress_score': score,
         'status': status,
-        'overview_note': 'Derived anomaly signals from filing cadence, XBRL coverage, normalized concept mapping, and peer metadata.',
+        'overview_note': 'Derived filing stress signals from filing cadence, XBRL coverage, normalized concept mapping, and peer metadata.',
         'signals': [
             {
                 'label': 'Filing Velocity',

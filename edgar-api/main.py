@@ -94,6 +94,7 @@ async def per_ip_rate_limit(request: Request, call_next):
         window.append(now)
     return await call_next(request)
 
+
 cors_origins_raw = os.getenv("CORS_ALLOW_ORIGINS", "").strip()
 if not cors_origins_raw:
     # Fail closed when unset. This is safer for production and still allows
