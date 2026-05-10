@@ -605,14 +605,20 @@
         filings.map(async (filer) => {
           try {
             const res = await fetch(`${API}/company/${filer.cik}/metrics?quarters=2`);
-            if (!res.ok) return;
+            if (!res.ok) {
+              const err = await res.json().catch(() => ({}));
+              trackEvent('signal_board_skip', { cik: filer.cik, name: filer.name, status: res.status, reason: err.detail || 'unknown' });
+              return;
+            }
             const metrics = await res.json();
             const scored = scoreCompany(metrics.periods);
             if (!scored || scored.score === 0) return;
             const entry = { cik: filer.cik, name: metrics.name || filer.name || filer.cik, form: filer.form, filed: filer.filed, scored };
             if (scored.score > 0) up.push(entry);
             else down.push(entry);
-          } catch { /* skip unavailable companies */ } finally {
+          } catch (e) {
+            trackEvent('signal_board_skip', { cik: filer.cik, name: filer.name, status: 0, reason: e.message || 'fetch_error' });
+          } finally {
             done++;
             renderSignalColumns(up, down, done, filings.length);
           }

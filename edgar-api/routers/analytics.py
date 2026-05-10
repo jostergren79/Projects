@@ -21,6 +21,7 @@ _ALLOWED_EVENTS = {
     "search",
     "company_view",
     "signal_board_click",
+    "signal_board_skip",
     "watchlist_add",
     "export",
 }
