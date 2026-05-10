@@ -18,7 +18,7 @@ from html import unescape
 router = APIRouter()
 
 HEADERS = {
-    "User-Agent": "edgar-api/0.1 contact@example.com",
+    "User-Agent": "edgar-api/0.1 jason@edgarwolf.com",
     "Accept-Encoding": "gzip, deflate",
 }
 

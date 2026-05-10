@@ -36,7 +36,7 @@ def _user_agent() -> str:
     if explicit:
         return explicit
     app_name = os.getenv("SEC_APP_NAME", "edgar-api/0.1").strip()
-    contact = os.getenv("SEC_CONTACT_EMAIL", "contact@example.com").strip()
+    contact = os.getenv("SEC_CONTACT_EMAIL", "jason@edgarwolf.com").strip()
     return f"{app_name} {contact}"
 
 

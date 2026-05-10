@@ -11,7 +11,7 @@ services:
       - key: CORS_ALLOW_ORIGINS
         value: https://www.edgarwolf.com
       - key: SEC_USER_AGENT
-        value: edgar-api/0.1 jason.ostergren79@gmail.com
+        value: edgar-api/0.1 jason@edgarwolf.com
       - key: SEC_REQUIRE_EXPLICIT_USER_AGENT
         value: "true"
       - key: SEC_HTTP_TIMEOUT_SECONDS
