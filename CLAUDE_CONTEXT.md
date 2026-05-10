@@ -171,7 +171,7 @@ _Running log of important decisions so we don't relitigate them._
 - Header badge shows ✓ Pro (blue) or ✓ Pro+ (green) after verification; Standard shows Upgrade button
 - Stripe env vars in Render: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET (both sync:false / set manually)
 - Stripe webhook endpoint registered at https://www.edgarwolf.com/webhook/stripe
-- Price IDs: Pro = price_1TVNfH1C3cijZqBOyp7Y5qJH, Pro+ = price_1TVNeQ1C3cijZqBOkOX1IoJj
+- Price IDs: Pro = price_1TVNeQ1C3cijZqBOkOX1IoJj ($19/mo), Pro+ = price_1TVNfH1C3cijZqBOyp7Y5qJH ($99/mo)
 
 **Feature gating (LIVE as of May 10, 2026):**
 - Frontend: `applyTierGating()` runs after every dashboard render, gates 6 sections for Standard users
