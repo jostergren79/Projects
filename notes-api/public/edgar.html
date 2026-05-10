@@ -943,6 +943,7 @@
       setInputError(false);
       document.getElementById('dashboard').style.display = 'none';
       document.getElementById('loading').style.display = 'block';
+      document.getElementById('loading').scrollIntoView({ behavior: 'smooth', block: 'center' });
       document.getElementById('search-btn').disabled = true;
 
       try {
@@ -1081,6 +1082,7 @@
       setInputError(false);
       document.getElementById('dashboard').style.display = 'none';
       document.getElementById('loading').style.display = 'block';
+      document.getElementById('loading').scrollIntoView({ behavior: 'smooth', block: 'center' });
       document.getElementById('search-btn').disabled = true;
 
       try {
