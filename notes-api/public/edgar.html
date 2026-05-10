@@ -33,7 +33,8 @@
     .header-actions { display: flex; gap: 10px; flex-shrink: 0; }
     .btn-upgrade { background: transparent; border: 1px solid var(--accent); color: var(--accent); border-radius: var(--radius); padding: 7px 16px; font-size: .8rem; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background .15s, color .15s; }
     .btn-upgrade:hover { background: var(--accent); color: #fff; }
-    .btn-upgrade.active { border-color: var(--green); color: var(--green); }
+    .tier-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(52,211,153,.1); border: 1px solid var(--green); color: var(--green); border-radius: 999px; padding: 6px 14px; font-size: .78rem; font-weight: 700; white-space: nowrap; }
+    .tier-badge.tier-pro { background: rgba(79,142,247,.1); border-color: var(--accent); color: var(--accent); }
     /* ── Upgrade Modal ── */
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 1000; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(4px); }
     .modal-overlay.open { display: flex; }
@@ -350,6 +351,7 @@
       <div class="subtitle">Real financial data from SEC EDGAR — any US public company</div>
     </div>
     <div class="header-actions">
+      <div id="tier-badge" class="tier-badge" style="display:none"></div>
       <button id="upgrade-header-btn" class="btn-upgrade" onclick="openUpgradeModal()">Upgrade</button>
     </div>
   </header>
@@ -613,13 +615,48 @@
       }
     }
 
-    function updateTierBadge() {
-      const tierLabel = localStorage.getItem('edgarwolf_tier_label');
-      if (!tierLabel) return;
-      const btn = document.getElementById('upgrade-header-btn');
-      if (btn) {
-        btn.textContent = '✓ ' + tierLabel;
-        btn.classList.add('active');
+    function applyTierBadge(tier, label) {
+      const badge = document.getElementById('tier-badge');
+      const upgradeBtn = document.getElementById('upgrade-header-btn');
+      if (!tier || tier === 'standard') {
+        if (badge) badge.style.display = 'none';
+        if (upgradeBtn) { upgradeBtn.style.display = ''; upgradeBtn.textContent = 'Upgrade'; }
+        return;
+      }
+      if (badge) {
+        badge.style.display = 'inline-flex';
+        badge.textContent = '✓ ' + label;
+        badge.className = 'tier-badge' + (tier === 'pro' ? ' tier-pro' : '');
+      }
+      // Pro users can still upgrade to Pro+; Pro+ has nothing to upgrade to
+      if (upgradeBtn) upgradeBtn.style.display = tier === 'pro_plus' ? 'none' : '';
+    }
+
+    async function checkSubscriptionStatus() {
+      const sessionId = localStorage.getItem('edgarwolf_session');
+      const cachedTier = localStorage.getItem('edgarwolf_tier');
+      const cachedLabel = localStorage.getItem('edgarwolf_tier_label');
+      const cachedAt = parseInt(localStorage.getItem('edgarwolf_tier_checked_at') || '0');
+
+      // Use cache if it's under 1 hour old and shows a paid tier
+      if (cachedTier && cachedTier !== 'standard' && (Date.now() - cachedAt) < 3_600_000) {
+        applyTierBadge(cachedTier, cachedLabel);
+        return;
+      }
+
+      if (!sessionId) return;
+
+      try {
+        const res = await fetch(`${API}/subscription/status?session_id=${encodeURIComponent(sessionId)}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        localStorage.setItem('edgarwolf_tier', data.tier);
+        localStorage.setItem('edgarwolf_tier_label', data.label);
+        localStorage.setItem('edgarwolf_tier_checked_at', String(Date.now()));
+        applyTierBadge(data.tier, data.label);
+      } catch (_) {
+        // Network error — fall back to cached value
+        if (cachedTier && cachedTier !== 'standard') applyTierBadge(cachedTier, cachedLabel);
       }
     }
 
@@ -826,7 +863,7 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-      updateTierBadge();
+      checkSubscriptionStatus();
       const params   = new URLSearchParams(window.location.search);
       const cikParam = params.get('cik');
       const qParam   = params.get('q') || params.get('ticker');

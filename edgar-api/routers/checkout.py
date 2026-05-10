@@ -1,11 +1,14 @@
 """
 Stripe Checkout integration.
 
-POST /checkout/session  — creates a hosted Stripe Checkout session and returns
-                          the redirect URL. Called by the frontend upgrade buttons.
+POST /checkout/session      — creates a hosted Stripe Checkout session and returns
+                              the redirect URL. Called by the frontend upgrade buttons.
 
-POST /webhook/stripe    — receives Stripe webhook events. Logs completed
-                          subscriptions for analytics and future email alerts.
+GET  /subscription/status   — verifies a Stripe session ID against the live Stripe API
+                              and returns the user's active tier. Cached client-side.
+
+POST /webhook/stripe        — receives Stripe webhook events. Logs completed
+                              subscriptions for analytics and future email alerts.
 
 Environment variables required (set in Render dashboard, never in code):
   STRIPE_SECRET_KEY       sk_live_...
@@ -57,6 +60,47 @@ async def create_checkout_session(request: Request):
     except stripe.StripeError as e:
         logger.error("Stripe error creating checkout session: %s", e)
         raise HTTPException(status_code=502, detail="Failed to create checkout session")
+
+
+@router.get("/subscription/status")
+async def subscription_status(session_id: str = ""):
+    """
+    Verify a Stripe checkout session and return the active subscription tier.
+    Returns {"tier": "standard"|"pro"|"pro_plus", "label": "Standard"|"Pro"|"Pro+"}.
+    """
+    if not session_id or not stripe.api_key:
+        return {"tier": "standard", "label": "Standard"}
+
+    try:
+        session = stripe.checkout.Session.retrieve(
+            session_id,
+            expand=["subscription", "subscription.items.data.price"],
+        )
+        sub = session.get("subscription") if isinstance(session, dict) else session.subscription
+        if sub is None:
+            return {"tier": "standard", "label": "Standard"}
+
+        status = sub.get("status") if isinstance(sub, dict) else sub.status
+        if status != "active":
+            return {"tier": "standard", "label": "Standard"}
+
+        items = (sub.get("items", {}).get("data", []) if isinstance(sub, dict)
+                 else sub.items.data)
+        price_id = ""
+        if items:
+            p = items[0].get("price", {}) if isinstance(items[0], dict) else items[0].price
+            price_id = p.get("id", "") if isinstance(p, dict) else p.id
+
+        if price_id == PRICE_IDS["pro_plus"]:
+            return {"tier": "pro_plus", "label": "Pro+"}
+        if price_id == PRICE_IDS["pro"]:
+            return {"tier": "pro", "label": "Pro"}
+
+        return {"tier": "standard", "label": "Standard"}
+
+    except stripe.StripeError as e:
+        logger.error("Stripe error checking subscription status: %s", e)
+        return {"tier": "standard", "label": "Standard"}
 
 
 @router.post("/webhook/stripe")
