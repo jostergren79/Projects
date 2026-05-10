@@ -59,7 +59,7 @@ app = FastAPI(title="EDGAR Financial Metrics API", version="0.1.0")
 # Configurable via env: APP_RATE_LIMIT_REQUESTS, APP_RATE_LIMIT_WINDOW_SECONDS.
 # Only applies to /company/* routes; health and static pages are exempt.
 # ---------------------------------------------------------------------------
-_RATE_LIMIT_REQUESTS = int(os.getenv("APP_RATE_LIMIT_REQUESTS", "60"))
+_RATE_LIMIT_REQUESTS = int(os.getenv("APP_RATE_LIMIT_REQUESTS", "200"))
 _RATE_LIMIT_WINDOW   = float(os.getenv("APP_RATE_LIMIT_WINDOW_SECONDS", "60"))
 _ip_windows: dict[str, collections.deque] = {}
 
@@ -76,7 +76,7 @@ async def request_logger(request: Request, call_next):
 @app.middleware("http")
 async def per_ip_rate_limit(request: Request, call_next):
     path = request.url.path
-    if path.startswith("/company") or path.startswith("/feed") or path.startswith("/analytics"):
+    if path.startswith("/company") or path.startswith("/feed"):
         ip = request.client.host if request.client else "unknown"
         now = time.monotonic()
         window = _ip_windows.setdefault(ip, collections.deque())
