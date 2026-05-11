@@ -576,7 +576,11 @@ async def company_metrics(
         output.append(item)
 
     if not output:
-        raise HTTPException(status_code=404, detail="No quarterly financial data found for this company")
+        return {
+            "cik":     cik10,
+            "name":    facts.get("entityName"),
+            "periods": [],
+        }
 
     response = {
         "cik":    cik10,
