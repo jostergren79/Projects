@@ -141,12 +141,29 @@ _Running log of important decisions so we don't relitigate them._
 - **Stripe session-based auth:** Without user login, subscription status is verified by storing the Stripe session_id in localStorage and checking it against the Stripe API on load (cached 1 hour). This breaks if user clears localStorage or switches browsers. Full per-user auth is needed to solve this properly.
 - **Feature gating shipped May 10, 2026:** Frontend gates 6 Pro sections with upgrade cards (Exception Flags, Filing Signals, Peer Comparison, Segment Breakdown, Source Filing, Data Quality). No backend lookup limit — free users have unlimited searches. Charts and quarterly table are free.
 - **Free tier value-first design:** 8-quarter charts and quarterly data table are free. Pro gates the analytical layer (z-scores, stress score, peer comparison). Summary CTA below narrative drives upgrades contextually.
-- **Signal board shows 20 companies:** 10 strengthening + 10 weakening, sourced from 80 recent filers.
+- **Signal board is on-demand:** User clicks "Load Signal Board" and picks a per-column count (5/10/15/20/25). Feed limit scales with selection (perCol × 8, capped at 200). No auto-load on page open.
 - **Terminology locked:** Upheaval Score → Filing Stress Score. Anomaly Signals → Filing Signals. Metric Trust & Sources → Data Quality & Sources. Filing Provenance → Source Filing. All docs, backend, and frontend updated.
 
 ---
 
-## 8. Technical State (as of May 10, 2026)
+## 8. Local Dev Workflow
+
+**Start local server + browser in one command:**
+```bash
+./dev.sh          # opens http://127.0.0.1:8000/?dev_tier=pro (default)
+./dev.sh standard # free tier
+./dev.sh pro_plus # Pro+ tier
+```
+`dev.sh` kills any existing process on :8000, starts uvicorn with --reload, waits for health, then opens the browser.
+
+**Dev tier bypass:**
+The `?dev_tier=pro` URL parameter bypasses Stripe verification on `127.0.0.1`/`localhost` only. It's a no-op on the live site. The tier persists in localStorage for 1 hour (same as a real subscription check). To reset, clear localStorage or open a `?dev_tier=standard` URL.
+
+**Always test locally before deploying.** Use `./dev.sh` and exercise the signal board, company search, Pro gating, and mobile layout before pushing to Render.
+
+---
+
+## 9. Technical State (as of May 10, 2026)
 
 **What's solid:**
 - Rate limiting: 200 req/min per IP on /company/* and /feed/* (analytics excluded)
@@ -187,4 +204,4 @@ _Running log of important decisions so we don't relitigate them._
 
 ---
 
-_Last updated: May 10, 2026 (entity detection, null guard fixes, loading UX, UptimeRobot live, 4 X replies posted on $GIS threads)_
+_Last updated: May 10, 2026 (signal board on-demand with range selector, dev.sh launch script, ?dev_tier bypass for local testing, feed limit raised to 200, Pro price updated to $19.99)_

@@ -777,6 +777,20 @@
     }
 
     async function checkSubscriptionStatus() {
+      // Localhost-only dev shortcut: ?dev_tier=pro or ?dev_tier=pro_plus
+      // bypasses Stripe so you can test gating without a real subscription.
+      if (['127.0.0.1', 'localhost'].includes(window.location.hostname)) {
+        const devTier = new URLSearchParams(window.location.search).get('dev_tier');
+        if (devTier) {
+          const devLabel = devTier === 'pro_plus' ? 'Pro+' : devTier === 'pro' ? 'Pro' : 'Standard';
+          localStorage.setItem('edgarwolf_tier', devTier);
+          localStorage.setItem('edgarwolf_tier_label', devLabel);
+          localStorage.setItem('edgarwolf_tier_checked_at', String(Date.now()));
+          applyTierBadge(devTier, devLabel);
+          return;
+        }
+      }
+
       const sessionId   = localStorage.getItem('edgarwolf_session');
       const customerId  = localStorage.getItem('edgarwolf_customer');
       const cachedTier  = localStorage.getItem('edgarwolf_tier');
