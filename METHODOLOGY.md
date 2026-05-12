@@ -262,7 +262,7 @@ filing volume. High-volume filing periods (e.g., earnings season) will surface m
 
 ## 12. Signal Board: Strengthening / Weakening
 
-**File:** `notes-api/public/edgar.html` — `scoreCompany()`
+**File:** `edgar-frontend/public/edgar.html` — `scoreCompany()`
 
 The two-column signal board on the home page is the only logic applied entirely
 on the frontend (in the browser). It classifies each recently-filed company using

@@ -1,5 +1,5 @@
 """
-One-time script to generate notes-api/public/og-image.png
+One-time script to generate edgar-frontend/public/og-image.png
 Run from edgar-api/: .venv/bin/python generate_og_image.py
 """
 
@@ -7,7 +7,7 @@ from PIL import Image, ImageDraw, ImageFont
 import pathlib
 
 W, H = 1200, 630
-OUT = pathlib.Path(__file__).parent.parent / "notes-api" / "public" / "og-image.png"
+OUT = pathlib.Path(__file__).parent.parent / "edgar-frontend" / "public" / "og-image.png"
 
 # ── Palette ───────────────────────────────────────────────────────────────────
 BG      = (15,  17,  23)

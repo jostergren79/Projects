@@ -39,9 +39,9 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Resolve the frontend public directory.
-# Repo layout: edgar-api/ and notes-api/ are siblings at the repo root.
+# Repo layout: edgar-api/ and edgar-frontend/ are siblings at the repo root.
 # __file__ = <repo-root>/edgar-api/main.py → parent.parent = repo root.
-_PUBLIC = pathlib.Path(__file__).parent.parent / "notes-api" / "public"
+_PUBLIC = pathlib.Path(__file__).parent.parent / "edgar-frontend" / "public"
 
 from cache import cache_health_check
 
