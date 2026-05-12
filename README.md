@@ -1,103 +1,74 @@
-# Projects Monorepo
+# EdgarWolf
 
-This repository contains two app surfaces:
+SEC EDGAR financial data and anomaly detection tool. Pulls data directly from public SEC filings and flags statistical deviations in margins, revenue growth, and filing behavior for any US public company.
 
-1. edgar-api: FastAPI backend for SEC EDGAR normalized data.
-2. notes-api: Public static pages and smoke checks.
+**Live:** https://www.edgarwolf.com
 
-The repository is intentionally a single Git repo rooted at this folder.
+---
 
-## Start Here
+## Architecture
 
-If you are new to this repo, use this path-based guide:
+Single Railway service: FastAPI backend (`edgar-api/`) serving a static HTML/JS frontend (`notes-api/public/edgar.html`).
 
-1. Want EDGAR backend API behavior: start in edgar-api/main.py, then edgar-api/routers/.
-2. Want financial metric logic: start in edgar-api/routers/financial_metrics.py.
-3. Want anomaly signals or filing cadence logic: start in edgar-api/routers/anomaly_flags.py and edgar-api/routers/company_lookup.py (_build_anomaly_signals).
-4. Want the aggregated dashboard endpoint: start in edgar-api/routers/dashboard.py.
-5. Want the natural language summary: start in edgar-api/routers/narrative_summary.py.
-6. Want public-facing HTML pages: start in notes-api/public/.
-7. Want smoke validation for public mode: start in notes-api/scripts/smoke-public-mode.sh.
+```
+edgar-api/        Python FastAPI app — API, Stripe, watchlist, caching
+notes-api/public/ Static frontend — single-file HTML/JS/CSS
+railway.toml      Railway deployment config
+nixpacks.toml     Nixpacks start command override
+requirements.txt  Points to edgar-api/requirements.txt (nixpacks detection)
+```
 
-## Folder Naming Decision
+---
 
-For now, keep top-level folder names as edgar-api and notes-api.
-
-Why:
-
-1. They are already accurate and recognizable.
-2. Renaming now creates avoidable path churn across scripts, deploy config, and local muscle memory.
-3. The clearer immediate win is navigation documentation, which this README now provides.
-
-If we later rename folders, do it as a planned migration with path updates in one commit and a short compatibility note.
-
-## Current Tracked Scope
-
-The tracked source of truth currently includes:
-
-1. edgar-api application source and deployment config.
-2. notes-api public HTML pages.
-3. notes-api public-mode smoke script.
-
-Build and machine-local artifacts are intentionally untracked.
-
-## Repository Layout
-
-- edgar-api/: Python API service
-- notes-api/public/: static pages served publicly
-- notes-api/scripts/: smoke scripts
-
-## Local Setup
-
-### 1) Python service (edgar-api)
-
-From repository root:
+## Local Development
 
 ```bash
 cd edgar-api
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-uvicorn main:app --host 127.0.0.1 --port 8000
+uvicorn main:app --reload --port 8000
 ```
 
-Health check:
+Or use the launcher script (starts server + opens browser with dev tier):
 
 ```bash
-curl http://127.0.0.1:8000/health
+./dev.sh [standard|pro|pro_plus]
 ```
 
-### 2) Public pages (notes-api)
+Then open: http://127.0.0.1:8000
 
-If you only need to preview static pages, serve notes-api/public locally:
+---
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `edgar-api/main.py` | FastAPI app, middleware, routing |
+| `edgar-api/cache.py` | SQLite cache, watchlists, users tables |
+| `edgar-api/edgar_client.py` | SEC EDGAR HTTP client, rate limiter |
+| `edgar-api/routers/financial_metrics.py` | XBRL concept selection, margins, YoY |
+| `edgar-api/routers/anomaly_flags.py` | Z-score exception flags |
+| `edgar-api/routers/dashboard.py` | Aggregated single-call endpoint |
+| `edgar-api/routers/checkout.py` | Stripe checkout, webhooks, subscription status |
+| `edgar-api/routers/watchlist.py` | Server-side watchlist CRUD (Pro/Pro+ only) |
+| `edgar-api/routers/feed.py` | Recent SEC filers for signal board |
+| `notes-api/public/edgar.html` | Entire frontend (single file) |
+| `METHODOLOGY.md` | Every derived metric and scoring formula |
+
+---
+
+## Environment Variables
+
+Set in Railway Variables panel. See `edgar-api/.env.production.example` for the full list. Never commit real secrets.
+
+---
+
+## QA
+
+Postman collection with 28 requests and 49 assertions:
 
 ```bash
-cd notes-api/public
-python3 -m http.server 3001
+cd edgar-api/postman
+./run_qa.sh [local|production]   # requires: npm install -g newman
 ```
-
-Then open:
-
-1. http://127.0.0.1:3001/index.html
-2. http://127.0.0.1:3001/edgar.html
-
-## Production and Secrets
-
-Use edgar-api/.env.production.example as a template for deployment values.
-
-Never commit real secrets.
-
-## Cleanup Rules
-
-These paths are treated as generated or local and should remain untracked:
-
-1. edgar-api/.venv/
-2. edgar-api/data/*.db
-3. notes-api/node_modules/
-4. notes-api/dist/
-
-## Next Hardening Targets
-
-1. Add a tracked notes-api source manifest and build entrypoint if server-side runtime is required.
-2. Add a single top-level launcher script once notes-api runtime source is finalized.
-3. Add a clean-room verification checklist (fresh clone to successful local run).

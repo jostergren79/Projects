@@ -1,6 +1,6 @@
 # EdgarWolf — Claude Context Doc
 
-**Current version: v1.3.1** (2026-05-12) — see `CHANGELOG.md` for full release history.
+**Current version: v1.3.2** (2026-05-12) — see `CHANGELOG.md` for full release history.
 
 Paste this file at the start of every Claude conversation to restore full context.
 Update metrics, version, and priorities at the end of every relevant session.
@@ -256,4 +256,4 @@ Bypasses Stripe verification on `127.0.0.1`/`localhost` only — no-op on the li
 
 ---
 
-_Last updated: May 12, 2026 — v1.3.1. Railway build fixed (nixpacks auto-detection via root requirements.txt), persistent volume at /app/data live, Stripe webhook updated, Cloudflare DNS verified, edgarwolf.com fully live on Railway._
+_Last updated: May 12, 2026 — v1.3.2. Codebase audit: removed old S&OP project files, Node.js server, Render/Heroku artifacts. Root README rewritten. Codebase is now EdgarWolf-only and lean._

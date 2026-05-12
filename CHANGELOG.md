@@ -10,6 +10,23 @@ Versioning follows [Semantic Versioning](https://semver.org/):
 
 ---
 
+## [1.3.2] — 2026-05-12
+
+### Removed
+- `sop.html` and `query.html` — old PCB S&OP project files, unrelated to EdgarWolf
+- `runtime.txt` (root and `edgar-api/`) — Render/Heroku artifact, obsolete on Railway
+- `notes-api/server.js` and `notes-api/package.json` — old Node.js static server, FastAPI now serves all pages
+- `notes-api/scripts/smoke-public-mode.sh` — tested the Node.js server which is now removed
+- `notes-api/README.md` — stale, referenced removed files
+- `notes-api/dist/` — Node.js build artifacts
+
+### Changed
+- `README.md` (root) — full rewrite reflecting current EdgarWolf architecture
+- `scripts/clean-local-artifacts.sh` — removed node_modules/dist references, added WAL file cleanup
+- `.gitignore` — removed obsolete `notes-api/node_modules` and `notes-api/dist` entries
+
+---
+
 ## [1.3.1] — 2026-05-12
 
 ### Fixed

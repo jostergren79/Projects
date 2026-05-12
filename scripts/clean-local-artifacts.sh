@@ -8,7 +8,7 @@ echo "Cleaning local artifacts under: ${ROOT_DIR}"
 
 rm -rf "${ROOT_DIR}/edgar-api/.venv"
 rm -f "${ROOT_DIR}/edgar-api/data"/*.db
-rm -rf "${ROOT_DIR}/notes-api/node_modules"
-rm -rf "${ROOT_DIR}/notes-api/dist"
+rm -f "${ROOT_DIR}/edgar-api/data"/*.db-shm
+rm -f "${ROOT_DIR}/edgar-api/data"/*.db-wal
 
 echo "Done."
