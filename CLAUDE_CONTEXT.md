@@ -43,7 +43,7 @@ SEC EDGAR financial data and anomaly detection tool. Pulls data directly from pu
 - `edgar-api/routers/checkout.py` — Stripe checkout, webhook, subscription status, billing portal
 - `edgar-api/routers/watchlist.py` — server-side watchlist CRUD (Pro/Pro+ only, X-Customer-Id gated)
 - `edgar-api/routers/alerts.py` — dev-only test alert send via Resend
-- `edgar-frontend/public/edgar.html` — entire frontend (single file)
+- `edgar-frontend/edgar.html` — entire frontend (single file)
 - `railway.toml` — Railway deployment config (repo root)
 - `METHODOLOGY.md` — documents every derived metric and scoring formula
 
@@ -140,7 +140,7 @@ _Running log of important decisions so we don't relitigate them._
 - **Filing Stress Score:** Renamed from "Upheaval Score" — better resonance with finance audience.
 - **Distribution first:** Product is good enough to charge for. Distribution is the only job right now.
 - **Sale target ($500k) is not realistic short term.** Realistic near-term goal is replacing income.
-- **Railway deployment:** Migrated from Render free tier to Railway $5/month Hobby plan. `railway.toml` at repo root, start command `cd edgar-api && uvicorn main:app --host 0.0.0.0 --port $PORT`. Root directory in Railway set to blank (full repo deployed so `edgar-frontend/public` is accessible).
+- **Railway deployment:** Migrated from Render free tier to Railway $5/month Hobby plan. `railway.toml` at repo root, start command `cd edgar-api && uvicorn main:app --host 0.0.0.0 --port $PORT`. Root directory in Railway set to blank (full repo deployed so `edgar-frontend` is accessible).
 - **Analytics via Railway logs:** Events emitted as structured log lines (grep 'EVENT' in Railway log tab). No external analytics service needed.
 - **Watchlist keyed by CIK:** Ticker is unreliable (empty for many EDGAR companies). CIK is always present.
 - **Server-side watchlist (v1.3.0):** Pro/Pro+ users get watchlist persisted in SQLite (`watchlists` table, keyed by Stripe customer_id). Standard users stay on localStorage. syncWatchlistFromServer() runs once per session, merges server→local and pushes local-only items up. Identity anchor = Stripe customer_id (already verified, no new auth needed).

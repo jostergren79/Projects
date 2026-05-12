@@ -8,11 +8,11 @@ SEC EDGAR financial data and anomaly detection tool. Pulls data directly from pu
 
 ## Architecture
 
-Single Railway service: FastAPI backend (`edgar-api/`) serving a static HTML/JS frontend (`edgar-frontend/public/edgar.html`).
+Single Railway service: FastAPI backend (`edgar-api/`) serving a static HTML/JS frontend (`edgar-frontend/edgar.html`).
 
 ```
 edgar-api/        Python FastAPI app — API, Stripe, watchlist, caching
-edgar-frontend/public/ Static frontend — single-file HTML/JS/CSS
+edgar-frontend/ Static frontend — single-file HTML/JS/CSS
 railway.toml      Railway deployment config
 nixpacks.toml     Nixpacks start command override
 requirements.txt  Points to edgar-api/requirements.txt (nixpacks detection)
@@ -53,7 +53,7 @@ Then open: http://127.0.0.1:8000
 | `edgar-api/routers/checkout.py` | Stripe checkout, webhooks, subscription status |
 | `edgar-api/routers/watchlist.py` | Server-side watchlist CRUD (Pro/Pro+ only) |
 | `edgar-api/routers/feed.py` | Recent SEC filers for signal board |
-| `edgar-frontend/public/edgar.html` | Entire frontend (single file) |
+| `edgar-frontend/edgar.html` | Entire frontend (single file) |
 | `METHODOLOGY.md` | Every derived metric and scoring formula |
 
 ---
