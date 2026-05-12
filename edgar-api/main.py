@@ -133,6 +133,13 @@ app.include_router(alerts.router)
 app.include_router(watchlist.router)
 
 
+@app.get("/.well-known/cf-custom-hostname-challenge/{token}")
+def cf_hostname_challenge(token: str):
+    """Cloudflare custom hostname HTTP verification — must return token as plain text."""
+    from fastapi.responses import PlainTextResponse
+    return PlainTextResponse(token)
+
+
 @app.get("/og-image.png")
 def og_image():
     return FileResponse(_PUBLIC / "og-image.png", media_type="image/png")
