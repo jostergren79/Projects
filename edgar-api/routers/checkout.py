@@ -91,16 +91,18 @@ async def subscription_status(session_id: str = ""):
             p = items[0].get("price", {}) if isinstance(items[0], dict) else items[0].price
             price_id = p.get("id", "") if isinstance(p, dict) else p.id
 
-        if price_id == PRICE_IDS["pro_plus"]:
-            return {"tier": "pro_plus", "label": "Pro+"}
-        if price_id == PRICE_IDS["pro"]:
-            return {"tier": "pro", "label": "Pro"}
+        customer_id = session.get("customer") if isinstance(session, dict) else session.customer
 
-        return {"tier": "standard", "label": "Standard"}
+        if price_id == PRICE_IDS["pro_plus"]:
+            return {"tier": "pro_plus", "label": "Pro+", "customer_id": customer_id or ""}
+        if price_id == PRICE_IDS["pro"]:
+            return {"tier": "pro", "label": "Pro", "customer_id": customer_id or ""}
+
+        return {"tier": "standard", "label": "Standard", "customer_id": ""}
 
     except stripe.StripeError as e:
         logger.error("Stripe error checking subscription status: %s", e)
-        return {"tier": "standard", "label": "Standard"}
+        return {"tier": "standard", "label": "Standard", "customer_id": ""}
 
 
 @router.get("/subscription/restore")
@@ -169,6 +171,27 @@ async def subscription_status_by_customer(customer_id: str = ""):
     except stripe.StripeError as e:
         logger.error("Stripe error checking status by customer: %s", e)
         return {"tier": "standard", "label": "Standard"}
+
+
+@router.post("/billing/portal")
+async def billing_portal(request: Request):
+    """
+    Create a Stripe Customer Portal session for subscription self-management
+    (cancel, update payment method, view invoices). Returns a redirect URL.
+    """
+    body = await request.json()
+    customer_id = body.get("customer_id", "")
+    if not customer_id or not stripe.api_key:
+        raise HTTPException(status_code=400, detail="customer_id required")
+    try:
+        session = stripe.billing_portal.Session.create(
+            customer=customer_id,
+            return_url=f"{APP_URL}/",
+        )
+        return {"url": session.url}
+    except stripe.StripeError as e:
+        logger.error("Stripe portal error for customer %s: %s", customer_id, e)
+        raise HTTPException(status_code=502, detail="Failed to create portal session")
 
 
 @router.post("/webhook/stripe")
