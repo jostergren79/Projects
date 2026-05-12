@@ -383,6 +383,7 @@
     </div>
     <div class="header-actions">
       <div id="tier-badge" class="tier-badge" style="display:none"></div>
+      <button id="dev-tier-toggle" onclick="devToggleTier()" style="display:none;background:#2a2300;border:1px solid #f0a500;color:#f0a500;border-radius:4px;padding:5px 12px;font-size:.75rem;font-weight:700;cursor:pointer;letter-spacing:.03em">DEV: Standard</button>
       <button id="manage-sub-link" onclick="manageSubscription()">Manage</button>
       <button id="upgrade-header-btn" class="btn-upgrade" onclick="openUpgradeModal()">Upgrade</button>
     </div>
@@ -594,7 +595,7 @@
   <script>
     const apiOverride = new URLSearchParams(window.location.search).get('api');
     const inferredApiBase = (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost')
-      ? 'http://127.0.0.1:8000'
+      ? window.location.origin
       : '';
     const API = apiOverride || window.EDGAR_API_BASE || inferredApiBase;
     let revChart, marginChart;
@@ -602,6 +603,11 @@
     let currentMetrics = null;
     let currentTicker = null;
     let currentCik = null;
+    let currentSegments = null;
+    let currentFlags = null;
+    let currentSummary = null;
+    let currentCompanyObject = null;
+    let currentAnomalies = null;
     let openedWithCikParam = false;
 
     // ── Tier gating helpers ───────────────────────────────────────────────────
@@ -613,6 +619,22 @@
     function isProUser() {
       const t = getCurrentTier();
       return t === 'pro' || t === 'pro_plus';
+    }
+
+    function devToggleTier() {
+      const next = isProUser() ? 'standard' : 'pro';
+      const label = next === 'pro' ? 'Pro' : 'Standard';
+      localStorage.setItem('edgarwolf_tier', next);
+      localStorage.setItem('edgarwolf_tier_label', label);
+      localStorage.setItem('edgarwolf_tier_checked_at', String(Date.now()));
+      const btn = document.getElementById('dev-tier-toggle');
+      if (btn) btn.textContent = `DEV: ${label}`;
+      applyTierBadge(next, label);
+      if (currentCik && currentCompany) {
+        renderDashboard(currentCompany, currentMetrics, currentSegments, currentFlags, currentSummary, currentCompanyObject, currentAnomalies);
+      } else {
+        applyTierGating();
+      }
     }
 
     function requirePro(action, featureName) {
@@ -786,6 +808,9 @@
       // Localhost-only dev shortcut: ?dev_tier=pro or ?dev_tier=pro_plus
       // bypasses Stripe so you can test gating without a real subscription.
       if (['127.0.0.1', 'localhost'].includes(window.location.hostname)) {
+        const toggleBtn = document.getElementById('dev-tier-toggle');
+        if (toggleBtn) toggleBtn.style.display = 'inline-block';
+
         const devTier = new URLSearchParams(window.location.search).get('dev_tier');
         if (devTier) {
           const devLabel = devTier === 'pro_plus' ? 'Pro+' : devTier === 'pro' ? 'Pro' : 'Standard';
@@ -793,8 +818,12 @@
           localStorage.setItem('edgarwolf_tier_label', devLabel);
           localStorage.setItem('edgarwolf_tier_checked_at', String(Date.now()));
           applyTierBadge(devTier, devLabel);
+          if (toggleBtn) toggleBtn.textContent = `DEV: ${devLabel}`;
           return;
         }
+
+        const currentLabel = localStorage.getItem('edgarwolf_tier_label') || 'Standard';
+        if (toggleBtn) toggleBtn.textContent = `DEV: ${currentLabel}`;
       }
 
       const sessionId   = localStorage.getItem('edgarwolf_session');
@@ -1515,9 +1544,46 @@
         </table>`;
     }
 
+    function restoreGatedSections() {
+      document.getElementById('flags-section').innerHTML = `
+        <h3>Exception Flags</h3>
+        <div class="flag-list" id="flag-list"></div>`;
+      document.getElementById('anomaly-panel').innerHTML = `
+        <h3>Filing Signals</h3>
+        <div class="anomaly-summary" id="anomaly-summary"></div>
+        <div class="anomaly-grid" id="anomaly-grid"></div>`;
+      document.getElementById('peers-section').innerHTML = `
+        <h3>Peer Snapshot</h3>
+        <div class="prov-controls">
+          <input id="peer-input" type="text" placeholder="Tickers, e.g. KHC,CAG,CPB" />
+          <button onclick="comparePeers()">Compare</button>
+          <span class="muted" id="peer-note">Uses latest quarter revenue growth and margins.</span>
+        </div>
+        <div id="peer-table-wrap" class="muted">Add peer tickers and click Compare.</div>`;
+      document.getElementById('segments-section').innerHTML = `
+        <h3>Segment Revenue Breakdown</h3>
+        <div id="seg-body"></div>`;
+      document.getElementById('provenance-panel').innerHTML = `
+        <h3>Source Filing</h3>
+        <div class="prov-controls">
+          <label for="prov-period" class="muted">Period</label>
+          <select id="prov-period" onchange="renderProvenance()"></select>
+        </div>
+        <div class="prov-details" id="prov-details"></div>`;
+      document.getElementById('trust-panel').innerHTML = `
+        <h3>Data Quality & Sources</h3>
+        <div class="trust-grid" id="trust-grid"></div>`;
+    }
+
     function renderDashboard(company, metrics, segments, flags, summary, companyObject, anomalies) {
+      restoreGatedSections();
       currentCompany = company;
       currentMetrics = metrics;
+      currentSegments = segments;
+      currentFlags = flags;
+      currentSummary = summary;
+      currentCompanyObject = companyObject;
+      currentAnomalies = anomalies;
       currentTicker = company?.ticker || null;
       currentCik = company?.cik || null;
       document.getElementById('signal-board').style.display = 'none';

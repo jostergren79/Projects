@@ -1,0 +1,774 @@
+{
+  "info": {
+    "name": "EdgarWolf API",
+    "_postman_id": "ew-api-collection-v1",
+    "description": "Full QA suite for the EdgarWolf FastAPI backend. Run locally with Newman:\n  cd edgar-api/postman && ./run_qa.sh local\n  ./run_qa.sh production",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://127.0.0.1:8000" },
+    { "key": "test_cik",  "value": "0000320193", "description": "Apple Inc — reliable EDGAR filer" }
+  ],
+  "item": [
+
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET /health — ok",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/health", "host": ["{{base_url}}"], "path": ["health"] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('status 200', () => pm.response.to.have.status(200));",
+                "pm.test('has status field', () => {",
+                "  const b = pm.response.json();",
+                "  pm.expect(b).to.have.property('status');",
+                "  pm.expect(['ok','degraded']).to.include(b.status);",
+                "});",
+                "pm.test('response under 2s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+              ]
+            }
+          }]
+        }
+      ]
+    },
+
+    {
+      "name": "Company Lookup",
+      "item": [
+        {
+          "name": "GET /company?ticker=AAPL",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/company?ticker=AAPL",
+              "host": ["{{base_url}}"],
+              "path": ["company"],
+              "query": [{ "key": "ticker", "value": "AAPL" }]
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('status 200', () => pm.response.to.have.status(200));",
+                "pm.test('has cik and name', () => {",
+                "  const b = pm.response.json();",
+                "  pm.expect(b).to.have.property('cik');",
+                "  pm.expect(b).to.have.property('name');",
+                "  pm.expect(b.cik).to.be.a('string');",
+                "});"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "GET /company?ticker=XXXXXXXXX — 404",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/company?ticker=XXXXXXXXX",
+              "host": ["{{base_url}}"],
+              "path": ["company"],
+              "query": [{ "key": "ticker", "value": "XXXXXXXXX" }]
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('status 404', () => pm.response.to.have.status(404));"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "GET /company/search?name=apple&limit=5",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/company/search?name=apple&limit=5",
+              "host": ["{{base_url}}"],
+              "path": ["company", "search"],
+              "query": [
+                { "key": "name",  "value": "apple" },
+                { "key": "limit", "value": "5" }
+              ]
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('status 200', () => pm.response.to.have.status(200));",
+                "pm.test('returns results array with matches', () => {",
+                "  const b = pm.response.json();",
+                "  pm.expect(b).to.have.property('results');",
+                "  pm.expect(b.results).to.be.an('array');",
+                "  pm.expect(b.results.length).to.be.greaterThan(0);",
+                "  pm.expect(b.results[0]).to.have.property('cik');",
+                "  pm.expect(b.results[0]).to.have.property('name');",
+                "});"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "GET /company/resolve?q=nike",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/company/resolve?q=nike",
+              "host": ["{{base_url}}"],
+              "path": ["company", "resolve"],
+              "query": [{ "key": "q", "value": "nike" }]
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('status 200', () => pm.response.to.have.status(200));",
+                "pm.test('has company with cik', () => {",
+                "  const b = pm.response.json();",
+                "  pm.expect(b).to.have.property('company');",
+                "  pm.expect(b.company).to.have.property('cik');",
+                "});"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "GET /company/object/{{test_cik}}",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/company/object/{{test_cik}}",
+              "host": ["{{base_url}}"],
+              "path": ["company", "object", "{{test_cik}}"]
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('status 200', () => pm.response.to.have.status(200));",
+                "pm.test('has cik', () => {",
+                "  const b = pm.response.json();",
+                "  pm.expect(b).to.have.property('cik');",
+                "});"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "GET /company/object/invalid-cik — 400",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/company/object/not-a-cik",
+              "host": ["{{base_url}}"],
+              "path": ["company", "object", "not-a-cik"]
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('status 400', () => pm.response.to.have.status(400));"
+              ]
+            }
+          }]
+        }
+      ]
+    },
+
+    {
+      "name": "Financial Data",
+      "item": [
+        {
+          "name": "GET /company/{{test_cik}}/metrics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/company/{{test_cik}}/metrics",
+              "host": ["{{base_url}}"],
+              "path": ["company", "{{test_cik}}", "metrics"]
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('status 200', () => pm.response.to.have.status(200));",
+                "pm.test('has periods array', () => {",
+                "  const b = pm.response.json();",
+                "  pm.expect(b).to.have.property('periods');",
+                "  pm.expect(b.periods).to.be.an('array');",
+                "});"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "GET /company/{{test_cik}}/metrics?quarters=4",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/company/{{test_cik}}/metrics?quarters=4",
+              "host": ["{{base_url}}"],
+              "path": ["company", "{{test_cik}}", "metrics"],
+              "query": [{ "key": "quarters", "value": "4" }]
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('status 200', () => pm.response.to.have.status(200));",
+                "pm.test('periods capped at requested quarters', () => {",
+                "  const b = pm.response.json();",
+                "  pm.expect(b.periods).to.be.an('array');",
+                "  pm.expect(b.periods.length).to.be.at.most(4);",
+                "});"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "GET /company/{{test_cik}}/segments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/company/{{test_cik}}/segments",
+              "host": ["{{base_url}}"],
+              "path": ["company", "{{test_cik}}", "segments"]
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('status 200', () => pm.response.to.have.status(200));"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "GET /company/{{test_cik}}/flags",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/company/{{test_cik}}/flags",
+              "host": ["{{base_url}}"],
+              "path": ["company", "{{test_cik}}", "flags"]
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('status 200', () => pm.response.to.have.status(200));",
+                "pm.test('has flags array', () => {",
+                "  const b = pm.response.json();",
+                "  pm.expect(b).to.have.property('flags');",
+                "  pm.expect(b.flags).to.be.an('array');",
+                "});"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "GET /company/{{test_cik}}/summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/company/{{test_cik}}/summary",
+              "host": ["{{base_url}}"],
+              "path": ["company", "{{test_cik}}", "summary"]
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('status 200', () => pm.response.to.have.status(200));",
+                "pm.test('has summary text', () => {",
+                "  const b = pm.response.json();",
+                "  pm.expect(b).to.have.property('summary');",
+                "});"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "GET /company/{{test_cik}}/anomalies",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/company/{{test_cik}}/anomalies",
+              "host": ["{{base_url}}"],
+              "path": ["company", "{{test_cik}}", "anomalies"]
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('status 200', () => pm.response.to.have.status(200));"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "GET /company/{{test_cik}}/dashboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/company/{{test_cik}}/dashboard",
+              "host": ["{{base_url}}"],
+              "path": ["company", "{{test_cik}}", "dashboard"]
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('status 200 or 207', () => {",
+                "  pm.expect([200, 207]).to.include(pm.response.code);",
+                "});",
+                "pm.test('has all top-level keys', () => {",
+                "  const b = pm.response.json();",
+                "  ['cik','metrics','segments','flags','summary','anomalies','has_errors','error_count']",
+                "    .forEach(k => pm.expect(b, k).to.have.property(k));",
+                "});",
+                "pm.test('has_errors is boolean', () => {",
+                "  pm.expect(pm.response.json().has_errors).to.be.a('boolean');",
+                "});"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "GET /company/999999999/dashboard — invalid CIK 400",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/company/not-a-cik/dashboard",
+              "host": ["{{base_url}}"],
+              "path": ["company", "not-a-cik", "dashboard"]
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('status 400', () => pm.response.to.have.status(400));"
+              ]
+            }
+          }]
+        }
+      ]
+    },
+
+    {
+      "name": "Feed",
+      "item": [
+        {
+          "name": "GET /feed/recent — defaults",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/feed/recent",
+              "host": ["{{base_url}}"],
+              "path": ["feed", "recent"]
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('status 200', () => pm.response.to.have.status(200));",
+                "pm.test('has filings array and count', () => {",
+                "  const b = pm.response.json();",
+                "  pm.expect(b).to.have.property('filings');",
+                "  pm.expect(b.filings).to.be.an('array');",
+                "  pm.expect(b).to.have.property('count');",
+                "  pm.expect(b).to.have.property('generated_at');",
+                "});"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "GET /feed/recent?limit=5&days=7",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/feed/recent?limit=5&days=7",
+              "host": ["{{base_url}}"],
+              "path": ["feed", "recent"],
+              "query": [
+                { "key": "limit", "value": "5" },
+                { "key": "days",  "value": "7" }
+              ]
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('status 200', () => pm.response.to.have.status(200));",
+                "pm.test('count respects limit', () => {",
+                "  const b = pm.response.json();",
+                "  pm.expect(b.filings.length).to.be.at.most(5);",
+                "});"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "GET /feed/recent?limit=201 — out of range 422",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/feed/recent?limit=201",
+              "host": ["{{base_url}}"],
+              "path": ["feed", "recent"],
+              "query": [{ "key": "limit", "value": "201" }]
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('status 422 (query param out of range)', () => pm.response.to.have.status(422));"
+              ]
+            }
+          }]
+        }
+      ]
+    },
+
+    {
+      "name": "Subscription",
+      "item": [
+        {
+          "name": "GET /subscription/status — no session → standard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/subscription/status",
+              "host": ["{{base_url}}"],
+              "path": ["subscription", "status"]
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('status 200', () => pm.response.to.have.status(200));",
+                "pm.test('defaults to standard', () => {",
+                "  const b = pm.response.json();",
+                "  pm.expect(b.tier).to.equal('standard');",
+                "  pm.expect(b.label).to.equal('Standard');",
+                "});"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "GET /subscription/restore — no email → standard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/subscription/restore",
+              "host": ["{{base_url}}"],
+              "path": ["subscription", "restore"]
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('status 200', () => pm.response.to.have.status(200));",
+                "pm.test('defaults to standard', () => {",
+                "  pm.expect(pm.response.json().tier).to.equal('standard');",
+                "});"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "GET /subscription/status-by-customer — no customer_id → standard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/subscription/status-by-customer",
+              "host": ["{{base_url}}"],
+              "path": ["subscription", "status-by-customer"]
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('status 200', () => pm.response.to.have.status(200));",
+                "pm.test('defaults to standard', () => {",
+                "  pm.expect(pm.response.json().tier).to.equal('standard');",
+                "});"
+              ]
+            }
+          }]
+        }
+      ]
+    },
+
+    {
+      "name": "Checkout (error cases)",
+      "item": [
+        {
+          "name": "POST /checkout/session — invalid tier → 400",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"tier\": \"free\"}"
+            },
+            "url": {
+              "raw": "{{base_url}}/checkout/session",
+              "host": ["{{base_url}}"],
+              "path": ["checkout", "session"]
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('status 400 for unknown tier', () => pm.response.to.have.status(400));",
+                "pm.test('detail mentions tier', () => {",
+                "  pm.expect(pm.response.json().detail).to.include('tier');",
+                "});"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "POST /checkout/session — missing tier → 400",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{base_url}}/checkout/session",
+              "host": ["{{base_url}}"],
+              "path": ["checkout", "session"]
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('status 400 for missing tier', () => pm.response.to.have.status(400));"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "POST /billing/portal — missing customer_id → 400",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{base_url}}/billing/portal",
+              "host": ["{{base_url}}"],
+              "path": ["billing", "portal"]
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('status 400 for missing customer_id', () => pm.response.to.have.status(400));"
+              ]
+            }
+          }]
+        }
+      ]
+    },
+
+    {
+      "name": "Analytics",
+      "item": [
+        {
+          "name": "POST /analytics/event — valid event",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"event\": \"page_view\", \"props\": {\"cik\": \"0000320193\"}}"
+            },
+            "url": {
+              "raw": "{{base_url}}/analytics/event",
+              "host": ["{{base_url}}"],
+              "path": ["analytics", "event"]
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('status 200', () => pm.response.to.have.status(200));",
+                "pm.test('ok true', () => {",
+                "  pm.expect(pm.response.json().ok).to.equal(true);",
+                "});"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "POST /analytics/event — invalid event → 400",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"event\": \"not_an_allowed_event\"}"
+            },
+            "url": {
+              "raw": "{{base_url}}/analytics/event",
+              "host": ["{{base_url}}"],
+              "path": ["analytics", "event"]
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('status 400', () => pm.response.to.have.status(400));",
+                "pm.test('ok false', () => {",
+                "  pm.expect(pm.response.json().ok).to.equal(false);",
+                "});"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "POST /analytics/event — invalid JSON → 400",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "not valid json"
+            },
+            "url": {
+              "raw": "{{base_url}}/analytics/event",
+              "host": ["{{base_url}}"],
+              "path": ["analytics", "event"]
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('status 400', () => pm.response.to.have.status(400));"
+              ]
+            }
+          }]
+        }
+      ]
+    },
+
+    {
+      "name": "Rate Limiting",
+      "item": [
+        {
+          "name": "GET /company/{{test_cik}}/metrics — rate limit headers present",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/company/{{test_cik}}/metrics",
+              "host": ["{{base_url}}"],
+              "path": ["company", "{{test_cik}}", "metrics"]
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('status 200 (not rate limited)', () => pm.response.to.have.status(200));",
+                "pm.test('not a 429', () => pm.expect(pm.response.code).to.not.equal(429));"
+              ]
+            }
+          }]
+        }
+      ]
+    }
+
+  ]
+}

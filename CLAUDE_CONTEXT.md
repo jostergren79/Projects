@@ -1,6 +1,6 @@
 # EdgarWolf — Claude Context Doc
 
-**Current version: v1.1.0** (2026-05-12) — see `CHANGELOG.md` for full release history.
+**Current version: v1.2.0** (2026-05-12) — see `CHANGELOG.md` for full release history.
 
 Paste this file at the start of every Claude conversation to restore full context.
 Update metrics, version, and priorities at the end of every relevant session.
@@ -124,6 +124,7 @@ _Replace completed items each session. Keep this list short._
 **Soon:**
 - [ ] Identify 10 finance Substack writers and send personal outreach emails
 - [ ] Add user login / account system (required for proper per-user subscription enforcement)
+- [ ] Expand Postman QA collection with additional edge cases as new features ship
 
 ---
 
@@ -143,6 +144,8 @@ _Running log of important decisions so we don't relitigate them._
 - **Domain:** edgarwolf.com purchased, www.edgarwolf.com live via CNAME to sectracker.onrender.com.
 - **Email:** jason@edgarwolf.com via Microsoft 365 + GoDaddy. All public-facing email references updated.
 - **Stripe session-based auth:** Without user login, subscription status is verified by storing Stripe session_id (and customer_id) in localStorage and checking against the Stripe API on load (cached 1 hour). Full per-user auth needed long-term.
+- **Postman QA suite:** `edgar-api/postman/` contains the full collection (28 requests, 49 assertions), Local + Production environment files, and `run_qa.sh` (Newman runner). Run locally with `./run_qa.sh` — requires `npm install -g newman`. All 49 assertions pass against local server.
+- **Dev tier toggle:** Amber button in top-right header, visible only on localhost. Toggles between Standard and Pro instantly without page reload or re-fetch. Uses stored dashboard state to re-render. Button label reflects current tier.
 - **Feature gating shipped May 10, 2026:** Frontend gates 6 Pro sections with upgrade cards (Exception Flags, Filing Signals, Peer Comparison, Segment Breakdown, Source Filing, Data Quality). No backend lookup limit — free users have unlimited searches. Charts and quarterly table are free.
 - **Free tier value-first design:** 8-quarter charts and quarterly data table are free. Pro gates the analytical layer (z-scores, stress score, peer comparison). Summary CTA below narrative drives upgrades contextually.
 - **Signal board is on-demand:** User clicks "Load Signal Board" and picks a per-column count (5/10/15/20/25, default 10). Feed limit scales with selection (perCol × 8, capped at 200). No auto-load on page open — avoids slow cold-start performance on arrival.
@@ -222,6 +225,13 @@ Bypasses Stripe verification on `127.0.0.1`/`localhost` only — no-op on the li
 - Summary CTA below narrative for free users: "Want to know what's driving this? Upgrade to Pro →"
 - Pro divider between free content and gated sections labels the Pro zone clearly
 - Tests: `edgar-api/tests/test_gating.py` — run with `.venv/bin/python -m pytest tests/ -v`
+- Bug fixed (May 12): `showProGate()` was replacing section innerHTML and destroying child elements — `restoreGatedSections()` now resets all 6 panels at the start of every `renderDashboard` call
+
+**QA automation (added May 12, 2026):**
+- Postman collection: `edgar-api/postman/EdgarWolf_API.postman_collection.json`
+- 28 requests, 7 folders, 49 assertions — covers all endpoints including error cases
+- Newman runner: `edgar-api/postman/run_qa.sh [local|production]`
+- CSP bug fixed (May 12): API base now uses `window.location.origin` on localhost so `connect-src 'self'` always matches regardless of whether browser accesses via `localhost` or `127.0.0.1`
 
 **Known limitations (acceptable for now):**
 - SQLite cache resets on Render redeploy (ephemeral filesystem on free tier) — recovers automatically
@@ -230,4 +240,4 @@ Bypasses Stripe verification on `127.0.0.1`/`localhost` only — no-op on the li
 
 ---
 
-_Last updated: May 12, 2026 (signal board on-demand, dev.sh + ?dev_tier local bypass, feed limit 200, Stripe Customer Portal live, Manage button in header, customer_id stored after checkout verification, metrics endpoint returns 200 for empty data)_
+_Last updated: May 12, 2026 (QA automation via Postman + Newman, dev tier toggle button on localhost, CSP connect-src fix for local testing, tier gating bug fixed — showProGate no longer breaks re-render, all dashboard state stored globally for instant toggle without re-fetch)_
