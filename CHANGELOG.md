@@ -10,6 +10,22 @@ Versioning follows [Semantic Versioning](https://semver.org/):
 
 ---
 
+## [1.3.1] — 2026-05-12
+
+### Fixed
+- Railway build: replaced manual `nixPkgs = ["python311"]` in nixpacks.toml with auto-detection via root `requirements.txt`. Manual nix Python install did not include pip, causing `No module named pip` build failures.
+- SQLite persistence: `CACHE_PATH` in `cache.py` now reads `DATA_DIR` env var (set to `/app/data` in Railway). Previously wrote to `edgar-api/data/` which was not on the persistent volume.
+
+### Infrastructure
+- Added root `requirements.txt` (points to `edgar-api/requirements.txt`) for nixpacks Python auto-detection.
+- Simplified `nixpacks.toml` to only override the start command.
+- Railway persistent volume mounted at `/app/data` — SQLite now survives redeploys.
+- Stripe webhook URL updated from old Render URL → `https://www.edgarwolf.com/webhook/stripe`.
+- Cloudflare DNS fully verified in Railway. `edgarwolf.com` and `www.edgarwolf.com` both live on Railway.
+- Render service decommissioned (pending — do after confirming Railway stable for 24h).
+
+---
+
 ## [1.3.0] — 2026-05-12
 
 ### Added

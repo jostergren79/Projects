@@ -1,6 +1,6 @@
 # EdgarWolf — Claude Context Doc
 
-**Current version: v1.3.0** (2026-05-12) — see `CHANGELOG.md` for full release history.
+**Current version: v1.3.1** (2026-05-12) — see `CHANGELOG.md` for full release history.
 
 Paste this file at the start of every Claude conversation to restore full context.
 Update metrics, version, and priorities at the end of every relevant session.
@@ -118,10 +118,7 @@ _Update these at the end of every session._
 _Replace completed items each session. Keep this list short._
 
 **Immediate (next session):**
-- [ ] Finish Railway DNS migration — confirm edgarwolf.com resolves to Railway via Cloudflare
-- [ ] Add Railway persistent volume at `/app/data` (prevents SQLite wipe on redeploy)
-- [ ] Update Stripe webhook URL from Render → `https://www.edgarwolf.com/webhook/stripe`
-- [ ] Decommission Render service once DNS + webhook confirmed on Railway
+- [ ] Decommission Render service (DNS + webhook confirmed on Railway — safe to delete)
 - [ ] Build email alert trigger logic — poll watched companies for new filings/anomalies, send via Resend
 
 **Soon:**
@@ -246,15 +243,17 @@ Bypasses Stripe verification on `127.0.0.1`/`localhost` only — no-op on the li
 **Railway deployment:**
 - `railway.toml` at repo root — nixpacks build, uvicorn start, /health check
 - Root Directory in Railway: blank (full repo deployed)
+- Root `requirements.txt` at repo root (`-r edgar-api/requirements.txt`) — enables nixpacks Python auto-detection
 - Env vars set in Railway Variables panel (not in .env)
-- ⚠️ Persistent volume NOT YET SET UP — SQLite resets on redeploy until `/app/data` volume is mounted
+- Persistent volume mounted at `/app/data` — SQLite survives redeploys ✅
+- `DATA_DIR=/app/data` set in Railway Variables — cache.py writes to volume ✅
+- Stripe webhook: `https://www.edgarwolf.com/webhook/stripe` ✅
+- DNS: Cloudflare verified in Railway, `edgarwolf.com` live ✅
 
 **Known pending items:**
-- Railway persistent volume at `/app/data` — prevents watchlist data loss on redeploy
-- Stripe webhook URL update from Render → edgarwolf.com
-- DNS migration Cloudflare → edgarwolf.com (in progress)
-- Render service decommission (after DNS confirmed)
+- Render service decommission (Railway stable — safe to delete Render service)
+- Email alert trigger logic (poll watchlists → send via Resend on new anomaly/filing)
 
 ---
 
-_Last updated: May 12, 2026 — v1.3.0. Server-side watchlist (SQLite, Pro/Pro+ only), Resend email domain verified + test sent, migrated hosting Render → Railway, DNS migrating to Cloudflare, .vscode dev tooling added._
+_Last updated: May 12, 2026 — v1.3.1. Railway build fixed (nixpacks auto-detection via root requirements.txt), persistent volume at /app/data live, Stripe webhook updated, Cloudflare DNS verified, edgarwolf.com fully live on Railway._
