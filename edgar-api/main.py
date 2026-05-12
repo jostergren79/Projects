@@ -123,6 +123,11 @@ app.include_router(analytics.router)
 app.include_router(checkout.router)
 
 
+@app.get("/og-image.png")
+def og_image():
+    return FileResponse(_PUBLIC / "og-image.png", media_type="image/png")
+
+
 @app.get("/")
 def root():
     return FileResponse(_PUBLIC / "edgar.html")
