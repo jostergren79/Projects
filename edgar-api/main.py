@@ -38,7 +38,13 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-_PUBLIC = pathlib.Path(__file__).parent.parent / "notes-api" / "public"
+# Resolve the frontend public directory relative to this file's location.
+# Works whether Railway roots at repo root or edgar-api/.
+_EDGAR_API_DIR = pathlib.Path(__file__).parent
+_PUBLIC = _EDGAR_API_DIR.parent / "notes-api" / "public"
+if not _PUBLIC.exists():
+    # Fallback: Railway may mount repo root one level higher
+    _PUBLIC = _EDGAR_API_DIR / "notes-api" / "public"
 
 from cache import cache_health_check
 
