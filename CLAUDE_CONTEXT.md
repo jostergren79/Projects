@@ -1,7 +1,9 @@
 # EdgarWolf — Claude Context Doc
 
+**Current version: v1.1.0** (2026-05-12) — see `CHANGELOG.md` for full release history.
+
 Paste this file at the start of every Claude conversation to restore full context.
-Update metrics and priorities at the end of every relevant session.
+Update metrics, version, and priorities at the end of every relevant session.
 
 ---
 
@@ -170,6 +172,15 @@ Bypasses Stripe verification on `127.0.0.1`/`localhost` only — no-op on the li
 - Pro gating shows upgrade cards for Standard users
 - Pro mode shows all sections (use `./dev.sh pro`)
 - Mobile layout (use browser DevTools responsive mode)
+
+**End-of-session release steps:**
+1. Update `CHANGELOG.md` with all changes under a new version heading
+2. Bump `VERSION` file and footer version in `edgar.html`
+3. Update `CLAUDE_CONTEXT.md` — version field, metrics, priorities, last-updated line
+4. `git commit -m "Release vX.Y.Z"`
+5. `git tag -a vX.Y.Z -m "vX.Y.Z — <one-line summary>"`
+6. `git push origin main --tags`
+7. Deploy on Render
 
 ---
 
