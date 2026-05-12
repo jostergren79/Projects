@@ -2,7 +2,7 @@
 POST /analytics/event
 
 Fire-and-forget event logging for usage analytics.
-Events are emitted as structured JSON log lines — queryable in Render's log stream
+Events are emitted as structured JSON log lines — queryable in Railway's log tab
 via: grep '"EVENT"' or filter by logger name 'routers.analytics'.
 
 No PII is stored. Only event names and public company identifiers.

@@ -10,7 +10,7 @@ GET  /subscription/status   — verifies a Stripe session ID against the live St
 POST /webhook/stripe        — receives Stripe webhook events. Logs completed
                               subscriptions for analytics and future email alerts.
 
-Environment variables required (set in Render dashboard, never in code):
+Environment variables required (set in Railway Variables panel, never in code):
   STRIPE_SECRET_KEY       sk_live_...
   STRIPE_WEBHOOK_SECRET   whsec_...  (from Stripe dashboard → Webhooks)
   STRIPE_PRO_PRICE_ID     price_1TVNeQ1C3cijZqBOkOX1IoJj   ($19.99/mo)

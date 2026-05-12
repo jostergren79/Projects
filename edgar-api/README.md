@@ -126,4 +126,10 @@ summary rules, recent filers discovery, and the signal board scoring model.
 
 ## Deploy
 
-Render config is in render.yaml.
+Deployed on Railway. Config files at repo root:
+- `railway.toml` — builder (nixpacks), health check, restart policy
+- `nixpacks.toml` — start command override
+- `requirements.txt` — triggers nixpacks Python auto-detection (points to `edgar-api/requirements.txt`)
+
+Environment variables are set in the Railway Variables panel. Persistent volume
+mounted at `/app/data` (`DATA_DIR=/app/data`) for SQLite persistence across redeploys.

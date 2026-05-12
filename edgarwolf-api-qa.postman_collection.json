@@ -1,0 +1,1843 @@
+{
+  "info": {
+    "name": "EdgarWolf API — Comprehensive QA Suite",
+    "description": "Complete test coverage for all EdgarWolf endpoints: company lookup, financial data, Stripe integration, signal board, and analytics.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "18264715"
+  },
+  "item": [
+    {
+      "name": "Health & Status",
+      "item": [
+        {
+          "name": "Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has status field', function() {",
+                  "    pm.expect(pm.response.json()).to.have.property('status');",
+                  "});",
+                  "",
+                  "pm.test('Cache health is present', function() {",
+                  "    pm.expect(pm.response.json()).to.have.property('cache');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/health",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Company Lookup",
+      "item": [
+        {
+          "name": "1.1 — Lookup by Ticker (AAPL)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Response contains ticker', function() {",
+                  "    pm.expect(json).to.have.property('ticker');",
+                  "});",
+                  "",
+                  "pm.test('Response contains CIK', function() {",
+                  "    pm.expect(json).to.have.property('cik');",
+                  "});",
+                  "",
+                  "pm.test('Response contains name', function() {",
+                  "    pm.expect(json).to.have.property('name');",
+                  "});",
+                  "",
+                  "pm.test('CIK is 10 digits', function() {",
+                  "    pm.expect(json.cik).to.match(/^\\d{10}$/);",
+                  "});",
+                  "",
+                  "pm.environment.set('aapl_cik', json.cik);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/company?ticker=AAPL",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "company"
+              ],
+              "query": [
+                {
+                  "key": "ticker",
+                  "value": "AAPL"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "1.2 — Lookup by Ticker (GIS)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Ticker matches query', function() {",
+                  "    pm.expect(json.ticker).to.equal('GIS');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/company?ticker=GIS",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "company"
+              ],
+              "query": [
+                {
+                  "key": "ticker",
+                  "value": "GIS"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "1.3 — Lookup by Ticker (Invalid)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 404', function() {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('Error message is present', function() {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('detail');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/company?ticker=FAKEXYZ",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "company"
+              ],
+              "query": [
+                {
+                  "key": "ticker",
+                  "value": "FAKEXYZ"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "1.4 — Search by Name (Apple)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Response has results array', function() {",
+                  "    pm.expect(json).to.have.property('results');",
+                  "    pm.expect(Array.isArray(json.results)).to.be.true;",
+                  "});",
+                  "",
+                  "pm.test('At least one result returned', function() {",
+                  "    pm.expect(json.results.length).to.be.greaterThan(0);",
+                  "});",
+                  "",
+                  "pm.test('First result contains ticker and CIK', function() {",
+                  "    var first = json.results[0];",
+                  "    pm.expect(first).to.have.property('ticker');",
+                  "    pm.expect(first).to.have.property('cik');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/company/search?name=Apple&limit=10",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "company",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "name",
+                  "value": "Apple"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "1.5 — Search by Name (Nike)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Nike found in results', function() {",
+                  "    var hasSneakers = json.results.some(r => r.ticker.includes('NKE'));",
+                  "    pm.expect(hasSneakers).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/company/search?name=Nike&limit=5",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "company",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "name",
+                  "value": "Nike"
+                },
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "1.6 — Search with 1 character (error)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400', function() {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Error detail present', function() {",
+                  "    pm.expect(pm.response.json()).to.have.property('detail');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/company/search?name=A&limit=10",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "company",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "name",
+                  "value": "A"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "1.7 — Resolve Ticker (AAPL)",
+          "event": [
+            {
+              "listen": "test",
+              "script": [
+                "pm.test('Status code is 200', function() {",
+                "    pm.response.to.have.status(200);",
+                "});",
+                "",
+                "var json = pm.response.json();",
+                "pm.test('Response has company object', function() {",
+                "    pm.expect(json).to.have.property('company');",
+                "});",
+                "",
+                "pm.test('Matched by ticker', function() {",
+                "    pm.expect(json.matched_by).to.equal('ticker');",
+                "});",
+                "",
+                "pm.test('Company has CIK and name', function() {",
+                "    pm.expect(json.company).to.have.property('cik');",
+                "    pm.expect(json.company).to.have.property('name');",
+                "});"
+              ]
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/company/resolve?q=AAPL",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "company",
+                "resolve"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "AAPL"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "1.8 — Resolve Company Name (Nike)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Matched by name', function() {",
+                  "    pm.expect(json.matched_by).to.equal('name');",
+                  "});",
+                  "",
+                  "pm.test('Has candidate suggestions', function() {",
+                  "    pm.expect(json).to.have.property('candidates');",
+                  "    pm.expect(json.candidates.length).to.be.greaterThan(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/company/resolve?q=Nike&suggestions=5",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "company",
+                "resolve"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "Nike"
+                },
+                {
+                  "key": "suggestions",
+                  "value": "5"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Company Object & Metadata",
+      "item": [
+        {
+          "name": "2.1 — Company Object (AAPL CIK)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Has name and CIK', function() {",
+                  "    pm.expect(json).to.have.property('name');",
+                  "    pm.expect(json).to.have.property('cik');",
+                  "});",
+                  "",
+                  "pm.test('Has XBRL metadata', function() {",
+                  "    pm.expect(json).to.have.property('xbrl');",
+                  "});",
+                  "",
+                  "pm.test('Has recent filings', function() {",
+                  "    pm.expect(json).to.have.property('recent_filings');",
+                  "    pm.expect(Array.isArray(json.recent_filings)).to.be.true;",
+                  "});",
+                  "",
+                  "pm.test('Has SIC and state info', function() {",
+                  "    pm.expect(json).to.have.property('sic');",
+                  "    pm.expect(json).to.have.property('state');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/company/object/0000320193",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "company",
+                "object",
+                "0000320193"
+              ]
+            }
+          }
+        },
+        {
+          "name": "2.2 — Company Object (GIS)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/company/object/0000040545",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "company",
+                "object",
+                "0000040545"
+              ]
+            }
+          }
+        },
+        {
+          "name": "2.3 — Company Object (Invalid CIK)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400', function() {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Error message present', function() {",
+                  "    pm.expect(pm.response.json()).to.have.property('detail');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/company/object/NOTACIK",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "company",
+                "object",
+                "NOTACIK"
+              ]
+            }
+          }
+        },
+        {
+          "name": "2.4 — Company Anomalies",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Has filing stress score', function() {",
+                  "    pm.expect(json).to.have.property('filing_stress_score');",
+                  "    pm.expect(json.filing_stress_score).to.be.a('number');",
+                  "});",
+                  "",
+                  "pm.test('Score is 0-100', function() {",
+                  "    pm.expect(json.filing_stress_score).to.be.at.least(0);",
+                  "    pm.expect(json.filing_stress_score).to.be.at.most(100);",
+                  "});",
+                  "",
+                  "pm.test('Has status (LOW/MODERATE/ELEVATED)', function() {",
+                  "    var validStatus = ['LOW', 'MODERATE', 'ELEVATED'];",
+                  "    pm.expect(validStatus).to.include(json.status);",
+                  "});",
+                  "",
+                  "pm.test('Has signals array', function() {",
+                  "    pm.expect(json).to.have.property('signals');",
+                  "    pm.expect(Array.isArray(json.signals)).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/company/0000320193/anomalies",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "company",
+                "0000320193",
+                "anomalies"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Financial Metrics",
+      "item": [
+        {
+          "name": "3.1 — Metrics (AAPL, 8 quarters)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Has periods array', function() {",
+                  "    pm.expect(json).to.have.property('periods');",
+                  "    pm.expect(Array.isArray(json.periods)).to.be.true;",
+                  "});",
+                  "",
+                  "pm.test('Each period has key metrics', function() {",
+                  "    json.periods.forEach(function(period) {",
+                  "        pm.expect(period).to.have.property('period');",
+                  "        pm.expect(period).to.have.property('revenue');",
+                  "        pm.expect(period).to.have.property('gross_margin');",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/company/0000320193/metrics?quarters=8",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "company",
+                "0000320193",
+                "metrics"
+              ],
+              "query": [
+                {
+                  "key": "quarters",
+                  "value": "8"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "3.2 — Metrics (4 quarters only)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Returns ~4 periods', function() {",
+                  "    pm.expect(json.periods.length).to.be.at.most(4);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/company/0000320193/metrics?quarters=4",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "company",
+                "0000320193",
+                "metrics"
+              ],
+              "query": [
+                {
+                  "key": "quarters",
+                  "value": "4"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard (Aggregated)",
+      "item": [
+        {
+          "name": "4.1 — Dashboard (AAPL)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Has metrics', function() {",
+                  "    pm.expect(json).to.have.property('metrics');",
+                  "});",
+                  "",
+                  "pm.test('Has flags', function() {",
+                  "    pm.expect(json).to.have.property('flags');",
+                  "});",
+                  "",
+                  "pm.test('Has summary', function() {",
+                  "    pm.expect(json).to.have.property('summary');",
+                  "});",
+                  "",
+                  "pm.test('Has anomalies', function() {",
+                  "    pm.expect(json).to.have.property('anomalies');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/company/0000320193/dashboard?quarters=8",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "company",
+                "0000320193",
+                "dashboard"
+              ],
+              "query": [
+                {
+                  "key": "quarters",
+                  "value": "8"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "4.2 — Dashboard (GIS)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 or 207', function() {",
+                  "    var status = pm.response.code;",
+                  "    pm.expect([200, 207]).to.include(status);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/company/0000040545/dashboard?quarters=8",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "company",
+                "0000040545",
+                "dashboard"
+              ],
+              "query": [
+                {
+                  "key": "quarters",
+                  "value": "8"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "4.3 — Dashboard (Invalid CIK)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400', function() {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/company/ABC123/dashboard",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "company",
+                "ABC123",
+                "dashboard"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Signal Board Feed",
+      "item": [
+        {
+          "name": "5.1 — Recent Filers (default 14 days, 30 limit)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Has filings array', function() {",
+                  "    pm.expect(json).to.have.property('filings');",
+                  "    pm.expect(Array.isArray(json.filings)).to.be.true;",
+                  "});",
+                  "",
+                  "pm.test('Has count and generated_at', function() {",
+                  "    pm.expect(json).to.have.property('count');",
+                  "    pm.expect(json).to.have.property('generated_at');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/feed/recent?days=14&limit=30",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "feed",
+                "recent"
+              ],
+              "query": [
+                {
+                  "key": "days",
+                  "value": "14"
+                },
+                {
+                  "key": "limit",
+                  "value": "30"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "5.2 — Recent Filers (7 days, max 200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Returns at most 200 filings', function() {",
+                  "    pm.expect(json.filings.length).to.be.at.most(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/feed/recent?days=7&limit=200",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "feed",
+                "recent"
+              ],
+              "query": [
+                {
+                  "key": "days",
+                  "value": "7"
+                },
+                {
+                  "key": "limit",
+                  "value": "200"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "5.3 — Recent Filers (90 days)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/feed/recent?days=90&limit=50",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "feed",
+                "recent"
+              ],
+              "query": [
+                {
+                  "key": "days",
+                  "value": "90"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Stripe Checkout & Billing",
+      "item": [
+        {
+          "name": "6.1 — Create Checkout Session (Pro)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Returns Stripe checkout URL', function() {",
+                  "    pm.expect(json).to.have.property('url');",
+                  "    pm.expect(json.url).to.include('stripe.com');",
+                  "});",
+                  "",
+                  "pm.environment.set('checkout_url', json.url);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tier\": \"pro\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/checkout/session",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "checkout",
+                "session"
+              ]
+            }
+          }
+        },
+        {
+          "name": "6.2 — Create Checkout Session (Pro+)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Returns Stripe checkout URL', function() {",
+                  "    pm.expect(json).to.have.property('url');",
+                  "    pm.expect(json.url).to.include('stripe.com');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tier\": \"pro_plus\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/checkout/session",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "checkout",
+                "session"
+              ]
+            }
+          }
+        },
+        {
+          "name": "6.3 — Create Checkout (Invalid tier)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400', function() {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Error detail present', function() {",
+                  "    pm.expect(pm.response.json()).to.have.property('detail');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tier\": \"invalid_tier\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/checkout/session",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "checkout",
+                "session"
+              ]
+            }
+          }
+        },
+        {
+          "name": "6.4 — Create Checkout (Missing tier)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400', function() {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/checkout/session",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "checkout",
+                "session"
+              ]
+            }
+          }
+        },
+        {
+          "name": "6.5 — Subscription Status (Empty session_id)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Returns standard tier for empty session', function() {",
+                  "    pm.expect(json.tier).to.equal('standard');",
+                  "    pm.expect(json.label).to.equal('Standard');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/subscription/status?session_id=",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "subscription",
+                "status"
+              ],
+              "query": [
+                {
+                  "key": "session_id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "6.6 — Subscription Status (Fake session_id)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Returns standard tier for invalid session', function() {",
+                  "    pm.expect(json.tier).to.equal('standard');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/subscription/status?session_id=cs_test_fake123456",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "subscription",
+                "status"
+              ],
+              "query": [
+                {
+                  "key": "session_id",
+                  "value": "cs_test_fake123456"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "6.7 — Restore Subscription (Invalid email)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Returns standard tier for invalid email', function() {",
+                  "    pm.expect(json.tier).to.equal('standard');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/subscription/restore?email=nonexistent@fake.com",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "subscription",
+                "restore"
+              ],
+              "query": [
+                {
+                  "key": "email",
+                  "value": "nonexistent@fake.com"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "6.8 — Subscription Status by Customer (Invalid ID)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Returns standard tier', function() {",
+                  "    pm.expect(json.tier).to.equal('standard');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/subscription/status-by-customer?customer_id=cus_fakeid123",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "subscription",
+                "status-by-customer"
+              ],
+              "query": [
+                {
+                  "key": "customer_id",
+                  "value": "cus_fakeid123"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "6.9 — Billing Portal (Missing customer_id)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400', function() {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Error detail present', function() {",
+                  "    pm.expect(pm.response.json()).to.have.property('detail');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/billing/portal",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "billing",
+                "portal"
+              ]
+            }
+          }
+        },
+        {
+          "name": "6.10 — Billing Portal (Invalid customer_id)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400 or 502', function() {",
+                  "    var status = pm.response.code;",
+                  "    pm.expect([400, 502]).to.include(status);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_id\": \"cus_fakeid123\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/billing/portal",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "billing",
+                "portal"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Analytics Events",
+      "item": [
+        {
+          "name": "7.1 — Log page_view event",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has ok: true', function() {",
+                  "    pm.expect(pm.response.json().ok).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"page_view\",\n  \"props\": {\n    \"page\": \"dashboard\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/analytics/event",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "analytics",
+                "event"
+              ]
+            }
+          }
+        },
+        {
+          "name": "7.2 — Log company_view event",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"company_view\",\n  \"props\": {\n    \"ticker\": \"AAPL\",\n    \"cik\": \"0000320193\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/analytics/event",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "analytics",
+                "event"
+              ]
+            }
+          }
+        },
+        {
+          "name": "7.3 — Log upgrade_modal_open event",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"upgrade_modal_open\",\n  \"props\": {\n    \"from_page\": \"dashboard\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/analytics/event",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "analytics",
+                "event"
+              ]
+            }
+          }
+        },
+        {
+          "name": "7.4 — Log checkout_start event",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"checkout_start\",\n  \"props\": {\n    \"tier\": \"pro\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/analytics/event",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "analytics",
+                "event"
+              ]
+            }
+          }
+        },
+        {
+          "name": "7.5 — Log event (Invalid event name)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400', function() {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Returns ok: false', function() {",
+                  "    pm.expect(pm.response.json().ok).to.be.false;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"invalid_event_name\",\n  \"props\": {}\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/analytics/event",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "analytics",
+                "event"
+              ]
+            }
+          }
+        },
+        {
+          "name": "7.6 — Log event (Missing event name)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400', function() {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"props\": {}\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/analytics/event",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "analytics",
+                "event"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rate Limiting & Performance",
+      "item": [
+        {
+          "name": "8.1 — Rate Limit Test (Rapid requests)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// This test assumes we can send 200 requests/min",
+                  "// After exceeding the limit, we should get 429",
+                  "pm.test('Status code is 200 or 429', function() {",
+                  "    var status = pm.response.code;",
+                  "    pm.expect([200, 429]).to.include(status);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 429) {",
+                  "    pm.test('Rate limit response has Retry-After header', function() {",
+                  "        pm.expect(pm.response.headers.has('Retry-After')).to.be.true;",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/company/0000320193/metrics",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "company",
+                "0000320193",
+                "metrics"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Edge Cases & Error Handling",
+      "item": [
+        {
+          "name": "9.1 — CIK with leading zeros",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/company/object/0000320193",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "company",
+                "object",
+                "0000320193"
+              ]
+            }
+          }
+        },
+        {
+          "name": "9.2 — CIK without leading zeros",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/company/object/320193",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "company",
+                "object",
+                "320193"
+              ]
+            }
+          }
+        },
+        {
+          "name": "9.3 — Empty string parameters",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400', function() {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/company/resolve?q=",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "company",
+                "resolve"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "9.4 — Malformed JSON body",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400 or 422', function() {",
+                  "    var status = pm.response.code;",
+                  "    pm.expect([400, 422]).to.include(status);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{ invalid json ]"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/checkout/session",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "checkout",
+                "session"
+              ]
+            }
+          }
+        },
+        {
+          "name": "9.5 — Special characters in search",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 or 404', function() {",
+                  "    var status = pm.response.code;",
+                  "    pm.expect([200, 404]).to.include(status);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/company/search?name=A%26T&limit=5",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "company",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "name",
+                  "value": "A&T"
+                },
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "BASE_URL",
+      "value": "http://127.0.0.1:8000",
+      "type": "string"
+    }
+  ]
+}
