@@ -16,7 +16,10 @@ from typing import Optional
 import os
 from pathlib import Path
 
-CACHE_PATH = Path(__file__).parent / "data" / "edgar_cache.db"
+# Use DATA_DIR env var when set (Railway persistent volume at /app/data).
+# Falls back to edgar-api/data/ for local development.
+_data_dir = os.getenv("DATA_DIR")
+CACHE_PATH = Path(_data_dir) / "edgar_cache.db" if _data_dir else Path(__file__).parent / "data" / "edgar_cache.db"
 TTL_SECONDS = 6 * 60 * 60  # 6 hours
 SESSION_TTL_SECONDS = 60 * 60  # 1 hour
 
