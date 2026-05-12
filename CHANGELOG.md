@@ -10,6 +10,41 @@ Versioning follows [Semantic Versioning](https://semver.org/):
 
 ---
 
+## [1.3.0] — 2026-05-12
+
+### Added
+- Server-side watchlist persistence for Pro/Pro+ users. New SQLite tables: `watchlists` (customer_id, cik, ticker, name, added_at) and `users` (customer_id, email, tier). Watchlist data now survives across devices and sessions for paid users.
+- Watchlist API: `GET /watchlist`, `POST /watchlist`, `DELETE /watchlist/{cik}`, `POST /watchlist/sync`. All endpoints gated by `X-Customer-Id` header (Stripe customer ID validated + cached 1h in SQLite).
+- Frontend `syncWatchlistFromServer()`: runs once per session for Pro/Pro+ users, merges server list into localStorage and pushes any localStorage-only items up. Standard users continue using localStorage only.
+- `routers/alerts.py`: `POST /test/send-alert` dev-only endpoint. Sends a real HTML alert email via Resend (localhost-only, 403 in production).
+- `.vscode/tasks.json` + `settings.json`: VS Code dev tooling — Start Dev Server tasks for each tier + Simple Browser support.
+- `railway.toml` at repo root: Railway deployment config (nixpacks build, uvicorn start command, health check).
+
+### Changed
+- Migrated hosting from Render to Railway ($5/month Hobby plan). `railway.toml` replaces `render.yaml` as the active deploy config.
+- CORS middleware now allows `POST` and `DELETE` in addition to `GET` (required for watchlist endpoints).
+- `RESEND_FROM` env var set to `EdgarWolf <alerts@edgarwolf.com>` — Resend domain verified (DKIM + SPF + MX all green), test alert delivered end-to-end to gmail.
+- DNS migrating from GoDaddy direct CNAME → Cloudflare (in progress — enables CNAME flattening at root domain).
+
+### Infrastructure
+- Railway persistent volume (`/app/data`) required before next deploy to persist SQLite across redeploys. Pending setup in Railway dashboard.
+- Stripe webhook URL needs updating from Render URL to `https://www.edgarwolf.com/webhook/stripe` once DNS is live on Railway.
+
+---
+
+## [1.2.0] — 2026-05-12
+
+### Added
+- QA automation via Postman + Newman: `edgar-api/postman/` contains full collection (28 requests, 7 folders, 49 assertions). Newman runner: `edgar-api/postman/run_qa.sh [local|production]`. All 49 assertions pass.
+- Dev tier toggle: amber button in header (localhost only) cycles Standard → Pro → Pro+ without page reload. Uses stored dashboard state for instant re-render.
+- OG/link preview image: 1200×630 PNG at `/og-image.png`, served via FastAPI. Shows $GIS example data. `twitter:card = summary_large_image`. Regenerate with `generate_og_image.py`.
+- CSP fix: API base uses `window.location.origin` on localhost so `connect-src 'self'` always matches.
+
+### Fixed
+- `showProGate()` was replacing section innerHTML and destroying child elements — `restoreGatedSections()` now resets all 6 panels at the start of every `renderDashboard` call.
+
+---
+
 ## [1.1.0] — 2026-05-12
 
 ### Added
@@ -67,4 +102,4 @@ At the end of each working session:
 4. Commit: `git commit -m "Release vX.Y.Z"`
 5. Tag: `git tag -a vX.Y.Z -m "vX.Y.Z — <one-line summary>"`
 6. Push: `git push origin main --tags`
-7. Deploy on Render.
+7. Deploy on Railway (push to main triggers auto-deploy).

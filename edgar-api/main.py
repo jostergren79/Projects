@@ -59,7 +59,7 @@ from routers import (
     watchlist,
 )
 
-app = FastAPI(title="EDGAR Financial Metrics API", version="0.1.0")
+app = FastAPI(title="EDGAR Financial Metrics API", version="1.3.0")
 
 # ---------------------------------------------------------------------------
 # Per-IP rate limiting middleware
