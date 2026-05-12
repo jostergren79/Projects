@@ -86,9 +86,20 @@ out
 .nuxt
 dist
 
-# Local SQLite databases
+# macOS metadata
+.DS_Store
+**/.DS_Store
+
+# Local SQLite databases and WAL files
 data/*.db
+data/*.db-shm
+data/*.db-wal
 edgar-api/data/*.db
+edgar-api/data/*.db-shm
+edgar-api/data/*.db-wal
+
+# Stray Postman exports at repo root (canonical copy lives in edgar-api/postman/)
+edgarwolf-api-qa.postman_collection.json
 
 
 # Gatsby files
