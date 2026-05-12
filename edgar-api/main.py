@@ -23,6 +23,9 @@ import os
 import pathlib
 import time
 
+from dotenv import load_dotenv
+load_dotenv()
+
 import httpx
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -49,6 +52,8 @@ from routers import (
     feed,
     analytics,
     checkout,
+    alerts,
+    watchlist,
 )
 
 app = FastAPI(title="EDGAR Financial Metrics API", version="0.1.0")
@@ -108,7 +113,7 @@ else:
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allow_origins,
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["*"],
 )
 
@@ -121,6 +126,8 @@ app.include_router(dashboard.router)
 app.include_router(feed.router)
 app.include_router(analytics.router)
 app.include_router(checkout.router)
+app.include_router(alerts.router)
+app.include_router(watchlist.router)
 
 
 @app.get("/og-image.png")
