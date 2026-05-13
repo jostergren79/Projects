@@ -13,7 +13,7 @@ POST /webhook/stripe        — receives Stripe webhook events. Logs completed
 Environment variables required (set in Railway Variables panel, never in code):
   STRIPE_SECRET_KEY       sk_live_...
   STRIPE_WEBHOOK_SECRET   whsec_...  (from Stripe dashboard → Webhooks)
-  STRIPE_PRO_PRICE_ID     price_1TVNeQ1C3cijZqBOkOX1IoJj   ($19.99/mo)
+  STRIPE_PRO_PRICE_ID     price_1TWTJz1C3cijZqBOyfX4VwHC   ($19.00/mo)
   STRIPE_PRO_PLUS_PRICE_ID price_1TVNfH1C3cijZqBOyp7Y5qJH  ($99/mo)
 """
 
@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "")
 
 PRICE_IDS = {
-    "pro":      os.getenv("STRIPE_PRO_PRICE_ID",      "price_1TVNeQ1C3cijZqBOkOX1IoJj"),
+    "pro":      os.getenv("STRIPE_PRO_PRICE_ID",      "price_1TWTJz1C3cijZqBOyfX4VwHC"),
     "pro_plus": os.getenv("STRIPE_PRO_PLUS_PRICE_ID", "price_1TVNfH1C3cijZqBOyp7Y5qJH"),
 }
 

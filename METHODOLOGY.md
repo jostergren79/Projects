@@ -363,7 +363,7 @@ never produce a second alert for the same user, regardless of how many polling
 cycles run while that filing remains the most recent one.
 
 **Tier gate:** Alert sending is gated on the user's `tier` field in the `users`
-table being `pro_plus`. Pro ($19.99/mo) users have access to the dashboard
+table being `pro_plus`. Pro ($19.00/mo) users have access to the dashboard
 anomaly flags but do not receive email alerts.
 
 **Alert email content:**

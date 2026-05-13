@@ -54,8 +54,9 @@
     .header-actions { display: flex; gap: 10px; flex-shrink: 0; }
     .btn-upgrade { background: transparent; border: 1px solid var(--accent); color: var(--accent); border-radius: var(--radius); padding: 7px 16px; font-size: .8rem; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background .15s, color .15s; }
     .btn-upgrade:hover { background: var(--accent); color: #fff; }
-    .tier-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(52,211,153,.1); border: 1px solid var(--green); color: var(--green); border-radius: 999px; padding: 6px 14px; font-size: .78rem; font-weight: 700; white-space: nowrap; }
+    .tier-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(79,142,247,.1); border: 1px solid var(--accent); color: var(--accent); border-radius: 999px; padding: 6px 14px; font-size: .78rem; font-weight: 700; white-space: nowrap; }
     .tier-badge.tier-pro { background: rgba(79,142,247,.1); border-color: var(--accent); color: var(--accent); }
+    .tier-badge.tier-pro-plus { background: rgba(52,211,153,.1); border-color: var(--green); color: var(--green); }
     #manage-sub-link { font-size: .72rem; color: var(--muted); text-decoration: underline; cursor: pointer; white-space: nowrap; display: none; background: none; border: none; padding: 0; }
     #manage-sub-link:hover { color: var(--text); }
     /* ── Upgrade Modal ── */
@@ -577,25 +578,39 @@
 
   <!-- Upgrade modal -->
   <div id="upgrade-modal" class="modal-overlay" onclick="if(event.target===this)closeUpgradeModal()">
-    <div class="modal-box" style="max-width:480px">
+    <div class="modal-box" style="max-width:700px">
       <button class="modal-close" onclick="closeUpgradeModal()" aria-label="Close">&times;</button>
-      <h2>Upgrade to Pro</h2>
+      <h2 id="upgrade-modal-title">Choose Your Plan</h2>
       <p class="modal-sub">Full access to every signal. Cancel anytime.</p>
-      <div id="plan-card-pro" class="plan-card selected" style="cursor:default">
-        <div class="plan-name">Pro</div>
-        <div class="plan-price">$19.99<span>/mo</span></div>
-        <div class="plan-tagline">For individual investors and analysts</div>
-        <ul>
-          <li>Unlimited company lookups</li>
-          <li>Exception flags (z-score alerts)</li>
-          <li>Filing Stress Score &amp; Filing Signals</li>
-          <li>Peer comparison</li>
-          <li>Segment breakdown</li>
-          <li>Source Filing provenance</li>
-          <li>Export CSV &amp; JSON</li>
-          <li>Watchlist tracking</li>
-        </ul>
-        <button id="checkout-btn-pro" class="plan-btn" onclick="startCheckout('pro')">Get Pro &rarr;</button>
+      <div class="plan-cards">
+        <div id="plan-card-pro" class="plan-card selected" onclick="selectPlan('pro')">
+          <div class="plan-name">Pro</div>
+          <div class="plan-price">$19<span>/mo</span></div>
+          <div class="plan-tagline">For individual investors and analysts</div>
+          <ul>
+            <li>Unlimited company lookups</li>
+            <li>Exception flags (z-score alerts)</li>
+            <li>Filing Stress Score &amp; Filing Signals</li>
+            <li>Peer comparison</li>
+            <li>Segment breakdown</li>
+            <li>Source Filing provenance</li>
+            <li>Export CSV &amp; JSON</li>
+            <li>Server-synced watchlist</li>
+          </ul>
+          <button id="checkout-btn-pro" class="plan-btn" onclick="event.stopPropagation();startCheckout('pro')">Get Pro &rarr;</button>
+        </div>
+        <div id="plan-card-pro_plus" class="plan-card" onclick="selectPlan('pro_plus')">
+          <div class="plan-name">Pro+</div>
+          <div class="plan-price">$99<span>/mo</span></div>
+          <div class="plan-tagline">For power users who need alerts</div>
+          <ul>
+            <li>Everything in Pro</li>
+            <li>Hourly email alerts on new filings</li>
+            <li>Alerts fire when anomaly signals detected</li>
+            <li>Covers SEC filing hours (8 AM–6 PM ET)</li>
+          </ul>
+          <button id="checkout-btn-pro_plus" class="plan-btn" onclick="event.stopPropagation();startCheckout('pro_plus')">Get Pro+ &rarr;</button>
+        </div>
       </div>
       <div id="upgrade-cancel-note" style="display:none;margin-top:16px;padding:10px 14px;background:var(--surface2);border-radius:var(--radius);font-size:.82rem;color:var(--muted);text-align:center">
         Checkout was cancelled &mdash; no charge was made.
@@ -764,8 +779,24 @@
     }
 
     function openUpgradeModal() {
-      document.getElementById('upgrade-modal').classList.add('open');
-      selectPlan('pro');
+      const tier = getCurrentTier();
+      const modal = document.getElementById('upgrade-modal');
+      const title = document.getElementById('upgrade-modal-title');
+      const proCard = document.getElementById('plan-card-pro');
+
+      if (tier === 'pro') {
+        // Already on Pro — only show Pro+
+        if (proCard) proCard.style.display = 'none';
+        if (title) title.textContent = 'Upgrade to Pro+';
+        selectPlan('pro_plus');
+      } else {
+        // Standard — show both plans
+        if (proCard) proCard.style.display = '';
+        if (title) title.textContent = 'Choose Your Plan';
+        selectPlan('pro');
+      }
+
+      modal.classList.add('open');
       trackEvent('upgrade_modal_open');
     }
 
@@ -844,7 +875,7 @@
       if (badge) {
         badge.style.display = 'inline-flex';
         badge.textContent = '✓ ' + label;
-        badge.className = 'tier-badge' + (tier === 'pro' ? ' tier-pro' : '');
+        badge.className = 'tier-badge' + (tier === 'pro' ? ' tier-pro' : tier === 'pro_plus' ? ' tier-pro-plus' : '');
       }
       if (manageLink) manageLink.style.display = 'inline';
       // Pro users can still upgrade to Pro+; Pro+ has nothing to upgrade to
@@ -1152,6 +1183,17 @@
         document.getElementById('search-btn').disabled = false;
       }
     }
+
+    // Reset any stuck checkout buttons when navigating back from Stripe via bfcache.
+    window.addEventListener('pageshow', (e) => {
+      if (e.persisted) {
+        document.querySelectorAll('.plan-btn').forEach(btn => {
+          btn.disabled = false;
+          if (btn.id === 'checkout-btn-pro') btn.textContent = 'Get Pro →';
+          if (btn.id === 'checkout-btn-pro_plus') btn.textContent = 'Get Pro+ →';
+        });
+      }
+    });
 
     document.addEventListener('DOMContentLoaded', () => {
       checkSubscriptionStatus();

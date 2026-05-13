@@ -21,7 +21,7 @@ SEC EDGAR financial data and anomaly detection tool. Pulls data directly from pu
 - Metric Trust panel (reported vs. derived vs. stale labeling)
 - Natural language summary (rules-based, not AI-generated)
 - Analytics event tracking (log-based via Railway logs, 8 events including upgrade_modal_open, checkout_start)
-- Stripe payment integration — Pro $19.99/mo, Pro+ $99/mo (LIVE)
+- Stripe payment integration — Pro $19.00/mo, Pro+ $99/mo (LIVE)
 - Stripe Customer Portal — self-serve cancel/manage for paid users (LIVE)
 - Email alerts — infrastructure proven (Resend domain verified, test sent), trigger logic NOT YET BUILT
 
@@ -66,7 +66,7 @@ SEC EDGAR financial data and anomaly detection tool. Pulls data directly from pu
 | Tier | Price | Features |
 |------|-------|----------|
 | Standard | $0 | Signal board (on-demand), company search, KPI grid (latest quarter), narrative summary, 8-quarter charts, quarterly data table. Unlimited lookups. |
-| Pro | $19.99/month | Everything free + Exception Flags (z-score), Filing Stress Score, Filing Signals, peer comparison, segment breakdown, source filing, watchlist (server-side synced), CSV/JSON export. |
+| Pro | $19.00/month | Everything free + Exception Flags (z-score), Filing Stress Score, Filing Signals, peer comparison, segment breakdown, source filing, watchlist (server-side synced), CSV/JSON export. |
 | Pro+ | $99/month | Everything in Pro + email alerts (not yet built — the main differentiator for this tier). |
 
 **Feature gating is LIVE** as of May 10, 2026. Frontend gates Pro sections with upgrade cards. No backend lookup limit — differentiation is purely by feature depth, not access.
@@ -135,7 +135,7 @@ _Replace completed items each session. Keep this list short._
 
 _Running log of important decisions so we don't relitigate them._
 
-- **Pricing:** $99/month justified only once email alerts are live. Without alerts it's a $19.99/month product.
+- **Pricing:** $99/month justified only once email alerts are live. Without alerts it's a $19.00/month product.
 - **No CRM yet:** Spreadsheet is sufficient until 80+ users. CRM is premature.
 - **No scaling/automation yet:** First 30 days is manual everything. Find 10 paying users by hand before building infrastructure.
 - **Filing Stress Score:** Renamed from "Upheaval Score" — better resonance with finance audience.
@@ -225,7 +225,7 @@ Bypasses Stripe verification on `127.0.0.1`/`localhost` only — no-op on the li
 - `GET /subscription/status-by-customer?customer_id=...` — re-verifies by customer ID
 - `GET /success` — post-payment HTML page, stores tier + session + customer_id in localStorage
 - Stripe webhook endpoint: https://www.edgarwolf.com/webhook/stripe ⚠️ needs updating from Render URL
-- Price IDs: Pro = price_1TVNeQ1C3cijZqBOkOX1IoJj ($19.99/mo), Pro+ = price_1TVNfH1C3cijZqBOyp7Y5qJH ($99/mo)
+- Price IDs: Pro = price_1TWTJz1C3cijZqBOyfX4VwHC ($19.00/mo), Pro+ = price_1TVNfH1C3cijZqBOyp7Y5qJH ($99/mo)
 
 **Watchlist API (LIVE as of v1.3.0):**
 - `GET /watchlist` — fetch all items (X-Customer-Id required)
