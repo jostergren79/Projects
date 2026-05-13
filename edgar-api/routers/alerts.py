@@ -1,6 +1,7 @@
 import os
 import resend
 from fastapi import APIRouter, HTTPException, Request
+from cache import upsert_user, add_to_watchlist, get_all_pro_plus_watchlists
 
 router = APIRouter()
 
@@ -49,3 +50,24 @@ async def send_test_alert(request: Request):
 
     email = resend.Emails.send(params)
     return {"ok": True, "id": email.get("id")}
+
+
+@router.post("/test/seed-alert-user")
+async def seed_alert_test_user(request: Request):
+    """Insert a Pro+ test user + GIS watchlist entry for local alert testing."""
+    if not _is_dev(request):
+        raise HTTPException(status_code=403, detail="Dev-only endpoint")
+    upsert_user("cus_test_proplus", "jason.ostergren79@gmail.com", "pro_plus")
+    add_to_watchlist("cus_test_proplus", "0000040987", "GIS", "General Mills Inc")
+    return {"ok": True, "customer_id": "cus_test_proplus", "watchlist": ["GIS (0000040987)"]}
+
+
+@router.post("/test/run-alert-check")
+async def trigger_alert_check(request: Request):
+    """Manually trigger one alert check cycle. Returns a summary of what ran."""
+    if not _is_dev(request):
+        raise HTTPException(status_code=403, detail="Dev-only endpoint")
+    from scheduler import run_alert_check
+    entries_before = get_all_pro_plus_watchlists()
+    await run_alert_check()
+    return {"ok": True, "entries_checked": len(entries_before)}
