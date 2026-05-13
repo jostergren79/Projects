@@ -1403,7 +1403,8 @@
           headers: { 'X-Customer-Id': cid },
         });
         if (!res.ok) return;
-        const { items: serverItems } = await res.json();
+        const { items: serverItems, limit: serverLimit } = await res.json();
+        if (serverLimit) localStorage.setItem('wl_limit', String(serverLimit));
         const localItems  = getWatchlist();
         const serverCiks  = new Set(serverItems.map(x => x.cik));
         const localOnly   = localItems.filter(x => !serverCiks.has(x.cik));
@@ -1448,6 +1449,11 @@
           }).catch(() => {});
         }
       } else {
+        const limit = parseInt(localStorage.getItem('wl_limit') || '50', 10);
+        if (list.length >= limit) {
+          alert(`Watchlist limit of ${limit} companies reached. Email jason@edgarwolf.com to increase your limit.`);
+          return;
+        }
         const item = {
           cik:      currentCik,
           ticker:   currentTicker || '',
@@ -1461,6 +1467,15 @@
             method:  'POST',
             headers: { 'Content-Type': 'application/json', 'X-Customer-Id': cid },
             body:    JSON.stringify(item),
+          }).then(async r => {
+            if (r.status === 422) {
+              const err = await r.json().catch(() => ({}));
+              list.splice(list.findIndex(x => x.cik === currentCik), 1);
+              setWatchlist(list);
+              updateWatchButton();
+              renderWatchlistPanel();
+              alert(err.detail || `Watchlist limit of ${limit} companies reached. Email jason@edgarwolf.com to increase your limit.`);
+            }
           }).catch(() => {});
         }
       }
@@ -1922,7 +1937,9 @@
     </div>
     <div class="footer-meta">
       EdgarWolf &mdash; Questions or feedback? <a href="mailto:jason@edgarwolf.com">jason@edgarwolf.com</a>
-      &nbsp;&middot;&nbsp; v1.4.1
+      &nbsp;&middot;&nbsp; <a href="/privacy">Privacy Policy</a>
+      &nbsp;&middot;&nbsp; <a href="/terms">Terms of Service</a>
+      &nbsp;&middot;&nbsp; v1.5.0
     </div>
   </footer>
 </body>

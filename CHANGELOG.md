@@ -10,6 +10,22 @@ Versioning follows [Semantic Versioning](https://semver.org/):
 
 ---
 
+## [1.5.0] — 2026-05-13
+
+### Added
+- **Welcome email** — sent via Resend on `checkout.session.completed` Stripe webhook. Pro email lists features; Pro+ email includes an "Email Alerts — Active" callout. Stripe checkout session now includes `metadata={"tier": tier}` so the webhook correctly identifies the plan.
+- **Privacy Policy** — served at `/privacy`, linked from app footer.
+- **Terms of Service** — served at `/terms`, linked from app footer.
+- **Watchlist company limit** — backend enforces 50-company cap (HTTP 422 with contact message). `GET /watchlist` now returns `count` and `limit` fields. Frontend pre-checks locally before adding, and rolls back + alerts user if the server rejects with 422.
+- **Sentry error monitoring** — `sentry-sdk[fastapi]` added to requirements. Initialized in `main.py` when `SENTRY_DSN` env var is set; no-op locally. `traces_sample_rate=0.1`, `send_default_pii=False`.
+- **Postman QA expansion** — 3 new folders: Watchlist (8 requests), Alerts dev-only (2 requests), Pages (2 requests). Collection grows from 28 requests / 49 assertions → 40 requests / 66 assertions. `test_customer_id=cus_test` added to Local environment.
+
+### Fixed
+- **watchlist.py stale Pro price ID** — default fallback was the old pre-$19.00 price ID (`price_1TVNeQ1C3cijZqBOkOX1IoJj`). Updated to match checkout.py (`price_1TWTJz1C3cijZqBOyfX4VwHC`). Mismatch was harmless in production (env var set) but a landmine for local dev.
+- **Alert email CTA deep link** — `_build_alert_html` was constructing a URL using `name` instead of `cik`, and the variable was never wired to the button (button hardcoded the homepage). CTA now deep-links to `/?cik={cik10}` for the specific company. `cik` added as a parameter to `_build_alert_html`.
+
+---
+
 ## [1.4.1] — 2026-05-13
 
 ### Added

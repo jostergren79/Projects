@@ -27,6 +27,16 @@ from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 load_dotenv()
 
+import sentry_sdk
+_sentry_dsn = os.getenv("SENTRY_DSN", "")
+if _sentry_dsn:
+    sentry_sdk.init(
+        dsn=_sentry_dsn,
+        traces_sample_rate=0.1,
+        send_default_pii=False,
+    )
+    logging.getLogger(__name__).info("Sentry error monitoring enabled")
+
 import httpx
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -71,7 +81,7 @@ from routers import (
     watchlist,
 )
 
-app = FastAPI(title="EDGAR Financial Metrics API", version="1.4.1", lifespan=lifespan)
+app = FastAPI(title="EDGAR Financial Metrics API", version="1.5.0", lifespan=lifespan)
 
 # ---------------------------------------------------------------------------
 # Per-IP rate limiting middleware
@@ -181,6 +191,16 @@ def root():
 @app.get("/edgar")
 def edgar_page():
     return FileResponse(_PUBLIC / "edgar.html")
+
+
+@app.get("/privacy")
+def privacy_page():
+    return FileResponse(_PUBLIC / "privacy.html")
+
+
+@app.get("/terms")
+def terms_page():
+    return FileResponse(_PUBLIC / "terms.html")
 
 
 @app.get("/health")

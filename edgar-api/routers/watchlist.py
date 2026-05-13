@@ -22,6 +22,7 @@ from cache import (
     add_to_watchlist,
     get_cached_session_tier,
     get_watchlist,
+    get_watchlist_count,
     remove_from_watchlist,
     store_cached_session_tier,
     upsert_user,
@@ -33,12 +34,13 @@ logger = logging.getLogger(__name__)
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "")
 
 _PRICE_IDS = {
-    "pro":      os.getenv("STRIPE_PRO_PRICE_ID",      "price_1TVNeQ1C3cijZqBOkOX1IoJj"),
+    "pro":      os.getenv("STRIPE_PRO_PRICE_ID",      "price_1TWTJz1C3cijZqBOyfX4VwHC"),
     "pro_plus": os.getenv("STRIPE_PRO_PLUS_PRICE_ID", "price_1TVNfH1C3cijZqBOyp7Y5qJH"),
 }
 
 # Cache key prefix — avoids collision with session-id keys in session_tier_cache
 _CUST_PREFIX = "cust:"
+WATCHLIST_LIMIT = 50
 
 
 def _validate_customer(customer_id: str) -> str:
@@ -102,7 +104,7 @@ async def watchlist_get(x_customer_id: str = Header(default="")):
     """Return all watchlist items for the authenticated customer."""
     _validate_customer(x_customer_id)
     items = get_watchlist(x_customer_id)
-    return {"items": items}
+    return {"items": items, "count": len(items), "limit": WATCHLIST_LIMIT}
 
 
 @router.post("/watchlist")
@@ -115,6 +117,11 @@ async def watchlist_add(request: Request, x_customer_id: str = Header(default=""
     name   = str(body.get("name",   "")).strip()
     if not cik:
         raise HTTPException(status_code=400, detail="cik is required")
+    if get_watchlist_count(x_customer_id) >= WATCHLIST_LIMIT:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Watchlist limit of {WATCHLIST_LIMIT} companies reached. Contact support to increase.",
+        )
     add_to_watchlist(x_customer_id, cik, ticker, name)
     logger.info("watchlist_add customer=%s cik=%s ticker=%s", x_customer_id, cik, ticker)
     return {"ok": True}

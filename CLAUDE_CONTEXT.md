@@ -1,6 +1,6 @@
 # EdgarWolf — Claude Context Doc
 
-**Current version: v1.4.1** (2026-05-13) — see `CHANGELOG.md` for full release history.
+**Current version: v1.5.0** (2026-05-13) — see `CHANGELOG.md` for full release history.
 
 Paste this file at the start of every Claude conversation to restore full context.
 Update metrics, version, and priorities at the end of every relevant session.
@@ -127,14 +127,11 @@ _Replace completed items each session. Keep this list short._
 - [ ] Send beta invites to 2–3 crypto friends with free Pro access
 - [ ] Identify 10 finance Substack writers and send personal outreach emails
 - [ ] Continue X thread replies (3 posted May 13 on $HSY threads — target 4/day)
+- [ ] Decommission Render service (manual: delete from render.com dashboard — no code references remain)
 
 **Soon:**
-- [ ] Add privacy policy and terms of service pages
-- [ ] Add welcome email for new subscribers (Resend)
-- [ ] Set up error monitoring (Sentry free tier)
-- [ ] Expand Postman QA collection with watchlist + alert endpoint tests
-- [ ] Decommission Render service (Railway stable)
-- [ ] Add watchlist company limit UI (soft cap ~50, "contact us to increase")
+- [ ] Add welcome email unsubscribe link (CAN-SPAM compliance)
+- [ ] Expand sitemap to include /privacy and /terms URLs
 
 ---
 
@@ -165,7 +162,7 @@ _Running log of important decisions so we don't relitigate them._
 - **Upgrade modal (v1.4.0):** Shows both Pro and Pro+ plan cards. Context-aware: Standard → both plans, Pro → Pro+ only. bfcache fix prevents stuck Loading... buttons after returning from Stripe.
 - **Pro price updated to $19.00 (v1.4.0):** New Stripe price ID `price_1TWTJz1C3cijZqBOyfX4VwHC`. Old $19.99 price archived in Stripe.
 - **Methodology doc rule:** Always update METHODOLOGY.md before or alongside any new scoring, polling, classification, or trigger logic.
-- **Postman QA suite:** `edgar-api/postman/` contains the full collection (28 requests, 49 assertions), Local + Production environment files, and `run_qa.sh` (Newman runner). Run locally with `./run_qa.sh` — requires `npm install -g newman`. All 49 assertions pass against local server.
+- **Postman QA suite:** `edgar-api/postman/` contains the full collection (40 requests, 66 assertions), Local + Production environment files, and `run_qa.sh` (Newman runner). Run locally with `./run_qa.sh` — requires `npm install -g newman`.
 - **Dev tier toggle:** Amber button in top-right header, visible only on localhost. Toggles between Standard → Pro → Pro+ instantly without page reload or re-fetch.
 - **OG image:** 1200×630 PNG at `/og-image.png`, served via FastAPI route. Shows $GIS example data (Filing Stress Score 100/100, 3 exception flags, revenue trend). Regenerate with `edgar-api/generate_og_image.py`.
 - **Free tier lookup limit:** Decided to keep unlimited lookups. Differentiation is feature depth only, not access.
@@ -278,4 +275,4 @@ Bypasses Stripe verification on `127.0.0.1`/`localhost` only — no-op on the li
 
 ---
 
-_Last updated: May 13, 2026 — v1.4.1. X kickoff post live (public), 3 thread replies posted on $HSY threads, StockTwits $GIS post live. favicon.ico + sitemap.xml deployed, sitemap submitted to Google Search Console, indexing requested. UI: action row moved below Pro divider, Pro badges on action buttons, KPI grid alignment fixed, summary box full width._
+_Last updated: May 13, 2026 — v1.5.0. Tech hardening session: 2 bugs fixed (watchlist.py stale Pro price ID, alert email CTA deep link). Added: welcome email on signup, privacy policy + terms pages, 50-company watchlist cap (backend + frontend), Sentry error monitoring (SENTRY_DSN set in Railway), Postman QA expanded to 40 requests / 66 assertions._

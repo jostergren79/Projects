@@ -20,6 +20,7 @@ Environment variables required (set in Railway Variables panel, never in code):
 import logging
 import os
 import stripe
+import resend
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 
@@ -54,6 +55,7 @@ async def create_checkout_session(request: Request):
             success_url=f"{APP_URL}/success?session_id={{CHECKOUT_SESSION_ID}}&tier={tier}",
             cancel_url=f"{APP_URL}/?upgrade=cancelled",
             allow_promotion_codes=True,
+            metadata={"tier": tier},
         )
         logger.info("Checkout session created for tier=%s session=%s", tier, session.id)
         return {"url": session.url}
@@ -194,6 +196,62 @@ async def billing_portal(request: Request):
         raise HTTPException(status_code=502, detail="Failed to create portal session")
 
 
+def _send_welcome_email(to_email: str, tier: str) -> None:
+    api_key = os.getenv("RESEND_API_KEY")
+    if not api_key:
+        logger.warning("RESEND_API_KEY not set — skipping welcome email")
+        return
+
+    resend.api_key = api_key
+    from_addr = os.getenv("RESEND_FROM", "EdgarWolf <alerts@edgarwolf.com>")
+    tier_label = "Pro+" if tier == "pro_plus" else "Pro"
+
+    pro_plus_section = ""
+    if tier == "pro_plus":
+        pro_plus_section = """
+      <div style="background:#162a1e;border:1px solid #276749;border-radius:8px;padding:16px 20px;margin:20px 0">
+        <p style="margin:0 0 8px;font-weight:700;color:#34d399">Email Alerts — Active</p>
+        <p style="margin:0;color:#555;font-size:13px;line-height:1.6">
+          You'll receive an email whenever a company on your watchlist files a 10-Q, 10-K, or 8-K
+          <em>and</em> EdgarWolf detects an anomaly signal. Alerts run hourly Monday–Friday, 8 AM–6 PM ET.
+        </p>
+      </div>"""
+
+    html = f"""
+    <div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#1a1a1a">
+      <h2 style="color:#2b6cb0;margin-bottom:4px">Welcome to EdgarWolf {tier_label}</h2>
+      <p style="color:#555;line-height:1.6">
+        Your subscription is active. Here's what you now have access to:
+      </p>
+      <ul style="color:#555;line-height:1.8;padding-left:20px">
+        <li>Exception flags — z-score deviations on margins and revenue</li>
+        <li>Filing Stress Score — composite filing anomaly signal (0–100)</li>
+        <li>Filing Signals — cadence and XBRL anomalies</li>
+        <li>Peer comparison, segment breakdown, source filing links</li>
+        <li>Server-synced watchlist + CSV/JSON export</li>
+      </ul>
+      {pro_plus_section}
+      <a href="https://www.edgarwolf.com" style="display:inline-block;background:#2b6cb0;color:#fff;padding:10px 20px;border-radius:4px;text-decoration:none;font-size:14px;font-weight:600;margin-top:8px">
+        Go to EdgarWolf →
+      </a>
+      <p style="font-size:12px;color:#aaa;margin-top:24px">
+        Questions? Reply to this email or reach us at jason@edgarwolf.com.
+      </p>
+    </div>
+    """
+
+    try:
+        resend.Emails.send({
+            "from": from_addr,
+            "to": [to_email],
+            "subject": f"Welcome to EdgarWolf {tier_label}",
+            "html": html,
+        })
+        logger.info("EVENT welcome_email_sent email=%s tier=%s", to_email, tier)
+    except Exception as e:
+        logger.error("Failed to send welcome email to %s: %s", to_email, e)
+
+
 @router.post("/webhook/stripe")
 async def stripe_webhook(request: Request):
     payload = await request.body()
@@ -225,6 +283,8 @@ async def stripe_webhook(request: Request):
             "EVENT subscription_started email=%s tier=%s amount=%s session=%s",
             customer_email, tier, amount, session.get("id")
         )
+        if customer_email and customer_email != "unknown" and tier in ("pro", "pro_plus"):
+            _send_welcome_email(customer_email, tier)
 
     elif event.type == "customer.subscription.deleted":
         sub = event.data.object

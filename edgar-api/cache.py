@@ -207,6 +207,18 @@ def get_watchlist(customer_id: str) -> list:
     return [{"cik": r[0], "ticker": r[1], "name": r[2], "saved_at": r[3]} for r in rows]
 
 
+def get_watchlist_count(customer_id: str) -> int:
+    """Return the number of companies on a customer's watchlist."""
+    conn = open_cache_connection()
+    try:
+        row = conn.execute(
+            "SELECT COUNT(*) FROM watchlists WHERE customer_id = ?", (customer_id,)
+        ).fetchone()
+    finally:
+        conn.close()
+    return row[0] if row else 0
+
+
 def add_to_watchlist(customer_id: str, cik: str, ticker: str, name: str) -> None:
     """Insert a company into a customer's watchlist. No-op if already present."""
     with _write_lock:

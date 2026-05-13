@@ -37,6 +37,7 @@ _INTER_COMPANY_DELAY = 2.0
 
 
 def _build_alert_html(
+    cik: str,
     ticker: str,
     name: str,
     form_type: str,
@@ -58,7 +59,7 @@ def _build_alert_html(
         )
 
     display = ticker if ticker else name
-    url = f"https://www.edgarwolf.com/?cik={name}"
+    url = f"https://www.edgarwolf.com/?cik={cik}"
 
     return f"""
     <div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#1a1a1a">
@@ -77,7 +78,7 @@ def _build_alert_html(
         {flag_rows}
       </table>
       <hr style="border:none;border-top:1px solid #eee;margin:16px 0">
-      <a href="https://www.edgarwolf.com" style="display:inline-block;background:#2b6cb0;color:#fff;padding:10px 20px;border-radius:4px;text-decoration:none;font-size:14px;font-weight:600">
+      <a href="{url}" style="display:inline-block;background:#2b6cb0;color:#fff;padding:10px 20px;border-radius:4px;text-decoration:none;font-size:14px;font-weight:600">
         View on EdgarWolf →
       </a>
       <p style="font-size:11px;color:#aaa;margin-top:24px">
@@ -176,6 +177,7 @@ async def _check_company(customer_id: str, email: str, cik: str, ticker: str, na
     subject = f"[EdgarWolf] New {new_filing['form']} filing — {name} ({ticker or cik10})"
 
     html = _build_alert_html(
+        cik=cik10,
         ticker=ticker,
         name=name,
         form_type=new_filing["form"],
