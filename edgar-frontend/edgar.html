@@ -137,12 +137,13 @@
     .company-header { display: flex; align-items: flex-start; gap: 20px; margin-bottom: 24px; }
     .company-header .co-info h2 { font-size: 1.5rem; font-weight: 700; }
     .company-header .co-info .co-meta { color: var(--muted); font-size: .85rem; margin-top: 4px; }
-    .company-header .co-info .summary-text { color: var(--text); font-size: .9rem; margin-top: 10px; line-height: 1.6; max-width: 720px; background: var(--surface2); border-left: 3px solid var(--accent); padding: 10px 14px; border-radius: 0 var(--radius) var(--radius) 0; }
-    #summary-cta { display:none; margin-top: 10px; max-width: 720px; background: var(--surface2); border-left: 3px solid var(--yellow); padding: 10px 14px; border-radius: 0 var(--radius) var(--radius) 0; font-size: .85rem; line-height: 1.5; color: var(--muted); }
+    .company-header .co-info .summary-text { color: var(--text); font-size: .9rem; margin-top: 10px; line-height: 1.6; background: var(--surface2); border-left: 3px solid var(--accent); padding: 10px 14px; border-radius: 0 var(--radius) var(--radius) 0; }
+    #summary-cta { display:none; margin-top: 10px; background: var(--surface2); border-left: 3px solid var(--yellow); padding: 10px 14px; border-radius: 0 var(--radius) var(--radius) 0; font-size: .85rem; line-height: 1.5; color: var(--muted); }
     #summary-cta strong { color: var(--text); }
     #summary-cta .cta-link { color: var(--accent); cursor: pointer; text-decoration: underline; white-space: nowrap; }
     .company-header .co-info .profile-chip { display: inline-block; margin-top: 10px; font-size: .76rem; color: var(--muted); border: 1px solid var(--border); background: var(--surface); border-radius: 999px; padding: 5px 10px; }
-    .action-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .action-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 20px; }
+    .action-row .pro-badge { font-size:.65rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--accent); background:color-mix(in srgb,var(--accent) 12%,transparent); border-radius:4px; padding:1px 5px; margin-left:4px; vertical-align:middle; }
     .action-row button {
       background: var(--surface2);
       color: var(--text);
@@ -155,7 +156,7 @@
     .action-row button:hover { border-color: var(--accent); }
 
     /* KPI tiles */
-    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 24px; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; margin-bottom: 24px; }
     .kpi-tile { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; display: flex; flex-direction: column; word-break: break-word; overflow-wrap: break-word; }
     .kpi-tile .kpi-label { font-size: .75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; }
     .kpi-tile .kpi-value { font-size: 1.6rem; font-weight: 700; word-break: break-word; overflow-wrap: break-word; }
@@ -523,18 +524,18 @@
       </div>
     </div>
 
-    <!-- Action row — sits between free and pro content -->
-    <div class="action-row">
-      <button id="watch-btn" onclick="toggleWatchlist()">Add to Watchlist</button>
-      <button onclick="exportMetrics('csv')">Export CSV</button>
-      <button onclick="exportMetrics('json')">Export JSON</button>
-    </div>
-
     <!-- Pro Analytics divider -->
     <div id="pro-divider" style="display:none;margin:32px 0 20px;align-items:center;gap:12px">
       <div style="flex:1;height:1px;background:var(--border)"></div>
       <span style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)">Pro Analytics</span>
       <div style="flex:1;height:1px;background:var(--border)"></div>
+    </div>
+
+    <!-- Action row — Pro section -->
+    <div class="action-row">
+      <button id="watch-btn" onclick="toggleWatchlist()">Add to Watchlist</button>
+      <button onclick="exportMetrics('csv')">Export CSV</button>
+      <button onclick="exportMetrics('json')">Export JSON</button>
     </div>
 
     <!-- Exception flags -->
@@ -747,14 +748,14 @@
       // Export buttons — prompt upgrade on click
       document.querySelectorAll('[onclick*="exportMetrics"]').forEach(btn => {
         btn.onclick = () => requirePro(() => {}, 'Export');
-        btn.title = 'Pro feature';
+        btn.innerHTML = btn.textContent + ' <span class="pro-badge">Pro</span>';
       });
 
       // Watchlist button
       const watchBtn = document.getElementById('watch-btn');
       if (watchBtn) {
         watchBtn.onclick = () => requirePro(() => {}, 'Watchlist');
-        watchBtn.textContent = 'Watchlist (Pro)';
+        watchBtn.innerHTML = '☆ Watchlist <span class="pro-badge">Pro</span>';
       }
     }
 
