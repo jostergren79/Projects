@@ -484,11 +484,6 @@
           <strong>Want to know what's driving this?</strong> See Exception Flags, Filing Stress Score, and anomaly signals that put these numbers in statistical context. <span class="cta-link" onclick="openUpgradeModal()">Upgrade to Pro &rarr;</span>
         </div>
         <div class="profile-chip" id="co-profile" style="display:none;"></div>
-        <div class="action-row">
-          <button id="watch-btn" onclick="toggleWatchlist()">Add to Watchlist</button>
-          <button onclick="exportMetrics('csv')">Export CSV</button>
-          <button onclick="exportMetrics('json')">Export JSON</button>
-        </div>
       </div>
     </div>
 
@@ -526,6 +521,13 @@
           <tbody id="tbl-body"></tbody>
         </table>
       </div>
+    </div>
+
+    <!-- Action row — sits between free and pro content -->
+    <div class="action-row">
+      <button id="watch-btn" onclick="toggleWatchlist()">Add to Watchlist</button>
+      <button onclick="exportMetrics('csv')">Export CSV</button>
+      <button onclick="exportMetrics('json')">Export JSON</button>
     </div>
 
     <!-- Pro Analytics divider -->
