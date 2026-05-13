@@ -156,6 +156,14 @@ def cf_hostname_challenge(token: str):
 def og_image():
     return FileResponse(_PUBLIC / "og-image.png", media_type="image/png")
 
+@app.get("/sitemap.xml")
+def sitemap():
+    return FileResponse(_PUBLIC / "sitemap.xml", media_type="application/xml")
+
+@app.get("/favicon.ico")
+def favicon_ico():
+    return FileResponse(_PUBLIC / "favicon-32.png", media_type="image/png")
+
 @app.get("/favicon.png")
 def favicon():
     return FileResponse(_PUBLIC / "favicon.png", media_type="image/png")
