@@ -1,6 +1,6 @@
 # EdgarWolf — Claude Context Doc
 
-**Current version: v1.3.2** (2026-05-12) — see `CHANGELOG.md` for full release history.
+**Current version: v1.3.3** (2026-05-12) — see `CHANGELOG.md` for full release history.
 
 Paste this file at the start of every Claude conversation to restore full context.
 Update metrics, version, and priorities at the end of every relevant session.
@@ -118,7 +118,8 @@ _Update these at the end of every session._
 _Replace completed items each session. Keep this list short._
 
 **Immediate (next session):**
-- [ ] Decommission Render service (DNS + webhook confirmed on Railway — safe to delete)
+- [ ] Add Cloudflare redirect rule: `edgarwolf.com` → `www.edgarwolf.com` (301, in Cloudflare dashboard → Rules → Redirect Rules)
+- [ ] Confirm `www.edgarwolf.com` is fully live and stable after cert provisioning
 - [ ] Build email alert trigger logic — poll watched companies for new filings/anomalies, send via Resend
 
 **Soon:**
@@ -140,7 +141,10 @@ _Running log of important decisions so we don't relitigate them._
 - **Filing Stress Score:** Renamed from "Upheaval Score" — better resonance with finance audience.
 - **Distribution first:** Product is good enough to charge for. Distribution is the only job right now.
 - **Sale target ($500k) is not realistic short term.** Realistic near-term goal is replacing income.
-- **Railway deployment:** Migrated from Render free tier to Railway $5/month Hobby plan. `railway.toml` at repo root, start command `cd edgar-api && uvicorn main:app --host 0.0.0.0 --port $PORT`. Root directory in Railway set to blank (full repo deployed so `edgar-frontend` is accessible).
+- **Railway deployment:** Migrated from Render free tier to Railway $5/month Hobby plan. `railway.toml` at repo root, start command `cd edgar-api && uvicorn main:app --host 0.0.0.0 --port $PORT`. Root directory in Railway set to blank (full repo deployed so `edgar-frontend` is accessible). Railway Cloudflare one-click integration used for custom domain — manages hostname verification automatically.
+- **Canonical domain:** `www.edgarwolf.com` is the intended primary. `edgarwolf.com` will redirect to www via Cloudflare redirect rule (pending). Both added as Railway custom domains.
+- **Cloudflare setup:** Railway one-click integration manages DNS. Do NOT manually change CNAME proxy status — Railway owns that configuration. HTTP challenge handler at `/.well-known/cf-custom-hostname-challenge/{token}` is in `main.py`.
+- **Folder structure:** `notes-api/` renamed to `edgar-frontend/`. `edgar-frontend/public/` flattened to `edgar-frontend/`. `scripts/` removed, `clean.sh` at repo root.
 - **Analytics via Railway logs:** Events emitted as structured log lines (grep 'EVENT' in Railway log tab). No external analytics service needed.
 - **Watchlist keyed by CIK:** Ticker is unreliable (empty for many EDGAR companies). CIK is always present.
 - **Server-side watchlist (v1.3.0):** Pro/Pro+ users get watchlist persisted in SQLite (`watchlists` table, keyed by Stripe customer_id). Standard users stay on localStorage. syncWatchlistFromServer() runs once per session, merges server→local and pushes local-only items up. Identity anchor = Stripe customer_id (already verified, no new auth needed).
@@ -256,4 +260,4 @@ Bypasses Stripe verification on `127.0.0.1`/`localhost` only — no-op on the li
 
 ---
 
-_Last updated: May 12, 2026 — v1.3.2. Codebase audit: removed old S&OP project files, Node.js server, Render/Heroku artifacts. Root README rewritten. Codebase is now EdgarWolf-only and lean._
+_Last updated: May 12, 2026 — v1.3.3. Railway + Cloudflare one-click integration stable. Codebase fully cleaned and renamed. www.edgarwolf.com cert provisioning, Cloudflare redirect rule pending for next session._

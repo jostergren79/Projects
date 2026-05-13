@@ -10,6 +10,23 @@ Versioning follows [Semantic Versioning](https://semver.org/):
 
 ---
 
+## [1.3.3] — 2026-05-12
+
+### Added
+- Cloudflare custom hostname HTTP challenge handler (`GET /.well-known/cf-custom-hostname-challenge/{token}`) — required for Railway's Cloudflare integration to verify domain ownership without failing during deploys.
+
+### Fixed
+- CSP updated to allow `https://static.cloudflareinsights.com` script and `https://cloudflareinsights.com` connect — eliminates console errors from Railway's Cloudflare beacon injection.
+- Footer and FastAPI version strings synced to 1.3.3 (were stale at 1.3.0/1.3.2).
+
+### Infrastructure
+- Completed Railway + Cloudflare one-click integration for `edgarwolf.com` — Railway now manages hostname verification, eliminating intermittent "Service Suspended" errors on every deploy.
+- `www.edgarwolf.com` added as Railway custom domain with cert provisioned.
+- Cloudflare redirect rule pending: `edgarwolf.com` → `www.edgarwolf.com` (to be set in Cloudflare dashboard).
+- Repo fully cleaned: removed S&OP project files, Node.js static server, Render config, `runtime.txt` files. `notes-api/` renamed to `edgar-frontend/`, `public/` nesting removed.
+
+---
+
 ## [1.3.2] — 2026-05-12
 
 ### Removed
