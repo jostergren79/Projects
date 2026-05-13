@@ -22,6 +22,7 @@ import collections
 import os
 import pathlib
 import time
+from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -44,6 +45,17 @@ logger = logging.getLogger(__name__)
 _PUBLIC = pathlib.Path(__file__).parent.parent / "edgar-frontend"
 
 from cache import cache_health_check
+from scheduler import alert_scheduler
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    alert_scheduler.start()
+    logger.info("Alert scheduler started — Pro+ filing alerts active M-F 08:00-18:00 ET")
+    yield
+    alert_scheduler.shutdown(wait=False)
+    logger.info("Alert scheduler stopped")
+
 
 from routers import (
     company_lookup,
@@ -59,7 +71,7 @@ from routers import (
     watchlist,
 )
 
-app = FastAPI(title="EDGAR Financial Metrics API", version="1.3.3")
+app = FastAPI(title="EDGAR Financial Metrics API", version="1.3.3", lifespan=lifespan)
 
 # ---------------------------------------------------------------------------
 # Per-IP rate limiting middleware

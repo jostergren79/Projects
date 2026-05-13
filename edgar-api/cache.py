@@ -62,6 +62,23 @@ def open_cache_connection() -> sqlite3.Connection:
             PRIMARY KEY (customer_id, cik)
         )
     """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS alert_log (
+            customer_id      TEXT NOT NULL,
+            cik              TEXT NOT NULL,
+            accession_number TEXT NOT NULL,
+            sent_at          INTEGER NOT NULL,
+            PRIMARY KEY (customer_id, cik, accession_number)
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS alert_checks (
+            customer_id     TEXT NOT NULL,
+            cik             TEXT NOT NULL,
+            last_checked_at INTEGER NOT NULL,
+            PRIMARY KEY (customer_id, cik)
+        )
+    """)
     conn.commit()
     return conn
 
@@ -247,3 +264,77 @@ def get_user_email(customer_id: str) -> Optional[str]:
     finally:
         conn.close()
     return row[0] if row else None
+
+
+# ── Alert helpers ──────────────────────────────────────────────────────────────
+
+def get_all_pro_plus_watchlists() -> list:
+    """Return all (customer_id, email, cik, ticker, name) rows for Pro+ users."""
+    conn = open_cache_connection()
+    try:
+        rows = conn.execute("""
+            SELECT u.customer_id, u.email, w.cik, w.ticker, w.name
+            FROM users u
+            JOIN watchlists w ON u.customer_id = w.customer_id
+            WHERE u.tier = 'pro_plus'
+        """).fetchall()
+    finally:
+        conn.close()
+    return [{"customer_id": r[0], "email": r[1], "cik": r[2], "ticker": r[3], "name": r[4]} for r in rows]
+
+
+def get_last_checked(customer_id: str, cik: str) -> int:
+    """Return last_checked_at unix timestamp, or 0 if never checked."""
+    conn = open_cache_connection()
+    try:
+        row = conn.execute(
+            "SELECT last_checked_at FROM alert_checks WHERE customer_id = ? AND cik = ?",
+            (customer_id, cik),
+        ).fetchone()
+    finally:
+        conn.close()
+    return row[0] if row else 0
+
+
+def set_last_checked(customer_id: str, cik: str) -> None:
+    """Upsert last_checked_at to now for a (customer_id, cik) pair."""
+    with _write_lock:
+        conn = open_cache_connection()
+        try:
+            conn.execute(
+                """INSERT INTO alert_checks (customer_id, cik, last_checked_at)
+                   VALUES (?, ?, ?)
+                   ON CONFLICT(customer_id, cik) DO UPDATE SET last_checked_at = excluded.last_checked_at""",
+                (customer_id, cik, int(time.time())),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+
+def has_alert_been_sent(customer_id: str, cik: str, accession_number: str) -> bool:
+    """Return True if an alert for this accession was already sent to this user."""
+    conn = open_cache_connection()
+    try:
+        row = conn.execute(
+            "SELECT 1 FROM alert_log WHERE customer_id = ? AND cik = ? AND accession_number = ?",
+            (customer_id, cik, accession_number),
+        ).fetchone()
+    finally:
+        conn.close()
+    return row is not None
+
+
+def log_alert_sent(customer_id: str, cik: str, accession_number: str) -> None:
+    """Record a sent alert. INSERT OR IGNORE prevents double-logging on retry."""
+    with _write_lock:
+        conn = open_cache_connection()
+        try:
+            conn.execute(
+                """INSERT OR IGNORE INTO alert_log (customer_id, cik, accession_number, sent_at)
+                   VALUES (?, ?, ?, ?)""",
+                (customer_id, cik, accession_number, int(time.time())),
+            )
+            conn.commit()
+        finally:
+            conn.close()

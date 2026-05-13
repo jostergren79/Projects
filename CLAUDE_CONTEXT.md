@@ -188,6 +188,8 @@ Bypasses Stripe verification on `127.0.0.1`/`localhost` only — no-op on the li
 - Mobile layout (use browser DevTools responsive mode)
 - Watchlist add/remove works and syncs for Pro users
 
+**Methodology doc rule:** Any time new scoring, classification, polling, statistical, or trigger logic is added or changed, update `METHODOLOGY.md` **before or alongside** the code — not after. The doc is the spec; the code implements it.
+
 **End-of-session release steps:**
 1. Update `CHANGELOG.md` with all changes under a new version heading
 2. Bump `VERSION` file and footer version in `edgar.html` and FastAPI `version=` in `main.py`

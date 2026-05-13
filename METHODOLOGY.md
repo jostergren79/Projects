@@ -305,3 +305,93 @@ but does not affect order or inclusion.
 **This is a momentum signal, not a valuation.** A company in WEAKENING may be
 attractively priced; a company in STRENGTHENING may already reflect good news.
 Always verify with primary SEC filings before making investment decisions.
+
+---
+
+## 13. Email Alert Polling Schedule
+
+**File:** `edgar-api/scheduler.py` — `run_alert_check()`
+
+**What we do:** A background job (APScheduler) polls SEC EDGAR for new filings
+on behalf of Pro+ users during active filing hours.
+
+**Schedule:** Every 60 minutes, Monday–Friday, 08:00–18:00 US/Eastern.
+
+**Rationale:** SEC EDGAR accepts and publishes filings in real time throughout
+the day. Analysis of acceptance timestamps across major filers shows the
+practical filing window is roughly 06:00–18:00 ET, with the bulk of material
+filings (10-Q, 10-K, 8-K) arriving between 10:00–16:00 ET. An hourly cadence
+within the 08:00–18:00 ET window catches new filings promptly while
+respecting SEC rate limits and avoiding unnecessary overnight polling.
+
+**Coverage by time zone at the 08:00–18:00 ET window:**
+
+| Time zone | Local equivalent |
+|-----------|-----------------|
+| Eastern (ET) | 8:00 AM – 6:00 PM |
+| Central (CT) | 7:00 AM – 5:00 PM |
+| Mountain (MT) | 6:00 AM – 4:00 PM |
+| Pacific (PT) | 5:00 AM – 3:00 PM |
+
+**New filing detection:** For each watched company, we compare the most recent
+`acceptanceDateTime` in the EDGAR `submissions` endpoint against the last
+`checked_at` timestamp stored in the `alert_log` table. A filing is considered
+"new" if its acceptance time is after the last check for that
+`(customer_id, cik)` pair.
+
+---
+
+## 14. Email Alert Trigger Conditions
+
+**File:** `edgar-api/scheduler.py` — `_should_alert()`
+
+An alert email is sent to a Pro+ user for a watched company only when **both**
+of the following are true:
+
+1. **A new filing has been detected** since the last check (see §13).
+2. **At least one anomaly signal is present** in the most recent data:
+   - One or more z-score exception flags at MEDIUM (|z| ≥ 2.0) or HIGH (|z| ≥ 3.0) severity (see §8), **or**
+   - Filing Stress Score status is ELEVATED (score ≥ 70) (see §9).
+
+A new filing with no anomalies does not trigger an alert. Anomalies with no
+new filing do not trigger an alert — the assumption is the user has already
+seen existing flags on the dashboard.
+
+**Deduplication:** The `alert_log` table records every sent alert keyed by
+`(customer_id, cik, accession_number)`. The same filing accession number will
+never produce a second alert for the same user, regardless of how many polling
+cycles run while that filing remains the most recent one.
+
+**Tier gate:** Alert sending is gated on the user's `tier` field in the `users`
+table being `pro_plus`. Pro ($19.99/mo) users have access to the dashboard
+anomaly flags but do not receive email alerts.
+
+**Alert email content:**
+- Company name and ticker
+- Filing type and acceptance date
+- Filing Stress Score and status
+- All active exception flags with z-score and severity
+- Direct link to `https://www.edgarwolf.com` pre-populated with the company
+
+---
+
+## 15. Alert Log and State Management
+
+**File:** `edgar-api/cache.py` — `alert_log` table
+
+The `alert_log` table is the source of truth for alert delivery state. Schema:
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `customer_id` | TEXT | Stripe customer ID of the recipient |
+| `cik` | TEXT | CIK of the watched company |
+| `accession_number` | TEXT | EDGAR accession number of the triggering filing |
+| `sent_at` | INTEGER | Unix timestamp of when the alert was dispatched |
+
+Primary key is `(customer_id, cik, accession_number)`.
+
+**Last-checked tracking:** The most recent `sent_at` per `(customer_id, cik)`
+also serves as the "last checked" marker — if no alert was warranted on the
+most recent poll, a `checked_at` row is written with a null `accession_number`
+so the next poll knows where to start. This prevents re-evaluating the same
+filing window repeatedly.
