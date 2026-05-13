@@ -1,6 +1,6 @@
 # EdgarWolf — Claude Context Doc
 
-**Current version: v1.3.3** (2026-05-12) — see `CHANGELOG.md` for full release history.
+**Current version: v1.4.0** (2026-05-12) — see `CHANGELOG.md` for full release history.
 
 Paste this file at the start of every Claude conversation to restore full context.
 Update metrics, version, and priorities at the end of every relevant session.
@@ -23,7 +23,7 @@ SEC EDGAR financial data and anomaly detection tool. Pulls data directly from pu
 - Analytics event tracking (log-based via Railway logs, 8 events including upgrade_modal_open, checkout_start)
 - Stripe payment integration — Pro $19.00/mo, Pro+ $99/mo (LIVE)
 - Stripe Customer Portal — self-serve cancel/manage for paid users (LIVE)
-- Email alerts — infrastructure proven (Resend domain verified, test sent), trigger logic NOT YET BUILT
+- Email alerts — LIVE for Pro+ users. Hourly polling M–F 8 AM–6 PM ET. Fires on new 10-Q/10-K/8-K + anomaly signal.
 
 **Stack:** FastAPI (Python) backend + static HTML/JS frontend, single Railway service
 **Live URL:** https://www.edgarwolf.com
@@ -118,16 +118,15 @@ _Update these at the end of every session._
 _Replace completed items each session. Keep this list short._
 
 **Immediate (next session):**
-- [ ] Add Cloudflare redirect rule: `edgarwolf.com` → `www.edgarwolf.com` (301, in Cloudflare dashboard → Rules → Redirect Rules)
-- [ ] Confirm `www.edgarwolf.com` is fully live and stable after cert provisioning
-- [ ] Build email alert trigger logic — poll watched companies for new filings/anomalies, send via Resend
-
-**Soon:**
 - [ ] Post on r/SecurityAnalysis when mod approval comes through
 - [ ] Post on StockTwits using $GIS cashtag
 - [ ] Send beta invites to 2–3 crypto friends with free Pro access
 - [ ] Identify 10 finance Substack writers and send personal outreach emails
-- [ ] Expand Postman QA collection with watchlist endpoint tests
+
+**Soon:**
+- [ ] Expand Postman QA collection with watchlist + alert endpoint tests
+- [ ] Decommission Render service (Railway stable)
+- [ ] Add watchlist company limit UI (soft cap ~50, "contact us to increase")
 
 ---
 
@@ -154,6 +153,10 @@ _Running log of important decisions so we don't relitigate them._
 - **Domain:** edgarwolf.com purchased. DNS migrating to Cloudflare (in progress as of May 12).
 - **Email:** jason@edgarwolf.com via Microsoft 365 + GoDaddy. All public-facing email references updated.
 - **Stripe session-based auth:** Without user login, subscription status is verified by storing Stripe session_id (and customer_id) in localStorage and checking against the Stripe API on load (cached 1 hour). Full per-user auth needed long-term.
+- **Pro+ email alerts (v1.4.0):** Hourly APScheduler job (M–F 08:00–18:00 ET). Fires when new 10-Q/10-K/8-K found AND anomaly signals present. Deduped by accession number in `alert_log` table. `alert_checks` table tracks last_checked_at per (customer_id, cik). See METHODOLOGY.md §13–15.
+- **Upgrade modal (v1.4.0):** Shows both Pro and Pro+ plan cards. Context-aware: Standard → both plans, Pro → Pro+ only. bfcache fix prevents stuck Loading... buttons after returning from Stripe.
+- **Pro price updated to $19.00 (v1.4.0):** New Stripe price ID `price_1TWTJz1C3cijZqBOyfX4VwHC`. Old $19.99 price archived in Stripe.
+- **Methodology doc rule:** Always update METHODOLOGY.md before or alongside any new scoring, polling, classification, or trigger logic.
 - **Postman QA suite:** `edgar-api/postman/` contains the full collection (28 requests, 49 assertions), Local + Production environment files, and `run_qa.sh` (Newman runner). Run locally with `./run_qa.sh` — requires `npm install -g newman`. All 49 assertions pass against local server.
 - **Dev tier toggle:** Amber button in top-right header, visible only on localhost. Toggles between Standard → Pro → Pro+ instantly without page reload or re-fetch.
 - **OG image:** 1200×630 PNG at `/og-image.png`, served via FastAPI route. Shows $GIS example data (Filing Stress Score 100/100, 3 exception flags, revenue trend). Regenerate with `edgar-api/generate_og_image.py`.
@@ -201,7 +204,7 @@ Bypasses Stripe verification on `127.0.0.1`/`localhost` only — no-op on the li
 
 ---
 
-## 9. Technical State (as of May 12, 2026 — v1.3.0)
+## 9. Technical State (as of May 12, 2026 — v1.4.0)
 
 **What's solid:**
 - Rate limiting: 200 req/min per IP on /company/* and /feed/*
@@ -258,8 +261,7 @@ Bypasses Stripe verification on `127.0.0.1`/`localhost` only — no-op on the li
 
 **Known pending items:**
 - Render service decommission (Railway stable — safe to delete Render service)
-- Email alert trigger logic (poll watchlists → send via Resend on new anomaly/filing)
 
 ---
 
-_Last updated: May 12, 2026 — v1.3.3. Railway + Cloudflare one-click integration stable. Codebase fully cleaned and renamed. www.edgarwolf.com cert provisioning, Cloudflare redirect rule pending for next session._
+_Last updated: May 12, 2026 — v1.4.0. Pro+ email alert system live. Upgrade modal shows both plans. Pro price $19.00. EW favicon + canonical tag deployed. Cloudflare apex redirect active._

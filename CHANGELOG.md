@@ -10,6 +10,35 @@ Versioning follows [Semantic Versioning](https://semver.org/):
 
 ---
 
+## [1.4.0] — 2026-05-12
+
+### Added
+- **Pro+ email alert system** — APScheduler background job polls SEC EDGAR hourly (M–F 08:00–18:00 ET) for new 10-Q/10-K/8-K filings across all Pro+ user watchlists. Sends email via Resend when a new filing is detected and at least one anomaly signal (MEDIUM/HIGH z-score flag or ELEVATED Filing Stress Score) is present.
+- `scheduler.py` — new module with `AsyncIOScheduler` + `CronTrigger`, wired into FastAPI lifespan.
+- `alert_log` table — deduplicates alerts by `(customer_id, cik, accession_number)`; same filing never triggers a second email.
+- `alert_checks` table — tracks `last_checked_at` per `(customer_id, cik)` pair so each poll only looks at filings newer than the previous check.
+- Dev-only endpoints: `POST /test/seed-alert-user` and `POST /test/run-alert-check` for local alert testing (403 in production).
+- **Upgrade modal with Pro+ plan card** — modal now shows both Pro ($19/mo) and Pro+ ($99/mo) side by side. Context-aware: Standard users see both, Pro users see only the Pro+ upgrade.
+- `tier-pro-plus` CSS class — Pro+ badge displays in green, distinct from Pro (blue).
+- **EW favicon** — `favicon.png` (192×192) and `favicon-32.png` (32×32) with dark background and blue "EW" mark. Served via FastAPI routes. Replaces inline SVG data URI that Google couldn't crawl.
+- `generate_favicon.py` — script to regenerate favicon assets.
+- `<link rel="canonical" href="https://www.edgarwolf.com/" />` — signals www as the canonical URL for Google deduplication.
+- METHODOLOGY.md §13–15: Alert Polling Schedule, Alert Trigger Conditions, Alert Log and State Management.
+- Methodology doc rule added to CLAUDE_CONTEXT.md dev workflow: update METHODOLOGY.md before or alongside any new logic.
+
+### Changed
+- Pro price updated to **$19.00/mo** (new Stripe price ID `price_1TWTJz1C3cijZqBOyfX4VwHC`; old $19.99 price archived).
+- FastAPI lifespan context manager added to `main.py` — scheduler starts/stops cleanly with the app.
+- `apscheduler==3.10.4` added to `requirements.txt`.
+
+### Fixed
+- **bfcache bug** — `pageshow` handler resets "Get Pro →" / "Get Pro+ →" buttons that got stuck on "Loading…" after navigating back from Stripe checkout.
+
+### Infrastructure
+- Cloudflare redirect rule `apex-to-www` deployed: `edgarwolf.com` → `https://www.edgarwolf.com` (301, path + query string preserved). Both domains were previously resolving independently with no canonical redirect.
+
+---
+
 ## [1.3.3] — 2026-05-12
 
 ### Added
