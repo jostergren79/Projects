@@ -1,6 +1,6 @@
 # EdgarWolf — Claude Context Doc
 
-**Current version: v1.4.0** (2026-05-12) — see `CHANGELOG.md` for full release history.
+**Current version: v1.4.1** (2026-05-13) — see `CHANGELOG.md` for full release history.
 
 Paste this file at the start of every Claude conversation to restore full context.
 Update metrics, version, and priorities at the end of every relevant session.
@@ -56,8 +56,11 @@ SEC EDGAR financial data and anomaly detection tool. Pulls data directly from pu
 **Users needed:** 80 paying users at $99/month
 **Backup:** Job offer from Post Consumer Brands (in final stages)
 **Decision rule:** 5+ paying users by end of week 4 = pursue EdgarWolf full time. Fewer = take the job, build nights and weekends.
-**Audience:** Zero — no Twitter, no following anywhere
+**Audience:** Zero — recently created personal X account (not yet posted)
 **Network:** Crypto friends (potential early beta users)
+
+**Background (important for positioning):**
+Jason is an IT systems thinker, NOT a finance or investing professional. Background: 20+ years enterprise IT, Senior Business Systems Analyst, SQL/Snowflake, SAFe Product Owner, Full Stack Web Dev cert (U of Minnesota). Recently started looking at SEC filings — built EdgarWolf to scratch his own itch as an outsider who wanted to understand what was actually in the filings. This "outsider builder" angle is the honest founder story and should inform all marketing copy. Do NOT write posts implying years of financial analysis experience.
 
 ---
 
@@ -67,7 +70,7 @@ SEC EDGAR financial data and anomaly detection tool. Pulls data directly from pu
 |------|-------|----------|
 | Standard | $0 | Signal board (on-demand), company search, KPI grid (latest quarter), narrative summary, 8-quarter charts, quarterly data table. Unlimited lookups. |
 | Pro | $19.00/month | Everything free + Exception Flags (z-score), Filing Stress Score, Filing Signals, peer comparison, segment breakdown, source filing, watchlist (server-side synced), CSV/JSON export. |
-| Pro+ | $99/month | Everything in Pro + email alerts (not yet built — the main differentiator for this tier). |
+| Pro+ | $99/month | Everything in Pro + email alerts (LIVE — hourly M–F 8 AM–6 PM ET, fires on new 10-Q/10-K/8-K + anomaly signal). |
 
 **Feature gating is LIVE** as of May 10, 2026. Frontend gates Pro sections with upgrade cards. No backend lookup limit — differentiation is purely by feature depth, not access.
 
@@ -106,10 +109,12 @@ _Update these at the end of every session._
 
 **Target channels:**
 - r/SecurityAnalysis — post drafted and ready, waiting on mod approval (requested May 10)
-- X (Twitter) — 4 replies posted May 10 on active $GIS/$CPB/$CAG threads
+- X (Twitter) — **PRIMARY PLATFORM.** Personal account (branded to Jason, not EdgarWolf brand account). Kickoff post drafted but not yet posted. Strategy: honest outsider builder angle, lead with real data ($GIS Filing Stress Score 100/100), use cashtags $GIS $CAG $CPB + hashtags #FinTwit #SECFilings. Follow up same day with replies on active $GIS/$CAG/$CPB threads.
 - Finance Substack writers — free Pro access in exchange for a mention
 - Crypto friends — free beta access, honest feedback
 - StockTwits — not yet done
+
+**Google Search Console:** Verified and active for www.edgarwolf.com. Meta verification tag deployed in edgar.html. Sitemap not yet submitted.
 
 ---
 
@@ -119,11 +124,14 @@ _Replace completed items each session. Keep this list short._
 
 **Immediate (next session):**
 - [ ] Post on r/SecurityAnalysis when mod approval comes through
-- [ ] Post on StockTwits using $GIS cashtag
 - [ ] Send beta invites to 2–3 crypto friends with free Pro access
 - [ ] Identify 10 finance Substack writers and send personal outreach emails
+- [ ] Continue X thread replies (3 posted May 13 on $HSY threads — target 4/day)
 
 **Soon:**
+- [ ] Add privacy policy and terms of service pages
+- [ ] Add welcome email for new subscribers (Resend)
+- [ ] Set up error monitoring (Sentry free tier)
 - [ ] Expand Postman QA collection with watchlist + alert endpoint tests
 - [ ] Decommission Render service (Railway stable)
 - [ ] Add watchlist company limit UI (soft cap ~50, "contact us to increase")
@@ -166,6 +174,9 @@ _Running log of important decisions so we don't relitigate them._
 - **Signal board is on-demand:** User clicks "Load Signal Board" and picks per-column count (5–25, default 10).
 - **Stripe Customer Portal enabled:** Self-serve cancel/manage flow live. "Manage" button in header for paid users.
 - **Terminology locked:** Upheaval Score → Filing Stress Score. Anomaly Signals → Filing Signals. Metric Trust & Sources → Data Quality & Sources. Filing Provenance → Source Filing.
+- **Founder positioning:** Jason is an IT/systems thinker who recently started reading SEC filings — NOT a finance professional. All marketing copy should reflect this honest "outsider builder" angle. Never imply years of financial analysis experience. The story is: systems brain + public data = anyone can read the filings.
+- **X marketing strategy:** Personal account (not brand account). Lead with real anomaly data, not product pitches. Use cashtags to reach active discussions on the specific stock. Tone: builder sharing a tool, not marketer selling a product.
+- **Google Search Console:** Verified May 2026 via meta tag in edgar.html. Sitemap submission pending.
 
 ---
 
@@ -227,7 +238,7 @@ Bypasses Stripe verification on `127.0.0.1`/`localhost` only — no-op on the li
 - `GET /subscription/restore?email=...` — looks up active subscription by customer email
 - `GET /subscription/status-by-customer?customer_id=...` — re-verifies by customer ID
 - `GET /success` — post-payment HTML page, stores tier + session + customer_id in localStorage
-- Stripe webhook endpoint: https://www.edgarwolf.com/webhook/stripe ⚠️ needs updating from Render URL
+- Stripe webhook endpoint: https://www.edgarwolf.com/webhook/stripe ✅
 - Price IDs: Pro = price_1TWTJz1C3cijZqBOyfX4VwHC ($19.00/mo), Pro+ = price_1TVNfH1C3cijZqBOyp7Y5qJH ($99/mo)
 
 **Watchlist API (LIVE as of v1.3.0):**
@@ -238,12 +249,15 @@ Bypasses Stripe verification on `127.0.0.1`/`localhost` only — no-op on the li
 - Customer validated against Stripe on first call, cached 1h in SQLite (`session_tier_cache` table, `cust:` prefix)
 - Standard users: localStorage only. Pro/Pro+ users: server-synced, localStorage as display cache.
 
-**Email alerts infrastructure (LIVE, trigger logic pending):**
+**Email alerts (FULLY LIVE as of v1.4.0):**
+- APScheduler job: M–F 08:00–18:00 ET, hourly. Max 1 concurrent instance.
 - Resend API key configured, domain verified (DKIM + SPF + MX all green on edgarwolf.com)
 - FROM: `EdgarWolf <alerts@edgarwolf.com>`
-- Test send endpoint: `POST /test/send-alert` (localhost only)
-- `users` table stores customer_id + email for future alert delivery
-- Next step: build polling job that checks watched companies for new filings/anomalies and fires alerts
+- Trigger: new 10-Q/10-K/8-K filing found AND at least one anomaly signal (MEDIUM/HIGH z-score flag OR ELEVATED Filing Stress Score)
+- Deduped by `(customer_id, cik, accession_number)` in `alert_log` table
+- `alert_checks` table tracks last_checked_at per (customer_id, cik)
+- Dev test endpoints: `POST /test/seed-alert-user`, `POST /test/run-alert-check` (403 in production)
+- End-to-end tested locally — real email delivered to inbox
 
 **QA automation:**
 - Postman collection: `edgar-api/postman/` — 28 requests, 49 assertions
@@ -264,4 +278,4 @@ Bypasses Stripe verification on `127.0.0.1`/`localhost` only — no-op on the li
 
 ---
 
-_Last updated: May 12, 2026 — v1.4.0. Pro+ email alert system live. Upgrade modal shows both plans. Pro price $19.00. EW favicon + canonical tag deployed. Cloudflare apex redirect active._
+_Last updated: May 13, 2026 — v1.4.1. X kickoff post live (public), 3 thread replies posted on $HSY threads, StockTwits $GIS post live. favicon.ico + sitemap.xml deployed, sitemap submitted to Google Search Console, indexing requested. UI: action row moved below Pro divider, Pro badges on action buttons, KPI grid alignment fixed, summary box full width._

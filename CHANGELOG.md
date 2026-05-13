@@ -10,6 +10,22 @@ Versioning follows [Semantic Versioning](https://semver.org/):
 
 ---
 
+## [1.4.1] — 2026-05-13
+
+### Added
+- `/favicon.ico` route serving `favicon-32.png` — enables Google Search crawler to discover and display the EW favicon in search results.
+- `<link rel="shortcut icon">` tag in `edgar.html` for legacy favicon discovery.
+- `sitemap.xml` with homepage URL and `/sitemap.xml` FastAPI route. Submitted to Google Search Console; indexing requested.
+
+### Changed
+- Action row (Watchlist, Export CSV, Export JSON) moved below the Pro Analytics divider — users now see full free content before hitting Pro-gated buttons.
+- Watchlist and Export buttons now display inline "Pro" badge instead of "(Pro)" suffix text.
+- KPI grid changed from `auto-fit` to `auto-fill` — last row cards (EPS, Net Income) now match width of the 4-card rows above.
+- Narrative summary box `max-width` removed — now spans full dashboard width, matching KPI grid and charts below it.
+- CLAUDE_CONTEXT.md updated: founder background, X marketing strategy, Google Search Console status, email alert system marked fully live.
+
+---
+
 ## [1.4.0] — 2026-05-12
 
 ### Added
