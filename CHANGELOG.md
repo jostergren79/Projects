@@ -10,6 +10,21 @@ Versioning follows [Semantic Versioning](https://semver.org/):
 
 ---
 
+## [1.5.2] — 2026-05-14
+
+### Added
+- **PostHog product analytics + session replay** — initialized client-side in `edgar.html` via a `GET /config.js` route that exposes `POSTHOG_KEY` from env vars (no key committed). US Cloud region (`api_host: https://us.i.posthog.com`). Autocapture, heatmaps, web vitals, session recordings all on. CSP updated to allow `us.i.posthog.com` + `us-assets.i.posthog.com` for script/connect/img/font sources.
+- `trackEvent()` now mirrors every event to `posthog.capture()` while still logging to Railway (redundancy).
+- `identifyToPostHog()` ties activity to the Stripe customer ID for paid users; Standard tier remains anonymous.
+
+### Changed
+- **Watchlist panel always visible for Pro/Pro+** — `renderWatchlistPanel()` previously hid the panel whenever the company dashboard was visible. Now Standard users keep the old behavior (panel only on discovery view) but Pro/Pro+ users see the panel on every page including company dashboards. Fixes the "panel disappears when navigating back-and-forth" issue.
+- **Action row repositioned for Pro/Pro+** — Watchlist + Export CSV/JSON buttons now render at the top of the company dashboard (right under the company-header) for Pro and Pro+ users. Standard users keep the buttons below the Pro Analytics divider where the upgrade prompt lives. Implemented via an `#action-row-top-slot` placeholder and JS relocation in `applyTierGating()`.
+- **Privacy policy updated** — removed inaccurate "no third-party analytics" claim. New "Product Analytics" section discloses PostHog + session replay + Stripe customer ID identification. PostHog and Sentry added to Third-Party Services list. "Last updated" bumped to 2026-05-14.
+- **`.claude/` added to .gitignore** — local Claude Code workspace config stays out of the repo.
+
+---
+
 ## [1.5.1] — 2026-05-14
 
 ### Added

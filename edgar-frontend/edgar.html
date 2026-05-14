@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; connect-src 'self' https://cdn.jsdelivr.net https://cloudflareinsights.com; img-src 'self' data:; font-src 'self'" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://static.cloudflareinsights.com https://us-assets.i.posthog.com; style-src 'self' 'unsafe-inline'; connect-src 'self' https://cdn.jsdelivr.net https://cloudflareinsights.com https://us.i.posthog.com https://us-assets.i.posthog.com; img-src 'self' data: https://us-assets.i.posthog.com; font-src 'self' https://us-assets.i.posthog.com; worker-src 'self' blob:; media-src 'self' blob:" />
   <title>EdgarWolf — Know What's in the Filing Before the Market Does</title>
   <meta name="description" content="Z-score anomaly flags, Filing Stress Scores, and 8-quarter financial trends pulled live from SEC EDGAR filings — any US public company, free to start." />
 
@@ -413,6 +413,21 @@
     .wl-chip-remove { color: var(--muted); font-size: 1rem; line-height: 1; padding: 0 2px; border: none; background: none; cursor: pointer; flex-shrink: 0; }
     .wl-chip-remove:hover { color: var(--red); }
   </style>
+
+  <!-- PostHog: client-side config + init (no-op when POSTHOG_KEY env var is unset) -->
+  <script src="/config.js"></script>
+  <script>
+    (function() {
+      if (!window.POSTHOG_KEY) return;
+      !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+      posthog.init(window.POSTHOG_KEY, {
+        api_host: 'https://us.i.posthog.com',
+        person_profiles: 'identified_only',
+        capture_pageview: true,
+        capture_pageleave: true,
+      });
+    })();
+  </script>
 </head>
 <body>
   <header>
@@ -525,6 +540,9 @@
         <div class="profile-chip" id="co-profile" style="display:none;"></div>
       </div>
     </div>
+
+    <!-- Action row top slot — populated for Pro/Pro+ via applyTierGating() -->
+    <div id="action-row-top-slot"></div>
 
     <!-- KPI tiles -->
     <div class="kpi-grid" id="kpi-grid"></div>
@@ -774,6 +792,23 @@
       const divider = document.getElementById('pro-divider');
       if (divider) divider.style.display = isPro ? 'none' : 'flex';
 
+      // Action row position: Pro/Pro+ get it at the top of the dashboard for
+      // quick access to Watchlist/Export. Standard users keep it below the
+      // Pro Analytics divider where the upgrade prompt is wired in.
+      const actionRow = document.querySelector('.action-row');
+      const topSlot   = document.getElementById('action-row-top-slot');
+      if (actionRow && topSlot) {
+        if (isPro && actionRow.parentElement !== topSlot) {
+          topSlot.appendChild(actionRow);
+        } else if (!isPro && actionRow.parentElement === topSlot) {
+          // Move back to original position — right after the pro-divider
+          divider.parentElement.insertBefore(actionRow, divider.nextSibling);
+        }
+      }
+
+      // Watchlist panel — re-render so it can appear on company pages for Pro/Pro+
+      renderWatchlistPanel();
+
       if (isPro) return;
 
       showProGate('flags-section',    'Exception Flags',  'Z-score flags when margins or revenue deviate from trailing history.');
@@ -810,6 +845,24 @@
           body: JSON.stringify({ event: name, props }),
           keepalive: true,
         }).catch(() => {});
+      } catch (_) {}
+      try {
+        if (window.posthog && typeof window.posthog.capture === 'function') {
+          window.posthog.capture(name, props);
+        }
+      } catch (_) {}
+    }
+
+    function identifyToPostHog() {
+      try {
+        if (!window.posthog || typeof window.posthog.identify !== 'function') return;
+        const cid  = getCustomerId();
+        const tier = localStorage.getItem('edgarwolf_tier') || 'standard';
+        if (cid) {
+          window.posthog.identify(cid, { tier });
+        } else {
+          window.posthog.setPersonProperties && window.posthog.setPersonProperties({ tier });
+        }
       } catch (_) {}
     }
 
@@ -1001,6 +1054,7 @@
           localStorage.setItem('edgarwolf_tier_label', devLabel);
           localStorage.setItem('edgarwolf_tier_checked_at', String(Date.now()));
           applyTierBadge(devTier, devLabel);
+          identifyToPostHog();
           if (toggleBtn) toggleBtn.textContent = `DEV: ${devLabel}`;
           return;
         }
@@ -1039,6 +1093,7 @@
         localStorage.setItem('edgarwolf_tier_checked_at', String(Date.now()));
         if (data.customer_id) localStorage.setItem('edgarwolf_customer', data.customer_id);
         applyTierBadge(data.tier, data.label);
+        identifyToPostHog();
         if (data.tier !== 'standard') syncWatchlistFromServer();
       } catch (_) {
         if (cachedTier && cachedTier !== 'standard') applyTierBadge(cachedTier, cachedLabel);
@@ -1299,6 +1354,7 @@
     });
 
     document.addEventListener('DOMContentLoaded', () => {
+      identifyToPostHog();
       checkSubscriptionStatus();
       initDigestBanner();
       const params   = new URLSearchParams(window.location.search);
@@ -1588,7 +1644,9 @@
       const grid  = document.getElementById('wl-grid');
       const list  = getWatchlist();
       const dashVisible = document.getElementById('dashboard').style.display !== 'none';
-      if (!list.length || dashVisible) {
+      // Standard users only see the watchlist on the discovery view.
+      // Pro/Pro+ users see it on every page (it's a core paid feature they should always have access to).
+      if (!list.length || (dashVisible && !isProUser())) {
         panel.style.display = 'none';
         return;
       }
@@ -2038,7 +2096,7 @@
       EdgarWolf &mdash; Questions or feedback? <a href="mailto:jason@edgarwolf.com">jason@edgarwolf.com</a>
       &nbsp;&middot;&nbsp; <a href="/privacy">Privacy Policy</a>
       &nbsp;&middot;&nbsp; <a href="/terms">Terms of Service</a>
-      &nbsp;&middot;&nbsp; v1.5.1
+      &nbsp;&middot;&nbsp; v1.5.2
     </div>
   </footer>
 </body>

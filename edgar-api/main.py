@@ -82,7 +82,7 @@ from routers import (
     digest,
 )
 
-app = FastAPI(title="EDGAR Financial Metrics API", version="1.5.1", lifespan=lifespan)
+app = FastAPI(title="EDGAR Financial Metrics API", version="1.5.2", lifespan=lifespan)
 
 # ---------------------------------------------------------------------------
 # Per-IP rate limiting middleware
@@ -162,6 +162,18 @@ def cf_hostname_challenge(token: str):
     """Cloudflare custom hostname HTTP verification — must return token as plain text."""
     from fastapi.responses import PlainTextResponse
     return PlainTextResponse(token)
+
+
+@app.get("/config.js")
+def config_js():
+    """Public client-side config: exposes the PostHog project key (safe by design)
+    from the POSTHOG_KEY env var. Returns an empty key when unset so PostHog
+    init becomes a no-op (useful for local dev)."""
+    import json as _json
+    from fastapi.responses import Response
+    key = os.getenv("POSTHOG_KEY", "")
+    body = f"window.POSTHOG_KEY = {_json.dumps(key)};"
+    return Response(content=body, media_type="application/javascript")
 
 
 @app.get("/og-image.png")

@@ -1,6 +1,6 @@
 # EdgarWolf — Claude Context Doc
 
-**Current version: v1.5.1** (2026-05-14) — see `CHANGELOG.md` for full release history.
+**Current version: v1.5.2** (2026-05-14) — see `CHANGELOG.md` for full release history.
 
 Paste this file at the start of every Claude conversation to restore full context.
 Update metrics, version, and priorities at the end of every relevant session.
@@ -20,7 +20,7 @@ SEC EDGAR financial data and anomaly detection tool. Pulls data directly from pu
 - Peer comparison, CSV/JSON export
 - Metric Trust panel (reported vs. derived vs. stale labeling)
 - Natural language summary (rules-based, not AI-generated)
-- Analytics event tracking (log-based via Railway logs, 8 events including upgrade_modal_open, checkout_start)
+- Analytics event tracking via PostHog (US Cloud) + Railway log redundancy. Autocapture, heatmaps, web vitals, session recordings all on. Stripe customer_id used for identify.
 - Stripe payment integration — Pro $19.00/mo, Pro+ $99/mo (LIVE)
 - Stripe Customer Portal — self-serve cancel/manage for paid users (LIVE)
 - Email alerts — LIVE for Pro+ users. Hourly polling M–F 8 AM–6 PM ET. Fires on new 10-Q/10-K/8-K + anomaly signal.
@@ -277,4 +277,4 @@ Bypasses Stripe verification on `127.0.0.1`/`localhost` only — no-op on the li
 
 ---
 
-_Last updated: May 14, 2026 — v1.5.1. Free-tier email capture shipped: dismissable banner offering weekly Filing Stress digest, POST /digest/subscribe + GET /digest/unsubscribe endpoints, Resend welcome email verified end-to-end. The Sunday digest send job is the next product build needed. Prior session (v1.5.0): tech hardening — 2 bug fixes, welcome email on subscription, privacy/terms pages, watchlist cap, Sentry._
+_Last updated: May 14, 2026 — v1.5.2. PostHog analytics + session replay wired in (US Cloud, POSTHOG_KEY env var in Railway, /config.js endpoint exposes key to frontend). Pro/Pro+ UX upgrades: watchlist panel now always visible (including on company pages), action row (Watchlist + Exports) moved to top of dashboard. Privacy policy updated to disclose PostHog and Sentry. v1.5.1 (earlier today): free-tier email capture (digest banner + welcome email)._

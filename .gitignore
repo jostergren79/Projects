@@ -163,3 +163,6 @@ edgar-api/.venv/
 edgar-api/__pycache__/
 edgar-api/**/*.pyc
 edgar-api/.pytest_cache/
+
+# Local Claude Code workspace config
+.claude/
