@@ -111,7 +111,7 @@ _Update these at the end of every session._
 
 **Target channels:**
 - r/SecurityAnalysis — post drafted and ready, waiting on mod approval (requested May 10)
-- X (Twitter) — **PRIMARY PLATFORM.** Personal account (branded to Jason, not EdgarWolf brand account). Kickoff post drafted but not yet posted. Strategy: honest outsider builder angle, lead with real data ($GIS Filing Stress Score 100/100), use cashtags $GIS $CAG $CPB + hashtags #FinTwit #SECFilings. Follow up same day with replies on active $GIS/$CAG/$CPB threads.
+- X (Twitter) — **PRIMARY PLATFORM.** Personal account (branded to Jason, not EdgarWolf brand account). **Kickoff post LIVE (May 14)** — outsider builder intro + $GIS 100/100 Filing Stress Score. **Second post LIVE (May 14)** — $CAG triple margin flag (all 3 margin lines 3+ SD below historical, revenue $3.2B → $2.4B). Daily posting framework established: 6 rotating themes (Company Spotlight, Methodology, Sector Sweep, Contrarian/Green, Builder Update, Retrospective). Use cashtags $GIS $CAG $CPB + hashtags #FinTwit #SECFilings. Follow up same day with replies on active threads.
 - Finance Substack writers — free Pro access in exchange for a mention
 - Crypto friends — free beta access, honest feedback
 - StockTwits — not yet done
@@ -128,7 +128,8 @@ _Replace completed items each session. Keep this list short._
 - [ ] Post on r/SecurityAnalysis when mod approval comes through
 - [ ] Send beta invites to 2–3 crypto friends with free Pro access
 - [ ] Identify 10 finance Substack writers and send personal outreach emails
-- [ ] Continue X thread replies (3 posted May 13 on $HSY threads — target 4/day)
+- [ ] Continue daily X posting (6-theme rotation — next up: Methodology or Sector Sweep angle)
+- [ ] Continue X thread replies on active $GIS/$CAG/$CPB threads (target 4/day)
 - [ ] Decommission Render service (manual: delete from render.com dashboard — no code references remain)
 
 **Soon:**
@@ -176,6 +177,8 @@ _Running log of important decisions so we don't relitigate them._
 - **Founder positioning:** Jason is an IT/systems thinker who recently started reading SEC filings — NOT a finance professional. All marketing copy should reflect this honest "outsider builder" angle. Never imply years of financial analysis experience. The story is: systems brain + public data = anyone can read the filings.
 - **X marketing strategy:** Personal account (not brand account). Lead with real anomaly data, not product pitches. Use cashtags to reach active discussions on the specific stock. Tone: builder sharing a tool, not marketer selling a product.
 - **Google Search Console:** Verified May 2026 via meta tag in edgar.html. Sitemap submission pending.
+- **Legal pages — personal name removed:** All instances of "Jason Ostergren" removed from terms.html and privacy.html. Replaced with "EdgarWolf" throughout. Contact email (jason@edgarwolf.com) retained. Deployed May 14, 2026.
+- **X daily posting framework:** 6 rotating themes — Company Spotlight, Methodology, Sector Sweep, Contrarian/Green signal, Builder Update, Retrospective. Post daily or near-daily. Never re-introduce yourself after the kickoff post.
 
 ---
 
@@ -277,4 +280,6 @@ Bypasses Stripe verification on `127.0.0.1`/`localhost` only — no-op on the li
 
 ---
 
-_Last updated: May 14, 2026 — v1.5.2. PostHog analytics + session replay wired in (US Cloud, POSTHOG_KEY env var in Railway, /config.js endpoint exposes key to frontend). Pro/Pro+ UX upgrades: watchlist panel now always visible (including on company pages), action row (Watchlist + Exports) moved to top of dashboard. Privacy policy updated to disclose PostHog and Sentry. v1.5.1 (earlier today): free-tier email capture (digest banner + welcome email)._
+_Last updated: May 14, 2026 — v1.5.3 (no version bump this session — copy/legal change only)._
+
+_This session: removed personal name from Terms and Privacy pages (deployed). Launched X outreach — kickoff post live (outsider builder intro + $GIS 100/100) and $CAG triple margin post live. Daily posting framework established (6 rotating themes). Distribution is the only job._
