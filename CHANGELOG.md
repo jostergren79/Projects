@@ -10,6 +10,13 @@ Versioning follows [Semantic Versioning](https://semver.org/):
 
 ---
 
+## [1.5.3] — 2026-05-14
+
+### Fixed
+- **`/config.js` no longer cached by Cloudflare** — added `Cache-Control: no-store, max-age=0` headers to the config endpoint. Cloudflare's default rules were caching the file for 4 hours (`max-age=14400`), which meant env var updates (like adding `POSTHOG_KEY`) didn't take effect until the cache expired or visitors hard-refreshed. Config values must always reflect current env state immediately.
+
+---
+
 ## [1.5.2] — 2026-05-14
 
 ### Added

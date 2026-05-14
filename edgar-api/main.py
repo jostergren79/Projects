@@ -82,7 +82,7 @@ from routers import (
     digest,
 )
 
-app = FastAPI(title="EDGAR Financial Metrics API", version="1.5.2", lifespan=lifespan)
+app = FastAPI(title="EDGAR Financial Metrics API", version="1.5.3", lifespan=lifespan)
 
 # ---------------------------------------------------------------------------
 # Per-IP rate limiting middleware
@@ -168,12 +168,21 @@ def cf_hostname_challenge(token: str):
 def config_js():
     """Public client-side config: exposes the PostHog project key (safe by design)
     from the POSTHOG_KEY env var. Returns an empty key when unset so PostHog
-    init becomes a no-op (useful for local dev)."""
+    init becomes a no-op (useful for local dev).
+
+    Cache-Control: no-store — config values must reflect env var changes
+    immediately. Without this header Cloudflare caches the file for 4 hours
+    by default, which causes stale config to be served after an env var update.
+    """
     import json as _json
     from fastapi.responses import Response
     key = os.getenv("POSTHOG_KEY", "")
     body = f"window.POSTHOG_KEY = {_json.dumps(key)};"
-    return Response(content=body, media_type="application/javascript")
+    return Response(
+        content=body,
+        media_type="application/javascript",
+        headers={"Cache-Control": "no-store, max-age=0"},
+    )
 
 
 @app.get("/og-image.png")
