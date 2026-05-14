@@ -79,6 +79,14 @@ def open_cache_connection() -> sqlite3.Connection:
             PRIMARY KEY (customer_id, cik)
         )
     """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS digest_subscribers (
+            email          TEXT PRIMARY KEY,
+            source         TEXT NOT NULL DEFAULT '',
+            subscribed_at  INTEGER NOT NULL,
+            unsubscribed_at INTEGER
+        )
+    """)
     conn.commit()
     return conn
 
@@ -348,5 +356,51 @@ def log_alert_sent(customer_id: str, cik: str, accession_number: str) -> None:
                 (customer_id, cik, accession_number, int(time.time())),
             )
             conn.commit()
+        finally:
+            conn.close()
+
+
+# ── Digest subscribers (free-tier email capture) ──────────────────────────────
+
+def add_digest_subscriber(email: str, source: str) -> bool:
+    """Insert or re-activate a digest subscriber. Returns True if newly added."""
+    with _write_lock:
+        conn = open_cache_connection()
+        try:
+            row = conn.execute(
+                "SELECT unsubscribed_at FROM digest_subscribers WHERE email = ?", (email,)
+            ).fetchone()
+            now = int(time.time())
+            if row is None:
+                conn.execute(
+                    """INSERT INTO digest_subscribers (email, source, subscribed_at, unsubscribed_at)
+                       VALUES (?, ?, ?, NULL)""",
+                    (email, source, now),
+                )
+                conn.commit()
+                return True
+            if row[0] is not None:
+                conn.execute(
+                    "UPDATE digest_subscribers SET unsubscribed_at = NULL, subscribed_at = ? WHERE email = ?",
+                    (now, email),
+                )
+                conn.commit()
+                return True
+            return False
+        finally:
+            conn.close()
+
+
+def remove_digest_subscriber(email: str) -> bool:
+    """Mark a subscriber as unsubscribed. Returns True if a row was updated."""
+    with _write_lock:
+        conn = open_cache_connection()
+        try:
+            cur = conn.execute(
+                "UPDATE digest_subscribers SET unsubscribed_at = ? WHERE email = ? AND unsubscribed_at IS NULL",
+                (int(time.time()), email),
+            )
+            conn.commit()
+            return cur.rowcount > 0
         finally:
             conn.close()

@@ -10,6 +10,21 @@ Versioning follows [Semantic Versioning](https://semver.org/):
 
 ---
 
+## [1.5.1] — 2026-05-14
+
+### Added
+- **Free-tier email capture** — dismissable banner under the header offering a free weekly Filing Stress digest. Inline email form with success/error states. Banner hides for paid users (already on file via Stripe) and for users who dismissed or subscribed previously.
+- `POST /digest/subscribe` — validates email, stores in `digest_subscribers` table, sends Resend welcome email with a one-click unsubscribe link.
+- `GET /digest/unsubscribe?email=...` — marks subscriber as unsubscribed and returns a styled confirmation page.
+- `digest_subscribers` table added to SQLite schema (email PK, source, subscribed_at, unsubscribed_at).
+- 3 new analytics events: `digest_banner_view`, `digest_banner_dismiss`, `digest_signup`.
+
+### Notes
+- The actual weekly digest send job is **not yet built** — this release captures the audience first. The Sunday send needs to be implemented before the list grows past trivial size.
+- Welcome email send verified end-to-end against `jason@edgarwolf.com` from local dev server.
+
+---
+
 ## [1.5.0] — 2026-05-13
 
 ### Added

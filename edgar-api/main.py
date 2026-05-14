@@ -79,9 +79,10 @@ from routers import (
     checkout,
     alerts,
     watchlist,
+    digest,
 )
 
-app = FastAPI(title="EDGAR Financial Metrics API", version="1.5.0", lifespan=lifespan)
+app = FastAPI(title="EDGAR Financial Metrics API", version="1.5.1", lifespan=lifespan)
 
 # ---------------------------------------------------------------------------
 # Per-IP rate limiting middleware
@@ -153,6 +154,7 @@ app.include_router(analytics.router)
 app.include_router(checkout.router)
 app.include_router(alerts.router)
 app.include_router(watchlist.router)
+app.include_router(digest.router)
 
 
 @app.get("/.well-known/cf-custom-hostname-challenge/{token}")

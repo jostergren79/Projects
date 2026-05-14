@@ -1,6 +1,6 @@
 # EdgarWolf — Claude Context Doc
 
-**Current version: v1.5.0** (2026-05-13) — see `CHANGELOG.md` for full release history.
+**Current version: v1.5.1** (2026-05-14) — see `CHANGELOG.md` for full release history.
 
 Paste this file at the start of every Claude conversation to restore full context.
 Update metrics, version, and priorities at the end of every relevant session.
@@ -24,6 +24,7 @@ SEC EDGAR financial data and anomaly detection tool. Pulls data directly from pu
 - Stripe payment integration — Pro $19.00/mo, Pro+ $99/mo (LIVE)
 - Stripe Customer Portal — self-serve cancel/manage for paid users (LIVE)
 - Email alerts — LIVE for Pro+ users. Hourly polling M–F 8 AM–6 PM ET. Fires on new 10-Q/10-K/8-K + anomaly signal.
+- Free-tier email capture — dismissable banner offering weekly Filing Stress digest. Captures email + sends welcome via Resend. Weekly digest send job not yet built.
 
 **Stack:** FastAPI (Python) backend + static HTML/JS frontend, single Railway service
 **Live URL:** https://www.edgarwolf.com
@@ -43,6 +44,7 @@ SEC EDGAR financial data and anomaly detection tool. Pulls data directly from pu
 - `edgar-api/routers/checkout.py` — Stripe checkout, webhook, subscription status, billing portal
 - `edgar-api/routers/watchlist.py` — server-side watchlist CRUD (Pro/Pro+ only, X-Customer-Id gated)
 - `edgar-api/routers/alerts.py` — dev-only test alert send via Resend
+- `edgar-api/routers/digest.py` — free-tier email capture + welcome email + unsubscribe page
 - `edgar-frontend/edgar.html` — entire frontend (single file)
 - `railway.toml` — Railway deployment config (repo root)
 - `METHODOLOGY.md` — documents every derived metric and scoring formula
@@ -130,7 +132,7 @@ _Replace completed items each session. Keep this list short._
 - [ ] Decommission Render service (manual: delete from render.com dashboard — no code references remain)
 
 **Soon:**
-- [ ] Add welcome email unsubscribe link (CAN-SPAM compliance)
+- [ ] **Build the actual weekly digest send job** — Sunday cron that picks top 10 Filing Stress companies from the past week and emails all active `digest_subscribers`. Must include unsubscribe link in every send.
 - [ ] Expand sitemap to include /privacy and /terms URLs
 
 ---
@@ -275,4 +277,4 @@ Bypasses Stripe verification on `127.0.0.1`/`localhost` only — no-op on the li
 
 ---
 
-_Last updated: May 13, 2026 — v1.5.0. Tech hardening session: 2 bugs fixed (watchlist.py stale Pro price ID, alert email CTA deep link). Added: welcome email on signup, privacy policy + terms pages, 50-company watchlist cap (backend + frontend), Sentry error monitoring (SENTRY_DSN set in Railway), Postman QA expanded to 40 requests / 66 assertions._
+_Last updated: May 14, 2026 — v1.5.1. Free-tier email capture shipped: dismissable banner offering weekly Filing Stress digest, POST /digest/subscribe + GET /digest/unsubscribe endpoints, Resend welcome email verified end-to-end. The Sunday digest send job is the next product build needed. Prior session (v1.5.0): tech hardening — 2 bug fixes, welcome email on subscription, privacy/terms pages, watchlist cap, Sentry._

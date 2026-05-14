@@ -87,6 +87,29 @@
     .plan-btn:disabled { opacity: .6; cursor: default; filter: none; }
     /* ── Footer ── */
     /* ── Pro gate ── */
+    /* Digest banner — free-tier email capture */
+    #digest-banner { display: none; background: linear-gradient(90deg, rgba(79,142,247,.08), rgba(79,142,247,.02)); border-bottom: 1px solid var(--border); padding: 12px 24px; }
+    #digest-banner .digest-inner { max-width: 960px; margin: 0 auto; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+    #digest-banner .digest-copy { flex: 1 1 280px; font-size: .88rem; color: var(--text); }
+    #digest-banner .digest-copy strong { color: var(--accent); }
+    #digest-banner .digest-copy .digest-sub { display: block; color: var(--muted); font-size: .76rem; margin-top: 2px; }
+    #digest-banner form { display: flex; gap: 8px; flex: 0 1 auto; }
+    #digest-banner input[type="email"] { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); padding: 8px 12px; font-size: .85rem; min-width: 220px; }
+    #digest-banner input[type="email"]:focus { outline: none; border-color: var(--accent); }
+    #digest-banner button[type="submit"] { background: var(--accent); border: none; border-radius: var(--radius); color: #fff; padding: 8px 16px; font-size: .85rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    #digest-banner button[type="submit"]:hover { filter: brightness(1.1); }
+    #digest-banner button[type="submit"][disabled] { opacity: .6; cursor: not-allowed; }
+    #digest-banner .digest-dismiss { background: none; border: none; color: var(--muted); font-size: 1.1rem; cursor: pointer; padding: 4px 8px; line-height: 1; }
+    #digest-banner .digest-dismiss:hover { color: var(--text); }
+    #digest-banner .digest-msg { font-size: .82rem; color: var(--muted); }
+    #digest-banner .digest-msg.error { color: #fc8181; }
+    #digest-banner .digest-msg.success { color: #68d391; }
+    @media (max-width: 640px) {
+      #digest-banner { padding: 10px 14px; }
+      #digest-banner input[type="email"] { min-width: 0; flex: 1; }
+      #digest-banner form { flex: 1 1 100%; }
+    }
+
     .pro-gate-card { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 28px 20px; text-align: center; }
     .pro-gate-card .gate-label { font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 700; }
     .pro-gate-card .gate-title { font-size: .95rem; font-weight: 700; color: var(--text); }
@@ -406,6 +429,21 @@
       <button id="upgrade-header-btn" class="btn-upgrade" onclick="openUpgradeModal()">Upgrade</button>
     </div>
   </header>
+
+  <div id="digest-banner" role="region" aria-label="Weekly Filing Stress digest signup">
+    <div class="digest-inner">
+      <div class="digest-copy">
+        <strong>Free weekly digest:</strong> the 10 public companies with the highest Filing Stress Scores each Sunday.
+        <span class="digest-sub">No spam. One click to unsubscribe.</span>
+      </div>
+      <form id="digest-form" onsubmit="submitDigest(event)">
+        <input type="email" id="digest-email" placeholder="you@example.com" required maxlength="254" autocomplete="email" />
+        <button type="submit" id="digest-submit">Subscribe</button>
+      </form>
+      <span id="digest-msg" class="digest-msg" aria-live="polite"></span>
+      <button class="digest-dismiss" onclick="dismissDigestBanner()" aria-label="Dismiss">×</button>
+    </div>
+  </div>
 
   <div class="search-wrap">
     <h2>Public Company Financials</h2>
@@ -773,6 +811,66 @@
           keepalive: true,
         }).catch(() => {});
       } catch (_) {}
+    }
+
+    // ── Digest banner (free-tier email capture) ───────────────────────────────
+
+    function initDigestBanner() {
+      // Don't show to paid users — they already gave us their email via Stripe.
+      const tier = localStorage.getItem('edgarwolf_tier') || 'standard';
+      if (tier !== 'standard') return;
+      if (localStorage.getItem('digest_dismissed') === '1') return;
+      if (localStorage.getItem('digest_subscribed') === '1') return;
+      const banner = document.getElementById('digest-banner');
+      if (!banner) return;
+      banner.style.display = 'block';
+      trackEvent('digest_banner_view');
+    }
+
+    function dismissDigestBanner() {
+      localStorage.setItem('digest_dismissed', '1');
+      const banner = document.getElementById('digest-banner');
+      if (banner) banner.style.display = 'none';
+      trackEvent('digest_banner_dismiss');
+    }
+
+    async function submitDigest(e) {
+      e.preventDefault();
+      const input  = document.getElementById('digest-email');
+      const btn    = document.getElementById('digest-submit');
+      const msg    = document.getElementById('digest-msg');
+      const email  = (input.value || '').trim();
+      msg.textContent = '';
+      msg.className = 'digest-msg';
+      if (!email) return;
+      btn.disabled = true;
+      btn.textContent = 'Subscribing…';
+      try {
+        const res = await fetch(`${API}/digest/subscribe`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, source: 'banner' }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          msg.textContent = data.detail || 'Something went wrong. Please try again.';
+          msg.className = 'digest-msg error';
+          btn.disabled = false;
+          btn.textContent = 'Subscribe';
+          return;
+        }
+        localStorage.setItem('digest_subscribed', '1');
+        trackEvent('digest_signup', { source: 'banner', is_new: !!data.new });
+        msg.textContent = 'Thanks! Check your inbox for a welcome email.';
+        msg.className = 'digest-msg success';
+        input.style.display = 'none';
+        btn.style.display = 'none';
+      } catch (_) {
+        msg.textContent = 'Network error. Please try again.';
+        msg.className = 'digest-msg error';
+        btn.disabled = false;
+        btn.textContent = 'Subscribe';
+      }
     }
 
     // ── Upgrade / Checkout ────────────────────────────────────────────────────
@@ -1202,6 +1300,7 @@
 
     document.addEventListener('DOMContentLoaded', () => {
       checkSubscriptionStatus();
+      initDigestBanner();
       const params   = new URLSearchParams(window.location.search);
       const cikParam = params.get('cik');
       const qParam   = params.get('q') || params.get('ticker');
@@ -1939,7 +2038,7 @@
       EdgarWolf &mdash; Questions or feedback? <a href="mailto:jason@edgarwolf.com">jason@edgarwolf.com</a>
       &nbsp;&middot;&nbsp; <a href="/privacy">Privacy Policy</a>
       &nbsp;&middot;&nbsp; <a href="/terms">Terms of Service</a>
-      &nbsp;&middot;&nbsp; v1.5.0
+      &nbsp;&middot;&nbsp; v1.5.1
     </div>
   </footer>
 </body>

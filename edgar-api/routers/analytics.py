@@ -27,6 +27,9 @@ _ALLOWED_EVENTS = {
     "upgrade_modal_open",
     "checkout_start",
     "pro_gate_hit",
+    "digest_banner_view",
+    "digest_banner_dismiss",
+    "digest_signup",
 }
 
 
