@@ -193,6 +193,10 @@ def og_image():
 def sitemap():
     return FileResponse(_PUBLIC / "sitemap.xml", media_type="application/xml")
 
+@app.get("/robots.txt")
+def robots():
+    return FileResponse(_PUBLIC / "robots.txt", media_type="text/plain")
+
 @app.get("/favicon.ico")
 def favicon_ico():
     return FileResponse(_PUBLIC / "favicon-32.png", media_type="image/png")
