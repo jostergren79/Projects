@@ -57,7 +57,7 @@ SEC EDGAR financial data and anomaly detection tool. Pulls data directly from pu
 **Income target:** $8k/month take home to replace current salary
 **Users needed:** 80 paying users at $99/month
 **Backup:** Job offer from Post Consumer Brands (in final stages)
-**Decision rule:** 5+ paying users by end of week 4 = pursue EdgarWolf full time. Fewer = take the job, build nights and weekends.
+**Decision rule (updated May 15, 2026):** Take the full-time job no matter which company offers first. EdgarWolf is parallel side-income, NOT an income replacement attempt. Re-evaluate full-time only when EdgarWolf reliably exceeds $8k/month for several consecutive months. Monthly household contribution to match is >$8k.
 **Audience:** Zero — recently created personal X account (not yet posted)
 **Network:** Crypto friends (potential early beta users)
 
@@ -128,12 +128,13 @@ _Replace completed items each session. Keep this list short._
 - [ ] Post on r/SecurityAnalysis when mod approval comes through
 - [ ] Send beta invites to 2–3 crypto friends with free Pro access
 - [ ] Identify 10 finance Substack writers and send personal outreach emails
-- [ ] Continue daily X posting (6-theme rotation — next up: Methodology or Sector Sweep angle)
-- [ ] Continue X thread replies on active $GIS/$CAG/$CPB threads (target 4/day)
-- [ ] Decommission Render service (manual: delete from render.com dashboard — no code references remain)
+- [ ] Continue daily X posting (6-theme rotation — Day 3 done: Methodology / $NKE 87/100. Day 4 next: Sector Sweep, Contrarian/Green, or Retrospective)
+- [ ] **Carry-over: 4 daily X replies** — didn't happen May 15. Proven format: filing data lead, no em dashes, CIK-direct edgarwolf.com link at end.
+- [ ] Post the drafted $FIG StockTwits reply (first StockTwits engagement)
+- [ ] **Build the actual weekly digest send job** — Sunday cron that picks top 10 Filing Stress companies from the past week and emails all active `digest_subscribers`. Must include unsubscribe link in every send.
+- [ ] Return to drafting/sending the Vietnamese message to wife (parked May 15)
 
 **Soon:**
-- [ ] **Build the actual weekly digest send job** — Sunday cron that picks top 10 Filing Stress companies from the past week and emails all active `digest_subscribers`. Must include unsubscribe link in every send.
 - [ ] Expand sitemap to include /privacy and /terms URLs
 
 ---
@@ -179,6 +180,11 @@ _Running log of important decisions so we don't relitigate them._
 - **Google Search Console:** Verified May 2026 via meta tag in edgar.html. Sitemap submission pending.
 - **Legal pages — personal name removed:** All instances of "Jason Ostergren" removed from terms.html and privacy.html. Replaced with "EdgarWolf" throughout. Contact email (jason@edgarwolf.com) retained. Deployed May 14, 2026.
 - **X daily posting framework:** 6 rotating themes — Company Spotlight, Methodology, Sector Sweep, Contrarian/Green signal, Builder Update, Retrospective. Post daily or near-daily. Never re-introduce yourself after the kickoff post.
+- **X reply format locked in:** Lead with the most striking filing data point (correct a factual error if possible), z-score framing adds credibility, acknowledge bull/bear case fairly, mention edgarwolf.com at end as earned reference. No em dashes. Tone: builder sharing a tool. Engaged threads on May 14: $NKE (thread had 40K views), $UAA, $SBUX (15K), $INTC (17K).
+- **Reach attribution clarified (May 15):** The 40K/17K/15K view counts refer to the original *threads being replied to*, not Jason's own posts. Jason's account is brand new and his own posts/replies have only a few hundred combined views. Strategy is **"borrowed audience" via high-traffic reply threads**, not building a large personal following from zero.
+- **CIK-direct URL pattern (May 15):** When a post references a specific company, link to `https://www.edgarwolf.com/?cik=<CIK>` so readers land directly on that company's data. Never use the bare domain when a specific company is named.
+- **Render decommissioned:** Render service deleted May 14, 2026. Railway is the only deployment target.
+- **StockTwits identified as new channel (May 15):** First engagement opportunity found ($FIG bullish post, May 14). Reply drafted using same format as X replies. Note: StockTwits forces Bullish/Bearish sentiment tag.
 
 ---
 
@@ -231,6 +237,7 @@ Bypasses Stripe verification on `127.0.0.1`/`localhost` only — no-op on the li
 - Entity type detection: foreign filers (20-F/6-K) and ETFs show friendly unsupported messages
 - Null guards on all gated section renders
 - Metrics endpoint returns 200 + empty periods (not 404) for companies with no EDGAR data
+- `/robots.txt` served via FastAPI route (added May 15) — allows all crawlers, points to sitemap
 
 **Stripe integration (LIVE):**
 - `POST /checkout/session` — creates Stripe Checkout session
@@ -280,6 +287,6 @@ Bypasses Stripe verification on `127.0.0.1`/`localhost` only — no-op on the li
 
 ---
 
-_Last updated: May 14, 2026 — v1.5.3 (no version bump this session — copy/legal change only)._
+_Last updated: May 15, 2026 — v1.5.3 (no version bump — small `/robots.txt` patch + marketing/distribution work only)._
 
-_This session: removed personal name from Terms and Privacy pages (deployed). Launched X outreach — kickoff post live (outsider builder intro + $GIS 100/100) and $CAG triple margin post live. Daily posting framework established (6 rotating themes). Distribution is the only job._
+_May 15 session: Shipped `/robots.txt` route (commit 1469ad5, prevents 404s for crawlers). Posted Day 3 X post — Methodology theme, $NKE 87/100 Filing Stress breakdown with direct CIK link. Pulled $FIG dashboard data (82/100 ELEVATED, +46% YoY revenue but -58.6pp operating margin). Drafted first StockTwits reply ($FIG bull post). Drafted Vietnamese message to wife about project scope/strategy (parked). Clarified the X reach numbers: 40K/17K/15K were on threads replied to, not Jason's posts. Strategy reframed: full-time job no matter what; EdgarWolf is side-income build, threshold for going full-time is reliably exceeding $8k/month. 4 daily X replies and digest send job did NOT happen — carried to next session._
