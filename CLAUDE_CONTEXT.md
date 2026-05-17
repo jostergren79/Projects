@@ -84,9 +84,10 @@ _Update these at the end of every session._
 
 | Metric | Value | Updated |
 |--------|-------|---------|
-| MRR | $0 | May 12, 2026 |
-| Paying users | 0 | May 12, 2026 |
-| Free signups | 0 | May 12, 2026 |
+| MRR | $0 | May 16, 2026 |
+| Paying users | 0 | May 16, 2026 |
+| Free signups | 0 | May 16, 2026 |
+| Real X-attributed visits | 5+ (verified via direct_cik URLs in PostHog) | May 16, 2026 |
 
 ---
 
@@ -128,14 +129,16 @@ _Replace completed items each session. Keep this list short._
 - [ ] Post on r/SecurityAnalysis when mod approval comes through
 - [ ] Send beta invites to 2–3 crypto friends with free Pro access
 - [ ] Identify 10 finance Substack writers and send personal outreach emails
-- [ ] Continue daily X posting (6-theme rotation — Day 3 done: Methodology / $NKE 87/100. Day 4 next: Sector Sweep, Contrarian/Green, or Retrospective)
-- [ ] **Carry-over: 4 daily X replies** — didn't happen May 15. Proven format: filing data lead, no em dashes, CIK-direct edgarwolf.com link at end.
+- [ ] Continue daily X posting (Days 1–4 done: Company Spotlight ×2, Methodology, Contrarian/Green. **Day 5 next**: Sector Sweep, Retrospective, or Builder Update)
+- [ ] Continue 4 X replies/day target — proven format, target mid-traffic threads (10K–100K views) that are still climbing
 - [ ] Post the drafted $FIG StockTwits reply (first StockTwits engagement)
 - [ ] **Build the actual weekly digest send job** — Sunday cron that picks top 10 Filing Stress companies from the past week and emails all active `digest_subscribers`. Must include unsubscribe link in every send.
 - [ ] Return to drafting/sending the Vietnamese message to wife (parked May 15)
 
 **Soon:**
 - [ ] Expand sitemap to include /privacy and /terms URLs
+- [ ] Add `responsive: true, maintainAspectRatio: false` + sized wrapper divs to Chart.js configs (defensive — guards against edge-case mobile chart rendering issues; not universal bug)
+- [ ] Filter localhost URLs out of existing PostHog data (Settings → Project → Test accounts and filters) — historical pollution stays in storage but excludes from dashboards
 
 ---
 
@@ -185,6 +188,14 @@ _Running log of important decisions so we don't relitigate them._
 - **CIK-direct URL pattern (May 15):** When a post references a specific company, link to `https://www.edgarwolf.com/?cik=<CIK>` so readers land directly on that company's data. Never use the bare domain when a specific company is named.
 - **Render decommissioned:** Render service deleted May 14, 2026. Railway is the only deployment target.
 - **StockTwits identified as new channel (May 15):** First engagement opportunity found ($FIG bullish post, May 14). Reply drafted using same format as X replies. Note: StockTwits forces Bullish/Bearish sentiment tag.
+- **CIK-direct URL strategy validated (May 16):** Multiple real X-attributed visits confirmed in PostHog tied directly to companies referenced in posts ($MSFT, $DECK, $PLTR via `direct_cik` source). The "borrowed audience" strategy is producing measurable clicks.
+- **Thread reach learning (May 16):** Mid-traffic threads (10K–100K views) with early replies outperform mega-threads for new accounts. Example: 99K-view @DudeWhoInvests reply hit 600+ views; 1.2M-view @amitisinvesting reply (posted late in thread) stuck at 10 views initially. EXCEPTION: still-climbing mega-threads in growth mode beat mid-traffic threads — reply compounds with parent.
+- **International reach confirmed (May 16):** PostHog session recording showed a real visitor from Germany on the $DECK page. First non-US visit observed.
+- **Mobile chart rendering investigation (May 16):** Germany user saw empty chart panels in session recording. Tested on Jason's phone — charts render fine. Conclusion: not a universal mobile bug; edge case (slow CDN, ad-blocker, or unusual mobile browser). Defensive fix `responsive: true, maintainAspectRatio: false` deferred to "Soon" priority.
+- **PostHog localhost guard added (May 16):** Frontend skips PostHog init when hostname is `127.0.0.1`/`localhost`/`0.0.0.0` to prevent local dev sessions from polluting production analytics. Pre-existing localhost recordings remain in PostHog storage; filter them out via Settings → Project → Test accounts and filters.
+- **`subscription_success` event added (May 16):** Fires once per customer in `checkSubscriptionStatus()` when verification confirms a paid tier. Closes the conversion funnel in PostHog without needing to cross-reference Stripe. Guarded by `subscription_success_fired` localStorage flag so it doesn't re-fire on subsequent visits.
+- **Digest banner copy reframe (May 16):** Old copy described digest abstractly. New copy leads with weekly value (ELEVATED stress filings) and proves it with 3 concrete receipts ($GIS 100/100, $CAG triple margin, $FIG -58pp op margin). Banner conversion rate still 0% as of session close but new copy hasn't had real traffic to test yet.
+- **Stale `cs_live_` session pattern (May 16):** A Stripe session_id from before 5/14 7pm kept appearing in Railway logs as `/subscription/status` verifies. Stripe dashboard showed no new activity. Confirmed it was Jason's old test browser holding the session_id in localStorage. Pattern to remember: a recurring verify call on the same `cs_live_` ID is a stale browser, not a new conversion.
 
 ---
 
@@ -238,6 +249,8 @@ Bypasses Stripe verification on `127.0.0.1`/`localhost` only — no-op on the li
 - Null guards on all gated section renders
 - Metrics endpoint returns 200 + empty periods (not 404) for companies with no EDGAR data
 - `/robots.txt` served via FastAPI route (added May 15) — allows all crawlers, points to sitemap
+- PostHog init guarded against localhost (added May 16) — prevents local dev pollution of prod analytics
+- `subscription_success` analytics event fires once per customer on first paid-tier verification (added May 16) — closes the funnel in PostHog without needing Stripe cross-reference
 
 **Stripe integration (LIVE):**
 - `POST /checkout/session` — creates Stripe Checkout session
@@ -287,6 +300,6 @@ Bypasses Stripe verification on `127.0.0.1`/`localhost` only — no-op on the li
 
 ---
 
-_Last updated: May 15, 2026 — v1.5.3 (no version bump — small `/robots.txt` patch + marketing/distribution work only)._
+_Last updated: May 16, 2026 — v1.5.3 (no version bump — digest banner copy + PostHog guard + subscription_success event + marketing/distribution work only)._
 
-_May 15 session: Shipped `/robots.txt` route (commit 1469ad5, prevents 404s for crawlers). Posted Day 3 X post — Methodology theme, $NKE 87/100 Filing Stress breakdown with direct CIK link. Pulled $FIG dashboard data (82/100 ELEVATED, +46% YoY revenue but -58.6pp operating margin). Drafted first StockTwits reply ($FIG bull post). Drafted Vietnamese message to wife about project scope/strategy (parked). Clarified the X reach numbers: 40K/17K/15K were on threads replied to, not Jason's posts. Strategy reframed: full-time job no matter what; EdgarWolf is side-income build, threshold for going full-time is reliably exceeding $8k/month. 4 daily X replies and digest send job did NOT happen — carried to next session._
+_May 16 session: Big distribution day. Posted Day 4 X post — Contrarian/Green theme, $EAT (Chili's) turnaround with 4x operating income progression. Completed 4 daily X replies: $BA (never-touch), $4500-dip with $DECK vs $LCID contrast, $MSFT @DudeWhoInvests on Gates exit, $META vs $PLTR value comparison. Posted exception/news-cycle post on $MSFT counter-narrative when Gates Foundation MSFT sale went viral. Replied to @amitisinvesting 1.2M-view Foundation thread (bonus). Responded to comment from @spinzone12 on Gates thread. @DudeWhoInvests reply climbed to 606+ views with 1 comment. Shipped 3 code changes: digest banner copy reframe (eb14d48), PostHog localhost guard + subscription_success event (f3b7a3c). Found and confirmed CIK-direct URL strategy is producing measurable X-attributed visits via PostHog. Found a Germany visitor (first international) in session replay with broken charts — investigated, determined to be edge case not universal mobile bug. Found and fixed PostHog localhost pollution. Investigated stale `cs_live_` session pattern (was Jason's old test browser). Theme rotation status: Days 1–4 used (Company Spotlight ×2, Methodology, Contrarian/Green). Day 5 next._
