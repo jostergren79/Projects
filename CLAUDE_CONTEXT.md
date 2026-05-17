@@ -84,10 +84,10 @@ _Update these at the end of every session._
 
 | Metric | Value | Updated |
 |--------|-------|---------|
-| MRR | $0 | May 16, 2026 |
-| Paying users | 0 | May 16, 2026 |
-| Free signups | 0 | May 16, 2026 |
-| Real X-attributed visits | 5+ (verified via direct_cik URLs in PostHog) | May 16, 2026 |
+| MRR | $0 | May 17, 2026 |
+| Paying users | 0 | May 17, 2026 |
+| Free signups | 0 | May 17, 2026 |
+| Real X-attributed visits | 15+ (verified via PostHog API — US, Germany, France, UK) | May 17, 2026 |
 
 ---
 
@@ -117,7 +117,7 @@ _Update these at the end of every session._
 - Crypto friends — free beta access, honest feedback
 - StockTwits — not yet done
 
-**Google Search Console:** Verified and active for www.edgarwolf.com. Meta verification tag deployed in edgar.html. Sitemap not yet submitted.
+**Google Search Console:** Verified and active for www.edgarwolf.com. Meta verification tag deployed in edgar.html. Sitemap submitted May 13, 2026 — Status: Success, 1 page discovered. JSON-LD structured data deployed May 17 — Google Rich Results confirmed working within hours.
 
 ---
 
@@ -129,11 +129,11 @@ _Replace completed items each session. Keep this list short._
 - [ ] Post on r/SecurityAnalysis when mod approval comes through
 - [ ] Send beta invites to 2–3 crypto friends with free Pro access
 - [ ] Identify 10 finance Substack writers and send personal outreach emails
-- [ ] Continue daily X posting (Days 1–4 done: Company Spotlight ×2, Methodology, Contrarian/Green. **Day 5 next**: Sector Sweep, Retrospective, or Builder Update)
-- [ ] Continue 4 X replies/day target — proven format, target mid-traffic threads (10K–100K views) that are still climbing
+- [ ] Continue daily X posting (Days 1–5 done: Company Spotlight ×2, Methodology, Contrarian/Green, Sector Sweep. **Day 6 next**: Retrospective or Builder Update)
+- [ ] Continue 4 X replies/day target — proven format, target mid-traffic threads (10K–100K views) that are still climbing. Monday pre-market is peak window.
 - [ ] Post the drafted $FIG StockTwits reply (first StockTwits engagement)
 - [ ] **Build the actual weekly digest send job** — Sunday cron that picks top 10 Filing Stress companies from the past week and emails all active `digest_subscribers`. Must include unsubscribe link in every send.
-- [ ] Return to drafting/sending the Vietnamese message to wife (parked May 15)
+- [ ] Submit EdgarWolf listing to SaaSWorthy, Product Hunt, G2, Capterra, AlternativeTo — Google AI is already citing saasworthy.com; getting real listings there strengthens SEO and credibility.
 
 **Soon:**
 - [ ] Expand sitemap to include /privacy and /terms URLs
@@ -196,6 +196,18 @@ _Running log of important decisions so we don't relitigate them._
 - **`subscription_success` event added (May 16):** Fires once per customer in `checkSubscriptionStatus()` when verification confirms a paid tier. Closes the conversion funnel in PostHog without needing to cross-reference Stripe. Guarded by `subscription_success_fired` localStorage flag so it doesn't re-fire on subsequent visits.
 - **Digest banner copy reframe (May 16):** Old copy described digest abstractly. New copy leads with weekly value (ELEVATED stress filings) and proves it with 3 concrete receipts ($GIS 100/100, $CAG triple margin, $FIG -58pp op margin). Banner conversion rate still 0% as of session close but new copy hasn't had real traffic to test yet.
 - **Stale `cs_live_` session pattern (May 16):** A Stripe session_id from before 5/14 7pm kept appearing in Railway logs as `/subscription/status` verifies. Stripe dashboard showed no new activity. Confirmed it was Jason's old test browser holding the session_id in localStorage. Pattern to remember: a recurring verify call on the same `cs_live_` ID is a stale browser, not a new conversion.
+- **JSON-LD structured data deployed (May 17, commit 950b3ba):** schema.org SoftwareApplication block added to edgar.html `<head>`. All three pricing tiers included. Google Rich Results Test confirmed valid within hours of deploy. Google AI Overview now surfaces edgarwolf.com as a direct clickable link. No version bump — metadata-only change.
+- **PostHog API access established (May 17):** Project 424339, US Cloud. Personal API key stored in memory. Can now query events, sessions, funnels programmatically via curl/requests. Use this at session start for traffic analysis instead of screenshots.
+- **Sitemap already submitted (May 13):** Context doc previously said "not yet submitted" — confirmed submitted and working. 1 page discovered, Status: Success.
+- **No version bump for metadata-only changes:** JSON-LD, copy tweaks, analytics guards do not warrant a version bump. Only functional product changes get a version bump.
+- **Sector sweep thread format validated (May 17):** Thread format with one company per tweet is strongest content format — each tweet indexed in its own cashtag feed simultaneously. Consumer staples sweep (5 companies) posted May 17. $JACK standalone post same day.
+- **Consumer staples sector data (May 17):** $GIS 100/100 ELEVATED (Rev -23% YoY, 3.3 SD below avg), $CPB 100/100 ELEVATED (Rev -8% YoY), $HRL 87/100 ELEVATED (Rev +1.3%), $CAG 70/100 ELEVATED (all 3 margin lines HIGH), $SJM 62/100 MODERATE (margin compression MEDIUM).
+- **$JACK data (May 17, CIK 0000807882):** 92/100 ELEVATED, Net income -$25.9M, EPS -$1.35, Revenue -12.4% YoY, Operating margin 5.0%, XBRL structure INCOMPLETE, Filing velocity ELEVATED.
+- **Major FinTwit engagement (May 17):** Three significant accounts liked posts in one day — Ashton Invests @Ashton_1nvests (33.2K followers), Jonah Lupton @JonahLupton (552K, CEO/CIO hedge fund), Mike Schiemer @MikeSchiemer (195.5K, dividend investor/CMO DividendVision). Combined 780K+ followers. Do not pitch — stay present in their threads with filing data.
+- **Google AI Overview upgraded (May 17):** After JSON-LD deploy, Google AI now leads with "EdgarWolf most commonly refers to a financial intelligence platform that analyzes SEC filings" and surfaces edgarwolf.com as first result with OG image thumbnail in right panel.
+- **Dynamic OG image (future):** Current static OG image shows $GIS data regardless of company linked. Works well for now (971 views on $MSFT post). Company-specific dynamic OG images would be more compelling but not a near-term priority.
+- **End of quarter filing season:** Late May/June = active 10-Q/10-K filing period. High-signal content period — fresh anomaly data as filings drop on EDGAR. Prioritize posting around new filings.
+- **Vietnamese message to wife completed (May 17):** Drafted and translated. Optimistic framing — early engagement signals, not "long road" framing.
 
 ---
 
@@ -300,6 +312,6 @@ Bypasses Stripe verification on `127.0.0.1`/`localhost` only — no-op on the li
 
 ---
 
-_Last updated: May 16, 2026 — v1.5.3 (no version bump — digest banner copy + PostHog guard + subscription_success event + marketing/distribution work only)._
+_Last updated: May 17, 2026 — v1.5.3 (no version bump — JSON-LD structured data + context/analytics work only)._
 
-_May 16 session: Big distribution day. Posted Day 4 X post — Contrarian/Green theme, $EAT (Chili's) turnaround with 4x operating income progression. Completed 4 daily X replies: $BA (never-touch), $4500-dip with $DECK vs $LCID contrast, $MSFT @DudeWhoInvests on Gates exit, $META vs $PLTR value comparison. Posted exception/news-cycle post on $MSFT counter-narrative when Gates Foundation MSFT sale went viral. Replied to @amitisinvesting 1.2M-view Foundation thread (bonus). Responded to comment from @spinzone12 on Gates thread. @DudeWhoInvests reply climbed to 606+ views with 1 comment. Shipped 3 code changes: digest banner copy reframe (eb14d48), PostHog localhost guard + subscription_success event (f3b7a3c). Found and confirmed CIK-direct URL strategy is producing measurable X-attributed visits via PostHog. Found a Germany visitor (first international) in session replay with broken charts — investigated, determined to be edge case not universal mobile bug. Found and fixed PostHog localhost pollution. Investigated stale `cs_live_` session pattern (was Jason's old test browser). Theme rotation status: Days 1–4 used (Company Spotlight ×2, Methodology, Contrarian/Green). Day 5 next._
+_May 17 session: Strong distribution day. Posted Day 5 X post — Sector Sweep theme, consumer staples thread ($GIS, $CAG, $CPB, $HRL, $SJM) — 5 cashtag feeds hit simultaneously. Posted standalone $JACK Company Spotlight (92/100 FSS, negative EPS, XBRL incomplete). Replied to @Ashton_1nvests thread (9.6K views) with $GIS filing data. Three major FinTwit accounts liked posts: Ashton Invests (33.2K), Jonah Lupton (552K hedge fund CEO), Mike Schiemer (195.5K dividend investor) — 780K+ combined followers. Deployed JSON-LD structured data to edgar.html — Google Rich Results confirmed valid within hours, Google AI Overview upgraded to show edgarwolf.com as primary direct link with OG thumbnail. Established PostHog API access (project 424339) for programmatic traffic analysis. Confirmed sitemap was already submitted May 13. Ran full PostHog traffic analysis — 15+ real visitors from US, Germany, France. Frankfurt visitor clicked $CPB from sector sweep within 2 hours of posting. Vietnamese message to wife drafted and translated. Theme rotation status: Days 1–5 used (Company Spotlight ×2, Methodology, Contrarian/Green, Sector Sweep). Day 6 next: Retrospective or Builder Update._
