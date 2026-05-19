@@ -10,6 +10,77 @@ Versioning follows [Semantic Versioning](https://semver.org/):
 
 ---
 
+## [1.6.0] — 2026-05-19
+
+### Security
+Auth hardening release. Addresses the email-based account-hijack vector
+discovered in the v1.5.5 second-pass review, plus a bundle of hygiene fixes.
+
+- **Replaced email-only `/subscription/restore` with magic-link auth.** The old
+  endpoint returned the Stripe `customer_id` to anyone who typed a Pro user's
+  email — full account hijack (read/modify watchlist, reroute Pro+ alert
+  emails). New flow: user enters email → server verifies an active Stripe
+  subscription on that email (via `stripe.Customer.list(email=...)`) →
+  Resend sends a short-lived signed magic link (HMAC-SHA256, 15-minute TTL) →
+  click sets a 30-day httpOnly Secure SameSite=Lax cookie containing a signed
+  customer_id. The frontend no longer stores customer_id anywhere.
+  `POST /auth/request` always returns 200 — silence is the only signal an
+  attacker gets, preventing customer enumeration.
+- **`/watchlist/*` switched to cookie auth.** Endpoints read customer_id from
+  the signed `ew_session` cookie instead of the `X-Customer-Id` header. The
+  unauthenticated `email` field on `POST /watchlist/sync` is removed; the
+  user's email is now set canonically via the Stripe webhook on
+  `checkout.session.completed`, closing the alert-reroute path.
+- **`/billing/portal` reads customer_id from the session cookie**, not the
+  request body. A third party can no longer open the portal for an arbitrary
+  customer.
+- **`/success` sets the auth cookie server-side** after looking up the Stripe
+  checkout session. The post-payment flow no longer relies on client-side
+  customer_id storage.
+- **Removed `/subscription/restore`, `/subscription/status`, and
+  `/subscription/status-by-customer`.** Tier is now established via the new
+  `GET /auth/whoami` endpoint, which reads the session cookie and re-verifies
+  the active subscription against Stripe (so cancelled/lapsed subs are
+  reflected immediately).
+- **Replaced `stripe.Customer.search(query=...)` with
+  `stripe.Customer.list(email=...)`** to remove the Lucene-style query
+  injection surface in the customer lookup path.
+- **Masked emails in EVENT log lines** (`digest_signup`, `subscription_started`,
+  `welcome_email_sent`, `alert_sent`, `magic_link_sent`, `digest_welcome_sent`,
+  `digest_unsubscribe`). Emails are now logged as `j***@gmail.com`; the domain
+  is preserved for routing analysis but the local-part is not.
+- **HTML-escaped every interpolation in `scheduler.py:_build_alert_html`**
+  (company name, ticker, CIK, form type, filing date, stress status, flag
+  metric, flag note). A maliciously-named company or crafted XBRL concept
+  could previously inject HTML into Pro+ alert emails.
+
+### Dependencies
+- `fastapi` 0.111.0 → 0.128.0
+- `starlette` pinned `>=0.47.0` (clears the pip-audit advisories)
+- `python-multipart` pinned `>=0.0.18` (clears CVE-2024-53981)
+- `requests` pinned `>=2.32.4` (clears CVE-2024-47081)
+- `urllib3` pinned `>=2.5.0`
+
+### Added
+- `edgar-api/auth.py` — HMAC token mint/verify + cookie helpers + `mask_email`
+- `edgar-api/routers/auth_router.py` — `/auth/request`, `/auth/verify`,
+  `/auth/logout`, `/auth/whoami`
+- New env var `MAGIC_LINK_SECRET` (required — generate with
+  `python -c 'import secrets; print(secrets.token_urlsafe(48))'` and set in
+  Railway Variables)
+
+### Notes
+- Cookie `Secure` flag follows `APP_URL` scheme: enabled when `APP_URL`
+  starts with `https://`, disabled otherwise. Production stays Secure-only;
+  local dev over `http://127.0.0.1` works without HTTPS.
+- The frontend's `?dev_tier=pro` localhost bypass is unchanged.
+- PostHog identify no longer ties events to a Stripe customer_id (the
+  frontend doesn't see it anymore). Tier is set as an anonymous person
+  property; we lose cross-device session stitching by customer_id in
+  exchange for keeping customer_id out of client-side telemetry.
+
+---
+
 ## [1.5.5] — 2026-05-18
 
 ### Security (hotfix)

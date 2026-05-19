@@ -1,6 +1,6 @@
 # EdgarWolf — Claude Context Doc
 
-**Current version: v1.5.5** (2026-05-18) — see `CHANGELOG.md` for full release history.
+**Current version: v1.6.0** (2026-05-19) — see `CHANGELOG.md` for full release history.
 
 Paste this file at the start of every Claude conversation to restore full context.
 Update metrics, version, and priorities at the end of every relevant session.
@@ -102,10 +102,10 @@ _Update these at the end of every session._
 
 _Replace completed items each session. Keep this list short._
 
-**Tomorrow (v1.6.0 — auth hardening):**
-- [ ] **Replace email-only `/subscription/restore` with magic-link auth.** Current flow returns the Stripe `customer_id` to anyone who types a Pro user's email — full account hijack (read/modify watchlist, reroute alert emails via `/watchlist/sync` email overwrite). Plan: user enters email → server verifies Stripe has an active sub on that email → Resend sends a short-lived signed token (15min, HMAC) → click sets `httpOnly` cookie with customer_id → frontend stops storing customer_id in localStorage. Stripe stays the source of truth; Resend infra is already in place; Customer Portal integration unchanged. Ship as v1.6.0.
-- [ ] **Bundle hygiene fixes alongside:** (a) replace `stripe.Customer.search(query=...)` with `stripe.Customer.list(email=...)` to remove the Stripe query-injection surface; (b) mask emails in logs to `j***@gmail.com` form (digest_signup, subscription_started, welcome_email_sent, alert_sent); (c) HTML-escape `name`, `ticker`, `flags[*].metric`, `flags[*].note` in `scheduler.py:_build_alert_html`; (d) bump fastapi → 0.128, starlette → 0.47+, python-multipart → 0.0.27, requests → 2.33+, urllib3 → 2.7+ to clear pip-audit CVEs.
+**Tomorrow:**
+- [ ] **Set `MAGIC_LINK_SECRET` in Railway** before pushing v1.6.0 — generate with `python -c 'import secrets; print(secrets.token_urlsafe(48))'`. Without this env var the new auth module fails fast on every token mint.
 - [ ] Confirm `SEC_REQUIRE_EXPLICIT_USER_AGENT=true` and `SEC_USER_AGENT` are set in Railway (env var check, no code change).
+- [ ] After deploy, smoke-test the magic-link flow end-to-end on production: request from jason@edgarwolf.com → receive the link → click → land on `/?signed_in=1` with cookie set → watchlist GET succeeds. Then test that hitting `/auth/request` with an unknown email returns the same `{ok: true}`.
 
 **Immediate:**
 - [ ] Day 7 X post — Builder Update (plan in morning, fold in fresh PostHog data)
@@ -155,15 +155,19 @@ Dev tier bypass: `?dev_tier=pro` (localhost only). Amber toggle button in header
 
 ---
 
-## 9. Technical State (v1.5.5, May 18)
+## 9. Technical State (v1.6.0, May 19)
 
-Solid: proxy-aware rate limiting (200/min per real client IP, with memory cleanup), stale cache fallback, WAL thread-safety, CIK validation, HTTP 207 on partial failures, full browser security header set (CSP + X-Frame-Options + X-Content-Type-Options + Referrer-Policy + HSTS), Stripe webhook signature verification (hard-fails on missing secret), full HTML output encoding via escapeAttr(), debug param gated to dev only, dev test endpoints gated by DEV_SECRET, health endpoint, entity type detection, robots.txt, PostHog localhost guard, `subscription_success` event once per customer.
+Solid: proxy-aware rate limiting (200/min per real client IP, with memory cleanup), stale cache fallback, WAL thread-safety, CIK validation, HTTP 207 on partial failures, full browser security header set (CSP + X-Frame-Options + X-Content-Type-Options + Referrer-Policy + HSTS), Stripe webhook signature verification (hard-fails on missing secret), full HTML output encoding via escapeAttr() + html.escape() in alert emails, debug param gated to dev only, dev test endpoints gated by DEV_SECRET, health endpoint, entity type detection, robots.txt, PostHog localhost guard, `subscription_success` event once per customer.
+
+**Auth (new in v1.6.0):** magic-link sign-in via Resend (HMAC-SHA256, 15-min TTL) → 30-day httpOnly Secure SameSite=Lax `ew_session` cookie. Customer_id never reaches the frontend. `/auth/request` always returns `{ok: true}` to prevent customer enumeration. Stripe customer lookup uses `Customer.list(email=)`, not `Customer.search(query=)`. Email log lines now masked (`j***@gmail.com`).
 
 Stripe, Watchlist API, Email alerts, QA (Postman/Newman), Railway persistent volume — all LIVE. See `DECISIONS_ARCHIVE.md` for full technical decision log and `SECURITY.md` for full security posture.
 
 ---
 
-_Last updated: May 18, 2026 — v1.5.5_
+_Last updated: May 19, 2026 — v1.6.0_
+
+_May 19 session: Refreshed README for v1.5.5 (was last touched May 12, missed everything in v1.4.x–v1.5.5 — features section, pricing table, new routers, docs cross-refs, env vars, security highlights, deploy checklist). Posted Day 7 Builder Update on X — first upgrade_modal_open as the hook, 5 countries / first StockTwits post / 2 security releases as supporting beats, magic-link auth flagged as next ship. Then shipped v1.6.0 — full auth hardening release. New `auth.py` module (HMAC token mint/verify, cookie helpers, mask_email) + `routers/auth_router.py` (POST /auth/request, GET /auth/verify, POST /auth/logout, GET /auth/whoami). Removed `/subscription/restore`, `/subscription/status`, `/subscription/status-by-customer` — magic-link replaces the email-leak path; `/auth/whoami` replaces the tier check. `/watchlist/*` reads customer_id from the signed cookie instead of `X-Customer-Id`; the email override on `/watchlist/sync` is gone (webhook now upserts the user record on `checkout.session.completed`). `/billing/portal` reads customer_id from the cookie too. `/success` does a server-side Stripe session lookup and sets the auth cookie before rendering. Frontend stops storing `edgarwolf_customer` anywhere; watchlist fetches use `credentials: 'include'`; restore form posts to `/auth/request` and always shows the same "check your inbox" message. Bundled hygiene fixes: stripe.Customer.list(email=) instead of .search(query=) (query-injection surface), html.escape() every interpolation in scheduler.py:_build_alert_html, mask_email() applied to digest_signup / subscription_started / welcome_email_sent / alert_sent / digest_welcome_sent / digest_unsubscribe / magic_link_sent log lines, fastapi 0.111→0.128 + starlette/python-multipart/requests/urllib3 floor pins to clear pip-audit CVEs. SECURITY.md §4 rewritten to describe the magic-link + cookie model. PostHog no longer identifies by customer_id (it's not on the client anymore) — tier set as anonymous person property. Need to set `MAGIC_LINK_SECRET` in Railway env vars BEFORE pushing._
 
 _May 18 session: Posted $UNH on X (news-driven Company Spotlight — Berkshire sold entire stake, FSS 92/100, 8-K 6 days before 10-Q). Posted $SOFI Contrarian/Green (profitable trajectory, bottom-line only — XBRL unreliable for fintechs). First StockTwits post live ($UNH Bearish). PostHog 24hr: first upgrade_modal_open (Minneapolis iPhone, $AAPL page, May 17 8:12 AM CT — warm returning lead, came back same day), Philippines = new country, $UNH clicked same day as post. Fixed signal_board_skip analytics bug — was firing 154× per board load, now fires once with aggregate stats. Trimmed context doc, created DECISIONS_ARCHIVE.md. Day 7: Builder Update — plan tomorrow morning._
 

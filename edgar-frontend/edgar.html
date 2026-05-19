@@ -895,15 +895,15 @@
     }
 
     function identifyToPostHog() {
+      // The frontend no longer holds the Stripe customer_id (it lives only in
+      // the httpOnly ew_session cookie). Track tier as a person property on
+      // the PostHog anonymous distinct_id; we lose the ability to stitch
+      // sessions across devices via customer_id, but in exchange the
+      // customer_id never reaches client-side telemetry.
       try {
-        if (!window.posthog || typeof window.posthog.identify !== 'function') return;
-        const cid  = getCustomerId();
+        if (!window.posthog || typeof window.posthog.setPersonProperties !== 'function') return;
         const tier = localStorage.getItem('edgarwolf_tier') || 'standard';
-        if (cid) {
-          window.posthog.identify(cid, { tier });
-        } else {
-          window.posthog.setPersonProperties && window.posthog.setPersonProperties({ tier });
-        }
+        window.posthog.setPersonProperties({ tier });
       } catch (_) {}
     }
 
@@ -1009,7 +1009,7 @@
     async function showRestoreAccess() {
       document.getElementById('upgrade-modal').classList.remove('open');
 
-      const email = prompt('Enter the email address you used when subscribing to Pro:');
+      const email = prompt('Enter the email you used to subscribe. We\'ll send a sign-in link.');
       if (!email || !email.trim()) return;
 
       const trimmed = email.trim().toLowerCase();
@@ -1019,24 +1019,18 @@
       }
 
       try {
-        const res = await fetch(`${API}/subscription/restore?email=${encodeURIComponent(trimmed)}`);
-        if (!res.ok) throw new Error('lookup_failed');
-        const data = await res.json();
-
-        if (data.tier && data.tier !== 'standard') {
-          localStorage.removeItem('edgarwolf_session');
-          if (data.customer_id) localStorage.setItem('edgarwolf_customer', data.customer_id);
-          localStorage.setItem('edgarwolf_tier', data.tier);
-          localStorage.setItem('edgarwolf_tier_label', data.label);
-          localStorage.setItem('edgarwolf_tier_checked_at', String(Date.now()));
-          alert('Pro access restored! Reloading…');
-          window.location.reload();
-        } else {
-          alert('No active Pro subscription found for that email. If you need help, email jason@edgarwolf.com.');
-        }
+        await fetch(`${API}/auth/request`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ email: trimmed }),
+        });
       } catch (_) {
-        alert('Something went wrong. Please try again or email jason@edgarwolf.com.');
+        // Silent — the server intentionally returns the same response either way.
       }
+      // We always show the same confirmation regardless of whether the email
+      // matched an active subscription. This prevents anyone from probing the
+      // endpoint to discover paying customers.
+      alert('Check your inbox — if there\'s an active subscription on that email, you\'ll get a sign-in link in the next minute. The link expires in 15 minutes.');
     }
 
     async function startCheckout(tier) {
@@ -1104,43 +1098,40 @@
         if (toggleBtn) toggleBtn.textContent = `DEV: ${currentLabel}`;
       }
 
-      const sessionId   = localStorage.getItem('edgarwolf_session');
-      const customerId  = localStorage.getItem('edgarwolf_customer');
+      // After a magic-link click the URL has ?signed_in=1. Force a fresh
+      // /auth/whoami fetch (bypass the 1-hour tier cache) and clean the URL.
+      const params = new URLSearchParams(window.location.search);
+      const justSignedIn = params.has('signed_in');
+      if (justSignedIn) {
+        params.delete('signed_in');
+        const newSearch = params.toString();
+        history.replaceState({}, '', window.location.pathname + (newSearch ? '?' + newSearch : ''));
+      }
+
       const cachedTier  = localStorage.getItem('edgarwolf_tier');
       const cachedLabel = localStorage.getItem('edgarwolf_tier_label');
       const cachedAt    = parseInt(localStorage.getItem('edgarwolf_tier_checked_at') || '0');
 
-      // Use cache if under 1 hour old and shows a paid tier
-      if (cachedTier && cachedTier !== 'standard' && (Date.now() - cachedAt) < 3_600_000) {
+      // Use cache if under 1 hour old and shows a paid tier, unless we just
+      // signed in (in which case we always re-confirm with the server).
+      if (!justSignedIn && cachedTier && cachedTier !== 'standard' && (Date.now() - cachedAt) < 3_600_000) {
         applyTierBadge(cachedTier, cachedLabel);
         syncWatchlistFromServer();
         return;
       }
 
-      if (!sessionId && !customerId) return;
-
       try {
-        let url;
-        if (customerId) {
-          url = `${API}/subscription/status-by-customer?customer_id=${encodeURIComponent(customerId)}`;
-        } else {
-          url = `${API}/subscription/status?session_id=${encodeURIComponent(sessionId)}`;
-        }
-        const res = await fetch(url);
+        const res = await fetch(`${API}/auth/whoami`, { credentials: 'include' });
         if (!res.ok) return;
         const data = await res.json();
         localStorage.setItem('edgarwolf_tier', data.tier);
         localStorage.setItem('edgarwolf_tier_label', data.label);
         localStorage.setItem('edgarwolf_tier_checked_at', String(Date.now()));
-        if (data.customer_id) localStorage.setItem('edgarwolf_customer', data.customer_id);
         applyTierBadge(data.tier, data.label);
         identifyToPostHog();
         if (data.tier !== 'standard') {
           if (!localStorage.getItem('subscription_success_fired')) {
-            trackEvent('subscription_success', {
-              tier: data.tier,
-              source: sessionId ? 'session_id' : 'customer_id',
-            });
+            trackEvent('subscription_success', { tier: data.tier, source: 'whoami' });
             localStorage.setItem('subscription_success_fired', '1');
           }
           syncWatchlistFromServer();
@@ -1151,18 +1142,15 @@
     }
 
     async function manageSubscription() {
-      const customerId = localStorage.getItem('edgarwolf_customer');
-      if (!customerId) {
-        // No customer ID stored — ask them to restore via email first.
-        alert('Please use "Restore Access" to verify your subscription, then try again.');
-        return;
-      }
       try {
         const res = await fetch(`${API}/billing/portal`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ customer_id: customerId }),
+          method:      'POST',
+          credentials: 'include',
         });
+        if (res.status === 401) {
+          alert('Please use "Restore Access" to sign in via email, then try again.');
+          return;
+        }
         if (!res.ok) throw new Error('portal unavailable');
         const { url } = await res.json();
         window.location.href = url;
@@ -1591,23 +1579,18 @@
       localStorage.setItem('edgar_watchlist', JSON.stringify(items));
     }
 
-    function getCustomerId() {
-      return localStorage.getItem('edgarwolf_customer') || '';
-    }
-
     // Sync server watchlist → localStorage for Pro/Pro+ users.
     // Runs once per session (guarded by sessionStorage flag).
     // Pushes any localStorage-only items up to the server, then merges
     // the full server list into localStorage so both are in sync.
+    // Authentication is the httpOnly ew_session cookie set by /auth/verify
+    // or /success — sent automatically with credentials: 'include'.
     async function syncWatchlistFromServer() {
-      const cid = getCustomerId();
-      if (!cid) return;
+      if (!isProUser()) return;
       if (sessionStorage.getItem('wl_synced')) return;
       sessionStorage.setItem('wl_synced', '1');
       try {
-        const res = await fetch(`${API}/watchlist`, {
-          headers: { 'X-Customer-Id': cid },
-        });
+        const res = await fetch(`${API}/watchlist`, { credentials: 'include' });
         if (!res.ok) return;
         const { items: serverItems, limit: serverLimit } = await res.json();
         if (serverLimit) localStorage.setItem('wl_limit', String(serverLimit));
@@ -1616,11 +1599,11 @@
         const localOnly   = localItems.filter(x => !serverCiks.has(x.cik));
         // Push items that exist locally but not on the server
         if (localOnly.length) {
-          const email = localStorage.getItem('edgarwolf_email') || '';
           await fetch(`${API}/watchlist/sync`, {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json', 'X-Customer-Id': cid },
-            body:    JSON.stringify({ items: localOnly, email }),
+            method:      'POST',
+            credentials: 'include',
+            headers:     { 'Content-Type': 'application/json' },
+            body:        JSON.stringify({ items: localOnly }),
           }).catch(() => {});
         }
         // Merge: server items first, then any local-only additions
@@ -1645,13 +1628,13 @@
       if (!currentCik || !currentCompany) return;
       const list = getWatchlist();
       const idx  = list.findIndex(x => x.cik === currentCik);
-      const cid  = getCustomerId();
+      const isPro = isProUser();
       if (idx >= 0) {
         list.splice(idx, 1);
-        if (cid) {
+        if (isPro) {
           fetch(`${API}/watchlist/${encodeURIComponent(currentCik)}`, {
-            method:  'DELETE',
-            headers: { 'X-Customer-Id': cid },
+            method:      'DELETE',
+            credentials: 'include',
           }).catch(() => {});
         }
       } else {
@@ -1668,11 +1651,12 @@
         };
         list.push(item);
         trackEvent('watchlist_add', { cik: currentCik, name: currentCompany.name });
-        if (cid) {
+        if (isPro) {
           fetch(`${API}/watchlist`, {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json', 'X-Customer-Id': cid },
-            body:    JSON.stringify(item),
+            method:      'POST',
+            credentials: 'include',
+            headers:     { 'Content-Type': 'application/json' },
+            body:        JSON.stringify(item),
           }).then(async r => {
             if (r.status === 422) {
               const err = await r.json().catch(() => ({}));
@@ -1713,11 +1697,10 @@
 
     function removeFromWatchlist(cik) {
       setWatchlist(getWatchlist().filter(x => x.cik !== cik));
-      const cid = getCustomerId();
-      if (cid) {
+      if (isProUser()) {
         fetch(`${API}/watchlist/${encodeURIComponent(cik)}`, {
-          method:  'DELETE',
-          headers: { 'X-Customer-Id': cid },
+          method:      'DELETE',
+          credentials: 'include',
         }).catch(() => {});
       }
       renderWatchlistPanel();
@@ -2147,7 +2130,7 @@
       EdgarWolf &mdash; Questions or feedback? <a href="mailto:jason@edgarwolf.com">jason@edgarwolf.com</a>
       &nbsp;&middot;&nbsp; <a href="/privacy">Privacy Policy</a>
       &nbsp;&middot;&nbsp; <a href="/terms">Terms of Service</a>
-      &nbsp;&middot;&nbsp; v1.5.5
+      &nbsp;&middot;&nbsp; v1.6.0
     </div>
   </footer>
 </body>

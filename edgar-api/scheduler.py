@@ -10,6 +10,7 @@ See METHODOLOGY.md §13–15 for the full spec.
 """
 
 import asyncio
+import html
 import logging
 import os
 
@@ -17,6 +18,7 @@ import resend
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
+from auth import mask_email
 from cache import (
     get_all_pro_plus_watchlists,
     get_last_checked,
@@ -46,43 +48,55 @@ def _build_alert_html(
     stress_status: str,
     flags: list,
 ) -> str:
+    # All fields below originate from SEC data (company name, XBRL concept
+    # names, ticker) or our own computed strings. SEC data is generally clean
+    # but is operator-controlled — a maliciously-named company or crafted
+    # XBRL concept could embed HTML. Escape every interpolation defensively.
+    safe_name        = html.escape(name or "")
+    safe_ticker      = html.escape(ticker or "")
+    safe_form_type   = html.escape(form_type or "")
+    safe_filing_date = html.escape(filing_date or "")
+    safe_status      = html.escape(stress_status or "")
+    safe_cik         = html.escape(cik or "")
+    safe_score       = html.escape(str(stress_score))
+
     severity_color = {"HIGH": "#e53e3e", "MEDIUM": "#f6ad55"}.get
     stress_color = "#e53e3e" if stress_status == "ELEVATED" else "#f6ad55" if stress_status == "MODERATE" else "#48bb78"
 
     flag_rows = ""
     for f in flags:
-        color = severity_color(f["severity"], "#e53e3e")
+        color = severity_color(f.get("severity", ""), "#e53e3e")
         flag_rows += (
-            f'<tr><td style="padding:6px 0;color:#555">{f["metric"]}</td>'
+            f'<tr><td style="padding:6px 0;color:#555">{html.escape(str(f.get("metric", "")))}</td>'
             f'<td style="text-align:right;font-weight:700;color:{color}">'
-            f'{f["note"]}</td></tr>'
+            f'{html.escape(str(f.get("note", "")))}</td></tr>'
         )
 
-    display = ticker if ticker else name
-    url = f"https://www.edgarwolf.com/?cik={cik}"
+    display = safe_ticker if safe_ticker else safe_name
+    url = f"https://www.edgarwolf.com/?cik={safe_cik}"
 
     return f"""
     <div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#1a1a1a">
-      <h2 style="color:#2b6cb0;margin-bottom:4px">&#9888; Filing Alert: {name} ({display})</h2>
+      <h2 style="color:#2b6cb0;margin-bottom:4px">&#9888; Filing Alert: {safe_name} ({display})</h2>
       <p style="color:#555;font-size:13px;margin-top:0">
-        New <strong>{form_type}</strong> filing accepted {filing_date}
+        New <strong>{safe_form_type}</strong> filing accepted {safe_filing_date}
       </p>
       <hr style="border:none;border-top:1px solid #eee;margin:16px 0">
       <table style="width:100%;border-collapse:collapse;font-size:14px">
         <tr>
           <td style="padding:6px 0;color:#555">Filing Stress Score</td>
           <td style="text-align:right;font-weight:700;color:{stress_color}">
-            {stress_score} / 100 {stress_status}
+            {safe_score} / 100 {safe_status}
           </td>
         </tr>
         {flag_rows}
       </table>
       <hr style="border:none;border-top:1px solid #eee;margin:16px 0">
       <a href="{url}" style="display:inline-block;background:#2b6cb0;color:#fff;padding:10px 20px;border-radius:4px;text-decoration:none;font-size:14px;font-weight:600">
-        View on EdgarWolf →
+        View on EdgarWolf &rarr;
       </a>
       <p style="font-size:11px;color:#aaa;margin-top:24px">
-        EdgarWolf Pro+ &middot; You're receiving this because {name} is on your watchlist.
+        EdgarWolf Pro+ &middot; You're receiving this because {safe_name} is on your watchlist.
       </p>
     </div>
     """
@@ -176,7 +190,7 @@ async def _check_company(customer_id: str, email: str, cik: str, ticker: str, na
     from_addr = os.getenv("RESEND_FROM", "EdgarWolf <alerts@edgarwolf.com>")
     subject = f"[EdgarWolf] New {new_filing['form']} filing — {name} ({ticker or cik10})"
 
-    html = _build_alert_html(
+    html_body = _build_alert_html(
         cik=cik10,
         ticker=ticker,
         name=name,
@@ -192,16 +206,16 @@ async def _check_company(customer_id: str, email: str, cik: str, ticker: str, na
             "from": from_addr,
             "to": [email],
             "subject": subject,
-            "html": html,
+            "html": html_body,
         })
         log_alert_sent(customer_id, cik10, new_filing["accession"])
         logger.info(
-            "EVENT alert_sent customer_id=%s cik=%s form=%s accession=%s resend_id=%s",
-            customer_id, cik10, new_filing["form"], new_filing["accession"],
+            "EVENT alert_sent customer_id=%s email=%s cik=%s form=%s accession=%s resend_id=%s",
+            customer_id, mask_email(email), cik10, new_filing["form"], new_filing["accession"],
             result.get("id"),
         )
     except Exception as e:
-        logger.error("Alert check: Resend send failed for %s → %s: %s", name, email, e)
+        logger.error("Alert check: Resend send failed for %s -> %s: %s", name, mask_email(email), e)
 
 
 async def run_alert_check() -> None:

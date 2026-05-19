@@ -80,9 +80,10 @@ from routers import (
     alerts,
     watchlist,
     digest,
+    auth_router,
 )
 
-app = FastAPI(title="EDGAR Financial Metrics API", version="1.5.5", lifespan=lifespan)
+app = FastAPI(title="EDGAR Financial Metrics API", version="1.6.0", lifespan=lifespan)
 
 # ---------------------------------------------------------------------------
 # Per-IP rate limiting middleware
@@ -98,7 +99,7 @@ _CLEANUP_INTERVAL = 10_000
 
 # Paths subject to per-IP rate limiting.
 _RATE_LIMITED_PREFIXES = ("/company", "/feed")
-_RATE_LIMITED_EXACT    = {"/digest/subscribe", "/subscription/restore"}
+_RATE_LIMITED_EXACT    = {"/digest/subscribe", "/auth/request", "/auth/verify"}
 
 
 @app.middleware("http")
@@ -178,6 +179,7 @@ app.include_router(checkout.router)
 app.include_router(alerts.router)
 app.include_router(watchlist.router)
 app.include_router(digest.router)
+app.include_router(auth_router.router)
 
 
 @app.get("/.well-known/cf-custom-hostname-challenge/{token}")

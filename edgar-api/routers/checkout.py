@@ -4,17 +4,22 @@ Stripe Checkout integration.
 POST /checkout/session      — creates a hosted Stripe Checkout session and returns
                               the redirect URL. Called by the frontend upgrade buttons.
 
-GET  /subscription/status   — verifies a Stripe session ID against the live Stripe API
-                              and returns the user's active tier. Cached client-side.
+GET  /success               — Stripe redirects here after a successful payment.
+                              Looks up the checkout session, sets the magic-link
+                              session cookie, and renders the welcome page.
 
-POST /webhook/stripe        — receives Stripe webhook events. Logs completed
-                              subscriptions for analytics and future email alerts.
+POST /webhook/stripe        — receives Stripe webhook events. Persists the user
+                              record on checkout.session.completed and triggers
+                              the welcome email.
+
+POST /billing/portal        — opens the Stripe Customer Portal. Reads the
+                              authenticated customer_id from the session cookie.
 
 Environment variables required (set in Railway Variables panel, never in code):
-  STRIPE_SECRET_KEY       sk_live_...
-  STRIPE_WEBHOOK_SECRET   whsec_...  (from Stripe dashboard → Webhooks)
-  STRIPE_PRO_PRICE_ID     price_1TWTJz1C3cijZqBOyfX4VwHC   ($19.00/mo)
-  STRIPE_PRO_PLUS_PRICE_ID price_1TVNfH1C3cijZqBOyp7Y5qJH  ($99/mo)
+  STRIPE_SECRET_KEY        sk_live_...
+  STRIPE_WEBHOOK_SECRET    whsec_...
+  STRIPE_PRO_PRICE_ID      price_1TWTJz1C3cijZqBOyfX4VwHC   ($19.00/mo)
+  STRIPE_PRO_PLUS_PRICE_ID price_1TVNfH1C3cijZqBOyp7Y5qJH   ($99/mo)
 """
 
 import json as _json
@@ -23,7 +28,10 @@ import os
 import stripe
 import resend
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
+
+from auth import mask_email, read_session_customer_id, set_session_cookie
+from cache import upsert_user
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -36,6 +44,14 @@ PRICE_IDS = {
 }
 
 APP_URL = os.getenv("APP_URL", "https://www.edgarwolf.com")
+
+
+def _tier_from_price_id(price_id: str) -> str:
+    if price_id == PRICE_IDS["pro_plus"]:
+        return "pro_plus"
+    if price_id == PRICE_IDS["pro"]:
+        return "pro"
+    return ""
 
 
 @router.post("/checkout/session")
@@ -65,127 +81,19 @@ async def create_checkout_session(request: Request):
         raise HTTPException(status_code=502, detail="Failed to create checkout session")
 
 
-@router.get("/subscription/status")
-async def subscription_status(session_id: str = ""):
-    """
-    Verify a Stripe checkout session and return the active subscription tier.
-    Returns {"tier": "standard"|"pro"|"pro_plus", "label": "Standard"|"Pro"|"Pro+"}.
-    """
-    if not session_id or not stripe.api_key:
-        return {"tier": "standard", "label": "Standard"}
-
-    try:
-        session = stripe.checkout.Session.retrieve(
-            session_id,
-            expand=["subscription", "subscription.items.data.price"],
-        )
-        sub = session.get("subscription") if isinstance(session, dict) else session.subscription
-        if sub is None:
-            return {"tier": "standard", "label": "Standard"}
-
-        status = sub.get("status") if isinstance(sub, dict) else sub.status
-        if status != "active":
-            return {"tier": "standard", "label": "Standard"}
-
-        items = (sub.get("items", {}).get("data", []) if isinstance(sub, dict)
-                 else sub.items.data)
-        price_id = ""
-        if items:
-            p = items[0].get("price", {}) if isinstance(items[0], dict) else items[0].price
-            price_id = p.get("id", "") if isinstance(p, dict) else p.id
-
-        customer_id = session.get("customer") if isinstance(session, dict) else session.customer
-
-        if price_id == PRICE_IDS["pro_plus"]:
-            return {"tier": "pro_plus", "label": "Pro+", "customer_id": customer_id or ""}
-        if price_id == PRICE_IDS["pro"]:
-            return {"tier": "pro", "label": "Pro", "customer_id": customer_id or ""}
-
-        return {"tier": "standard", "label": "Standard", "customer_id": ""}
-
-    except stripe.StripeError as e:
-        logger.error("Stripe error checking subscription status: %s", e)
-        return {"tier": "standard", "label": "Standard", "customer_id": ""}
-
-
-@router.get("/subscription/restore")
-async def restore_subscription(email: str = ""):
-    """
-    Look up an active subscription by customer email.
-    Returns {tier, label, customer_id} so the frontend can store the customer_id
-    and re-verify on future loads without the original checkout session_id.
-    """
-    if not email or not stripe.api_key:
-        return {"tier": "standard", "label": "Standard", "customer_id": ""}
-
-    try:
-        customers = stripe.Customer.search(query=f"email:'{email.strip()}'", limit=5)
-        results = customers.get("data", []) if isinstance(customers, dict) else customers.data
-        if not results:
-            return {"tier": "standard", "label": "Standard", "customer_id": ""}
-
-        for customer in results:
-            customer_id = customer.get("id") if isinstance(customer, dict) else customer.id
-            subs = stripe.Subscription.list(customer=customer_id, status="active", limit=5,
-                                            expand=["data.items.data.price"])
-            sub_list = subs.get("data", []) if isinstance(subs, dict) else subs.data
-            for sub in sub_list:
-                items = (sub.get("items", {}).get("data", []) if isinstance(sub, dict)
-                         else sub.items.data)
-                if not items:
-                    continue
-                p = items[0].get("price", {}) if isinstance(items[0], dict) else items[0].price
-                price_id = p.get("id", "") if isinstance(p, dict) else p.id
-                if price_id == PRICE_IDS["pro_plus"]:
-                    return {"tier": "pro_plus", "label": "Pro+", "customer_id": customer_id}
-                if price_id == PRICE_IDS["pro"]:
-                    return {"tier": "pro", "label": "Pro", "customer_id": customer_id}
-
-        return {"tier": "standard", "label": "Standard", "customer_id": ""}
-
-    except stripe.StripeError as e:
-        logger.error("Stripe error restoring subscription: %s", e)
-        return {"tier": "standard", "label": "Standard", "customer_id": ""}
-
-
-@router.get("/subscription/status-by-customer")
-async def subscription_status_by_customer(customer_id: str = ""):
-    """Verify an active subscription by Stripe customer ID (used after email-based restore)."""
-    if not customer_id or not stripe.api_key:
-        return {"tier": "standard", "label": "Standard"}
-
-    try:
-        subs = stripe.Subscription.list(customer=customer_id, status="active", limit=5,
-                                        expand=["data.items.data.price"])
-        sub_list = subs.get("data", []) if isinstance(subs, dict) else subs.data
-        for sub in sub_list:
-            items = (sub.get("items", {}).get("data", []) if isinstance(sub, dict)
-                     else sub.items.data)
-            if not items:
-                continue
-            p = items[0].get("price", {}) if isinstance(items[0], dict) else items[0].price
-            price_id = p.get("id", "") if isinstance(p, dict) else p.id
-            if price_id == PRICE_IDS["pro_plus"]:
-                return {"tier": "pro_plus", "label": "Pro+"}
-            if price_id == PRICE_IDS["pro"]:
-                return {"tier": "pro", "label": "Pro"}
-        return {"tier": "standard", "label": "Standard"}
-
-    except stripe.StripeError as e:
-        logger.error("Stripe error checking status by customer: %s", e)
-        return {"tier": "standard", "label": "Standard"}
-
-
 @router.post("/billing/portal")
 async def billing_portal(request: Request):
+    """Create a Stripe Customer Portal session.
+
+    The customer_id is read from the authenticated session cookie — never
+    from the request body — so a third party cannot open the portal for an
+    arbitrary customer.
     """
-    Create a Stripe Customer Portal session for subscription self-management
-    (cancel, update payment method, view invoices). Returns a redirect URL.
-    """
-    body = await request.json()
-    customer_id = body.get("customer_id", "")
-    if not customer_id or not stripe.api_key:
-        raise HTTPException(status_code=400, detail="customer_id required")
+    customer_id = read_session_customer_id(request)
+    if not customer_id:
+        raise HTTPException(status_code=401, detail="Sign in required")
+    if not stripe.api_key:
+        raise HTTPException(status_code=503, detail="Payments not configured")
     try:
         session = stripe.billing_portal.Session.create(
             customer=customer_id,
@@ -248,9 +156,9 @@ def _send_welcome_email(to_email: str, tier: str) -> None:
             "subject": f"Welcome to EdgarWolf {tier_label}",
             "html": html,
         })
-        logger.info("EVENT welcome_email_sent email=%s tier=%s", to_email, tier)
+        logger.info("EVENT welcome_email_sent email=%s tier=%s", mask_email(to_email), tier)
     except Exception as e:
-        logger.error("Failed to send welcome email to %s: %s", to_email, e)
+        logger.error("Failed to send welcome email to %s: %s", mask_email(to_email), e)
 
 
 @router.post("/webhook/stripe")
@@ -262,23 +170,31 @@ async def stripe_webhook(request: Request):
     if not webhook_secret:
         logger.error("STRIPE_WEBHOOK_SECRET not configured — rejecting webhook")
         raise HTTPException(status_code=500, detail="Webhook not configured")
-    else:
-        try:
-            event = stripe.Webhook.construct_event(payload, sig, webhook_secret)
-        except stripe.SignatureVerificationError:
-            logger.warning("Stripe webhook signature verification failed")
-            raise HTTPException(status_code=400, detail="Invalid signature")
+
+    try:
+        event = stripe.Webhook.construct_event(payload, sig, webhook_secret)
+    except stripe.SignatureVerificationError:
+        logger.warning("Stripe webhook signature verification failed")
+        raise HTTPException(status_code=400, detail="Invalid signature")
 
     if event.type == "checkout.session.completed":
         session = event.data.object
-        customer_email = session.get("customer_details", {}).get("email", "unknown")
+        customer_email = session.get("customer_details", {}).get("email", "")
+        customer_id = session.get("customer", "")
         tier = session.get("metadata", {}).get("tier", "unknown")
         amount = session.get("amount_total", 0)
         logger.info(
-            "EVENT subscription_started email=%s tier=%s amount=%s session=%s",
-            customer_email, tier, amount, session.get("id")
+            "EVENT subscription_started email=%s tier=%s amount=%s session=%s customer=%s",
+            mask_email(customer_email), tier, amount, session.get("id"), customer_id,
         )
-        if customer_email and customer_email != "unknown" and tier in ("pro", "pro_plus"):
+
+        if customer_id and customer_email and tier in ("pro", "pro_plus"):
+            # Webhook is the canonical place to persist the user record.
+            # /watchlist/sync no longer accepts an email override.
+            try:
+                upsert_user(customer_id, customer_email, tier)
+            except Exception as exc:
+                logger.error("upsert_user failed for customer=%s: %s", customer_id, exc)
             _send_welcome_email(customer_email, tier)
 
     elif event.type == "customer.subscription.deleted":
@@ -299,7 +215,7 @@ def _script_safe_json(value: str) -> str:
     string containing '</script>' will end the script tag and allow HTML
     injection. We additionally escape '<', '>', and '&' as Unicode sequences
     — JavaScript decodes these back to the original characters inside string
-    literals, but the HTML parser sees them as harmless data.
+    literals, but the HTML parser sees them as inert data.
     """
     return (
         _json.dumps(value)
@@ -309,17 +225,58 @@ def _script_safe_json(value: str) -> str:
     )
 
 
+def _resolve_session_customer(session_id: str) -> tuple[str, str]:
+    """Look up a Stripe checkout session and return (customer_id, tier).
+
+    Returns ("", "") if the session is missing, not paid, or Stripe is down.
+    Used by /success to set the auth cookie after a successful checkout.
+    """
+    if not session_id or not stripe.api_key:
+        return "", ""
+    try:
+        session = stripe.checkout.Session.retrieve(
+            session_id,
+            expand=["subscription", "subscription.items.data.price"],
+        )
+        status = session.get("status") if isinstance(session, dict) else session.status
+        if status != "complete":
+            return "", ""
+        customer_id = session.get("customer") if isinstance(session, dict) else session.customer
+        sub = session.get("subscription") if isinstance(session, dict) else session.subscription
+        if not customer_id or sub is None:
+            return "", ""
+        sub_status = sub.get("status") if isinstance(sub, dict) else sub.status
+        if sub_status != "active":
+            return "", ""
+        items = (sub.get("items", {}).get("data", []) if isinstance(sub, dict)
+                 else sub.items.data)
+        if not items:
+            return customer_id, ""
+        p = items[0].get("price", {}) if isinstance(items[0], dict) else items[0].price
+        price_id = p.get("id", "") if isinstance(p, dict) else p.id
+        return customer_id, _tier_from_price_id(price_id)
+    except stripe.StripeError as exc:
+        logger.error("Stripe error in /success session lookup: %s", exc)
+        return "", ""
+
+
 @router.get("/success")
 async def payment_success(session_id: str = "", tier: str = "pro"):
+    """Stripe redirects here after a successful payment.
+
+    On a valid completed session, sets the httpOnly session cookie containing
+    the customer_id. The frontend then calls /auth/whoami to recover tier on
+    subsequent loads — no client-side customer_id storage required.
     """
-    Stripe redirects here after a successful payment.
-    Returns a minimal HTML page that stores the tier in localStorage
-    and redirects the user back to the app.
-    """
-    from fastapi.responses import HTMLResponse
     if tier not in ("pro", "pro_plus"):
         tier = "pro"
     tier_label = "Pro+" if tier == "pro_plus" else "Pro"
+
+    customer_id, verified_tier = _resolve_session_customer(session_id)
+    if verified_tier in ("pro", "pro_plus"):
+        tier = verified_tier
+        tier_label = "Pro+" if tier == "pro_plus" else "Pro"
+
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -343,12 +300,11 @@ async def payment_success(session_id: str = "", tier: str = "pro"):
   <script>
     localStorage.setItem('edgarwolf_tier', {_script_safe_json(tier)});
     localStorage.setItem('edgarwolf_tier_label', {_script_safe_json(tier_label)});
-    localStorage.setItem('edgarwolf_session', {_script_safe_json(session_id)});
   </script>
 </head>
 <body>
   <div class="card">
-    <div class="check">✓</div>
+    <div class="check">&#10003;</div>
     <div class="tier">{tier_label}</div>
     <h1>You're all set!</h1>
     <p>Your EdgarWolf {tier_label} subscription is active. Thank you for supporting the product.</p>
@@ -356,4 +312,8 @@ async def payment_success(session_id: str = "", tier: str = "pro"):
   </div>
 </body>
 </html>"""
-    return HTMLResponse(content=html)
+
+    response = HTMLResponse(content=html)
+    if customer_id:
+        set_session_cookie(response, customer_id)
+    return response

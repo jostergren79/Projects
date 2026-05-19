@@ -17,6 +17,7 @@ import resend
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse
 
+from auth import mask_email
 from cache import add_digest_subscriber, remove_digest_subscriber
 
 router = APIRouter()
@@ -64,9 +65,9 @@ def _send_digest_welcome(to_email: str) -> None:
             "subject": "Welcome to the EdgarWolf Filing Stress digest",
             "html": html,
         })
-        logger.info("EVENT digest_welcome_sent email=%s", to_email)
+        logger.info("EVENT digest_welcome_sent email=%s", mask_email(to_email))
     except Exception as e:
-        logger.error("Failed to send digest welcome to %s: %s", to_email, e)
+        logger.error("Failed to send digest welcome to %s: %s", mask_email(to_email), e)
 
 
 @router.post("/digest/subscribe")
@@ -79,7 +80,7 @@ async def digest_subscribe(request: Request):
         raise HTTPException(status_code=400, detail="Please enter a valid email address.")
 
     is_new = add_digest_subscriber(email, source)
-    logger.info("EVENT digest_signup email=%s source=%s new=%s", email, source, is_new)
+    logger.info("EVENT digest_signup email=%s source=%s new=%s", mask_email(email), source, is_new)
 
     if is_new:
         _send_digest_welcome(email)
@@ -92,7 +93,7 @@ async def digest_unsubscribe(email: str = ""):
     email = email.strip().lower()
     if email and _EMAIL_RE.match(email):
         removed = remove_digest_subscriber(email)
-        logger.info("EVENT digest_unsubscribe email=%s removed=%s", email, removed)
+        logger.info("EVENT digest_unsubscribe email=%s removed=%s", mask_email(email), removed)
     else:
         removed = False
 

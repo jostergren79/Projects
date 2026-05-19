@@ -2,22 +2,28 @@
 Watchlist API — server-side persistence for Pro/Pro+ users.
 
 Endpoints:
-  GET    /watchlist              → fetch all items for a customer
+  GET    /watchlist              → fetch all items for the signed-in customer
   POST   /watchlist              → add a company
   DELETE /watchlist/{cik}        → remove a company
   POST   /watchlist/sync         → bulk-sync from localStorage (first Pro login)
 
-Authentication: all endpoints require the X-Customer-Id header (Stripe customer ID,
-e.g. cus_xxxxxxxx). The customer is validated against Stripe on first request and
-the result is cached in SQLite for 1 hour — so Stripe is not hit on every call.
+Authentication: customer_id is read from the signed httpOnly session cookie
+set by /auth/verify or /success. The Stripe subscription is verified on the
+first request and the result is cached in SQLite for 1 hour — so Stripe is
+not hit on every call.
+
+Note: /watchlist/sync no longer accepts an `email` field. The user's email
+is set canonically via the Stripe webhook (checkout.session.completed); the
+old email-override path was an alert-reroute attack surface.
 """
 
 import logging
 import os
 
 import stripe
-from fastapi import APIRouter, HTTPException, Header, Request
+from fastapi import APIRouter, HTTPException, Request
 
+from auth import read_session_customer_id
 from cache import (
     add_to_watchlist,
     get_cached_session_tier,
@@ -25,7 +31,6 @@ from cache import (
     get_watchlist_count,
     remove_from_watchlist,
     store_cached_session_tier,
-    upsert_user,
 )
 
 router = APIRouter()
@@ -38,30 +43,29 @@ _PRICE_IDS = {
     "pro_plus": os.getenv("STRIPE_PRO_PLUS_PRICE_ID", "price_1TVNfH1C3cijZqBOyp7Y5qJH"),
 }
 
-# Cache key prefix — avoids collision with session-id keys in session_tier_cache
 _CUST_PREFIX = "cust:"
 WATCHLIST_LIMIT = 50
 
 
-def _validate_customer(customer_id: str) -> str:
+def _require_customer(request: Request) -> str:
+    """Read the signed session cookie and return the customer_id.
+
+    Raises 401 if no cookie is present, 403 if the customer no longer has an
+    active Pro/Pro+ subscription, 502 if Stripe is unreachable.
     """
-    Confirm the customer has an active Pro or Pro+ subscription.
-    Returns the tier string. Raises 401/403/502 on failure.
-    Result is cached in SQLite for 1 hour (reuses session_tier_cache table).
-    """
-    if not customer_id or not customer_id.startswith("cus_"):
-        raise HTTPException(status_code=401, detail="X-Customer-Id header required")
+    customer_id = read_session_customer_id(request)
+    if not customer_id:
+        raise HTTPException(status_code=401, detail="Sign in required")
 
     cache_key = f"{_CUST_PREFIX}{customer_id}"
     cached = get_cached_session_tier(cache_key)
     if cached:
-        return cached
+        return customer_id
 
     if not stripe.api_key:
-        # Dev mode — no Stripe key configured, accept any cus_ id
         logger.warning("No STRIPE_SECRET_KEY — skipping customer validation in dev")
         store_cached_session_tier(cache_key, "pro")
-        return "pro"
+        return customer_id
 
     try:
         subs = stripe.Subscription.list(
@@ -83,10 +87,10 @@ def _validate_customer(customer_id: str) -> str:
             price_id = p.get("id", "") if isinstance(p, dict) else p.id
             if price_id == _PRICE_IDS["pro_plus"]:
                 store_cached_session_tier(cache_key, "pro_plus")
-                return "pro_plus"
+                return customer_id
             if price_id == _PRICE_IDS["pro"]:
                 store_cached_session_tier(cache_key, "pro")
-                return "pro"
+                return customer_id
 
         raise HTTPException(status_code=403, detail="No active Pro or Pro+ subscription")
 
@@ -100,76 +104,72 @@ def _validate_customer(customer_id: str) -> str:
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @router.get("/watchlist")
-async def watchlist_get(x_customer_id: str = Header(default="")):
+async def watchlist_get(request: Request):
     """Return all watchlist items for the authenticated customer."""
-    _validate_customer(x_customer_id)
-    items = get_watchlist(x_customer_id)
+    customer_id = _require_customer(request)
+    items = get_watchlist(customer_id)
     return {"items": items, "count": len(items), "limit": WATCHLIST_LIMIT}
 
 
 @router.post("/watchlist")
-async def watchlist_add(request: Request, x_customer_id: str = Header(default="")):
+async def watchlist_add(request: Request):
     """Add a company to the watchlist."""
-    _validate_customer(x_customer_id)
+    customer_id = _require_customer(request)
     body = await request.json()
     cik    = str(body.get("cik",    "")).strip()
     ticker = str(body.get("ticker", "")).strip()
     name   = str(body.get("name",   "")).strip()
     if not cik:
         raise HTTPException(status_code=400, detail="cik is required")
-    if get_watchlist_count(x_customer_id) >= WATCHLIST_LIMIT:
+    if get_watchlist_count(customer_id) >= WATCHLIST_LIMIT:
         raise HTTPException(
             status_code=422,
             detail=f"Watchlist limit of {WATCHLIST_LIMIT} companies reached. Contact support to increase.",
         )
-    add_to_watchlist(x_customer_id, cik, ticker, name)
-    logger.info("watchlist_add customer=%s cik=%s ticker=%s", x_customer_id, cik, ticker)
+    add_to_watchlist(customer_id, cik, ticker, name)
+    logger.info("watchlist_add customer=%s cik=%s ticker=%s", customer_id, cik, ticker)
     return {"ok": True}
 
 
 @router.delete("/watchlist/{cik}")
-async def watchlist_remove(cik: str, x_customer_id: str = Header(default="")):
+async def watchlist_remove(cik: str, request: Request):
     """Remove a company from the watchlist."""
-    _validate_customer(x_customer_id)
-    remove_from_watchlist(x_customer_id, cik)
-    logger.info("watchlist_remove customer=%s cik=%s", x_customer_id, cik)
+    customer_id = _require_customer(request)
+    remove_from_watchlist(customer_id, cik)
+    logger.info("watchlist_remove customer=%s cik=%s", customer_id, cik)
     return {"ok": True}
 
 
 @router.post("/watchlist/sync")
-async def watchlist_sync(request: Request, x_customer_id: str = Header(default="")):
-    """
-    Bulk-sync localStorage items to the server.
+async def watchlist_sync(request: Request):
+    """Bulk-sync localStorage items to the server.
+
     Called once when a user first signs in on a new device or after upgrading.
     Items already on the server are skipped (INSERT OR IGNORE semantics).
-    Optionally accepts {email} to register the user record for future alert delivery.
+
+    The user's email is NOT taken from the request body — it is set canonically
+    by the Stripe webhook on checkout.session.completed.
     """
-    _validate_customer(x_customer_id)
+    customer_id = _require_customer(request)
     body  = await request.json()
     items = body.get("items", [])
-    email = str(body.get("email", "")).strip()
 
     if not isinstance(items, list):
         raise HTTPException(status_code=400, detail="items must be a list")
 
-    # Register / update user email if provided
-    if email:
-        tier = get_cached_session_tier(f"{_CUST_PREFIX}{x_customer_id}") or "pro"
-        upsert_user(x_customer_id, email, tier)
-
-    existing_ciks = {i["cik"] for i in get_watchlist(x_customer_id)}
+    existing_ciks = {i["cik"] for i in get_watchlist(customer_id)}
     synced = 0
     for item in items:
         cik = str(item.get("cik", "")).strip()
         if not cik or cik in existing_ciks:
             continue
         add_to_watchlist(
-            x_customer_id,
+            customer_id,
             cik,
             str(item.get("ticker", "")).strip(),
             str(item.get("name",   "")).strip(),
         )
         synced += 1
 
-    logger.info("watchlist_sync customer=%s synced=%d email=%s", x_customer_id, synced, email or "none")
+    logger.info("watchlist_sync customer=%s synced=%d", customer_id, synced)
     return {"ok": True, "synced": synced}

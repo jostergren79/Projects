@@ -13,7 +13,8 @@ SEC EDGAR financial data and anomaly detection tool. Pulls data directly from pu
 - **Exception flags** — Z-score deviations on gross margin, operating margin, net margin, revenue YoY
 - **Filing Stress Score** — 0–100 composite of margin, growth, and filing-behavior signals
 - **Peer comparison, segment breakdown, source-filing links, natural-language summary**
-- **Watchlist** — server-side for Pro/Pro+ (SQLite, keyed by Stripe `customer_id`), localStorage for Standard
+- **Watchlist** — server-side for Pro/Pro+ (SQLite, keyed by Stripe `customer_id` resolved server-side from the session cookie), localStorage for Standard
+- **Magic-link sign-in** — paying users restore access from any device via a short-lived signed email link; session is an httpOnly cookie, customer_id never reaches the frontend
 - **CSV / JSON export** (Pro/Pro+)
 - **Email alerts** — hourly M–F 8 AM–6 PM ET, fires on new 10-Q / 10-K / 8-K + anomaly signal (Pro+, LIVE)
 - **Free-tier weekly digest** — email capture live; Sunday send job pending
@@ -77,13 +78,15 @@ Then open http://127.0.0.1:8000. Dev tier bypass: `?dev_tier=pro` (localhost onl
 |------|---------|
 | `main.py` | FastAPI app, middleware, security headers, rate limiter, routing |
 | `cache.py` | SQLite cache + `watchlists`, `users`, `digest_subscribers` tables |
+| `auth.py` | Magic-link HMAC token mint/verify + session cookie helpers + `mask_email` |
 | `edgar_client.py` | SEC EDGAR HTTP client, rate limiter, explicit User-Agent |
 | `scheduler.py` | Hourly email-alert job (Pro+) — new filings + anomaly signal |
 | `routers/financial_metrics.py` | XBRL concept selection, YTD normalization, margins |
 | `routers/anomaly_flags.py` | Z-score exception flags |
 | `routers/dashboard.py` | Aggregated single-call endpoint |
-| `routers/checkout.py` | Stripe checkout, webhooks, subscription status, customer portal |
-| `routers/watchlist.py` | Server-side watchlist CRUD (Pro/Pro+ only) |
+| `routers/checkout.py` | Stripe checkout, webhooks, post-payment cookie issuance, billing portal |
+| `routers/auth_router.py` | Magic-link auth — `/auth/request`, `/auth/verify`, `/auth/logout`, `/auth/whoami` |
+| `routers/watchlist.py` | Server-side watchlist CRUD (Pro/Pro+ only, cookie-authenticated) |
 | `routers/alerts.py` | Pro+ email-alert preferences |
 | `routers/digest.py` | Free-tier digest signup, welcome email, unsubscribe |
 | `routers/feed.py` | Recent SEC filers for signal board |
@@ -121,8 +124,10 @@ Set in the Railway Variables panel. See `edgar-api/.env.production.example` for 
 Notable variables:
 
 - `SEC_USER_AGENT`, `SEC_REQUIRE_EXPLICIT_USER_AGENT=true` — SEC compliance
-- `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PRO`, `STRIPE_PRICE_PRO_PLUS`
-- `RESEND_API_KEY` — welcome + alert + digest emails
+- `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRO_PRICE_ID`, `STRIPE_PRO_PLUS_PRICE_ID`
+- `MAGIC_LINK_SECRET` — HMAC key for magic-link tokens + session cookies. Generate with `python -c 'import secrets; print(secrets.token_urlsafe(48))'`
+- `APP_URL` — public site URL (`https://www.edgarwolf.com` in prod). Controls magic-link URLs and the cookie `Secure` flag.
+- `RESEND_API_KEY` — welcome + alert + digest + magic-link emails
 - `POSTHOG_KEY` — exposed to frontend via `/config.js` (no key committed)
 - `DEV_SECRET` — gates `/test/*` endpoints in production
 
@@ -141,7 +146,9 @@ cd edgar-api/postman
 
 ## Security
 
-See [`SECURITY.md`](SECURITY.md) for the full posture document. Highlights as of v1.5.5:
+See [`SECURITY.md`](SECURITY.md) for the full posture document. Highlights as of v1.6.0:
+
+- Magic-link sign-in (HMAC-SHA256, 15-min TTL), httpOnly Secure SameSite=Lax session cookie — customer_id never reaches the frontend
 
 - Full browser security header set (CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, HSTS)
 - Proxy-aware rate limiting (200/min per real client IP) on all public endpoints
