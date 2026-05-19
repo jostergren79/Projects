@@ -17,6 +17,7 @@ Environment variables required (set in Railway Variables panel, never in code):
   STRIPE_PRO_PLUS_PRICE_ID price_1TVNfH1C3cijZqBOyp7Y5qJH  ($99/mo)
 """
 
+import json as _json
 import logging
 import os
 import stripe
@@ -259,14 +260,8 @@ async def stripe_webhook(request: Request):
     webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET", "")
 
     if not webhook_secret:
-        # No webhook secret configured — accept but log a warning.
-        logger.warning("STRIPE_WEBHOOK_SECRET not set; skipping signature verification")
-        try:
-            event = stripe.Event.construct_from(
-                __import__("json").loads(payload), stripe.api_key
-            )
-        except Exception as e:
-            raise HTTPException(status_code=400, detail=f"Invalid payload: {e}")
+        logger.error("STRIPE_WEBHOOK_SECRET not configured — rejecting webhook")
+        raise HTTPException(status_code=500, detail="Webhook not configured")
     else:
         try:
             event = stripe.Webhook.construct_event(payload, sig, webhook_secret)
@@ -305,6 +300,8 @@ async def payment_success(session_id: str = "", tier: str = "pro"):
     and redirects the user back to the app.
     """
     from fastapi.responses import HTMLResponse
+    if tier not in ("pro", "pro_plus"):
+        tier = "pro"
     tier_label = "Pro+" if tier == "pro_plus" else "Pro"
     html = f"""<!DOCTYPE html>
 <html lang="en">
@@ -327,9 +324,9 @@ async def payment_success(session_id: str = "", tier: str = "pro"):
     a:hover {{ filter: brightness(1.1); }}
   </style>
   <script>
-    localStorage.setItem('edgarwolf_tier', '{tier}');
-    localStorage.setItem('edgarwolf_tier_label', '{tier_label}');
-    localStorage.setItem('edgarwolf_session', '{session_id}');
+    localStorage.setItem('edgarwolf_tier', {_json.dumps(tier)});
+    localStorage.setItem('edgarwolf_tier_label', {_json.dumps(tier_label)});
+    localStorage.setItem('edgarwolf_session', {_json.dumps(session_id)});
   </script>
 </head>
 <body>

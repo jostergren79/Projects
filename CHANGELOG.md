@@ -10,6 +10,26 @@ Versioning follows [Semantic Versioning](https://semver.org/):
 
 ---
 
+## [1.5.4] — 2026-05-18
+
+### Security
+Comprehensive security review and hardening pass. See `SECURITY.md` for the full security posture document.
+
+- **Fixed reflected XSS on `/success` page** — the Stripe redirect target was interpolating the `session_id` and `tier` query parameters directly into a `<script>` block. An attacker could craft a URL that executed arbitrary JavaScript in a victim's browser. All string injections now go through `json.dumps()` and `tier` is validated against an allowlist before use.
+- **Browser security headers on every response** — added `X-Frame-Options: DENY` (clickjacking), `X-Content-Type-Options: nosniff` (MIME sniffing), `Referrer-Policy: strict-origin-when-cross-origin` (URL leakage), and `Strict-Transport-Security: max-age=63072000; includeSubDomains` (HTTPS pinning).
+- **Proxy-aware rate limiting** — uvicorn now starts with `--proxy-headers --forwarded-allow-ips='*'`, so `request.client.host` reflects the real visitor IP instead of Railway's load balancer IP. Previously every visitor shared a single rate-limit bucket, rendering the limiter effectively useless.
+- **Expanded rate-limiting coverage** — `/digest/subscribe` and `/subscription/restore` now rate-limited at 200/min per IP to prevent automated email enumeration and welcome-email spam.
+- **Rate limiter no longer leaks memory** — empty per-IP windows are evicted immediately; periodic cleanup pass evicts stale IPs every 10,000 requests.
+- **Stripe webhook hardened** — the dangerous fallback that accepted unverified events when `STRIPE_WEBHOOK_SECRET` was unset has been removed. Missing secret now returns HTTP 500. Webhook signature verification is now non-optional.
+- **Frontend HTML escaping consistency** — applied `escapeAttr()` to all remaining `innerHTML` injection points that were missed in earlier passes: exception flag metric/note/severity (severity was being injected into a CSS class), provenance panel fields, trust-panel XBRL concept names, quarterly-table period strings, and segment names.
+- **`?debug=true` no longer sent in production** — added an `isDev` guard to the three frontend fetches that included it. Internal row context and concept-mapping diagnostics no longer flow to production browsers.
+- **Dev test endpoints gated by `DEV_SECRET`** — `/test/send-alert`, `/test/seed-alert-user`, and `/test/run-alert-check` now accept either localhost-origin requests OR a matching `X-Dev-Secret` header. With proxy-headers enabled, external requests can never impersonate localhost.
+
+### Added
+- **`SECURITY.md`** — full security posture document covering transport, API hardening, payments, authentication, data handling, secrets, and operational controls. Intended as a canonical reference for customers, partners, or investors asking about the site's security.
+
+---
+
 ## [1.5.3] — 2026-05-14
 
 ### Fixed

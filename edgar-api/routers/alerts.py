@@ -6,6 +6,10 @@ from cache import upsert_user, add_to_watchlist, get_all_pro_plus_watchlists
 router = APIRouter()
 
 def _is_dev(request: Request) -> bool:
+    """Allow dev endpoints via secret token (production) or localhost IP (local dev)."""
+    dev_secret = os.getenv("DEV_SECRET", "")
+    if dev_secret:
+        return request.headers.get("X-Dev-Secret", "") == dev_secret
     host = request.client.host if request.client else ""
     return host in ("127.0.0.1", "::1", "localhost")
 

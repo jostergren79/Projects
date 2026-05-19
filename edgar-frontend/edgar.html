@@ -728,6 +728,7 @@
       ? window.location.origin
       : '';
     const API = apiOverride || window.EDGAR_API_BASE || inferredApiBase;
+    const isDev = inferredApiBase !== '';
     let revChart, marginChart;
     let currentCompany = null;
     let currentMetrics = null;
@@ -1354,7 +1355,7 @@
       try {
         const [objectRes, dashRes] = await Promise.all([
           fetch(`${API}/company/object/${cik}`),
-          fetch(`${API}/company/${cik}/dashboard?debug=true`, { headers: sessionHeaders() }),
+          fetch(`${API}/company/${cik}/dashboard${isDev ? '?debug=true' : ''}`, { headers: sessionHeaders() }),
         ]);
         const companyObject = objectRes.ok ? await objectRes.json() : null;
         const dash = dashRes.ok ? await dashRes.json() : {};
@@ -1513,7 +1514,7 @@
         // Single aggregated call replaces the previous 4-5 parallel requests.
         const [objectRes, dashRes] = await Promise.all([
           fetch(`${API}/company/object/${cik}`),
-          fetch(`${API}/company/${cik}/dashboard?debug=true`, { headers: sessionHeaders() }),
+          fetch(`${API}/company/${cik}/dashboard${isDev ? '?debug=true' : ''}`, { headers: sessionHeaders() }),
         ]);
 
         const companyObject = objectRes.ok ? await objectRes.json() : null;
@@ -1770,7 +1771,7 @@
         <div class="trust-item">
           <div class="label">${label}</div>
           <div class="value">${sourceLabel(source)}</div>
-          <div class="muted">Concept: ${concept || 'n/a'}</div>
+          <div class="muted">Concept: ${escapeAttr(concept || 'n/a')}</div>
         </div>
       `).join('');
     }
@@ -1846,10 +1847,10 @@
       const row = dbg.row_context || {};
 
       details.innerHTML = `
-        <div><span class="muted">Filed:</span>${selected.filed || 'n/a'} <span class="muted">Form:</span>${selected.form || 'n/a'}</div>
-        <div><span class="muted">Context Period:</span>${row.period || 'n/a'} <span class="muted">Start:</span>${row.start || 'n/a'}</div>
-        <div><span class="muted">Fiscal:</span>${row.fy || 'n/a'} ${row.fp || ''} <span class="muted">Duration:</span>${row.duration_days ?? 'n/a'} days</div>
-        <div><span class="muted">Gross Source:</span>${sourceLabel(dbg.gross_profit_source)}</div>
+        <div><span class="muted">Filed:</span>${escapeAttr(selected.filed || 'n/a')} <span class="muted">Form:</span>${escapeAttr(selected.form || 'n/a')}</div>
+        <div><span class="muted">Context Period:</span>${escapeAttr(row.period || 'n/a')} <span class="muted">Start:</span>${escapeAttr(row.start || 'n/a')}</div>
+        <div><span class="muted">Fiscal:</span>${escapeAttr(row.fy || 'n/a')} ${escapeAttr(row.fp || '')} <span class="muted">Duration:</span>${escapeAttr(String(row.duration_days ?? 'n/a'))} days</div>
+        <div><span class="muted">Gross Source:</span>${escapeAttr(sourceLabel(dbg.gross_profit_source))}</div>
       `;
     }
 
@@ -1889,7 +1890,7 @@
           const res = await fetch(`${API}/company/resolve?q=${encodeURIComponent(t)}&suggestions=3`);
           if (!res.ok) continue;
           const r = await res.json();
-          const mRes = await fetch(`${API}/company/${r.company.cik}/metrics?quarters=1&debug=true`);
+          const mRes = await fetch(`${API}/company/${r.company.cik}/metrics?quarters=1${isDev ? '&debug=true' : ''}`);
           if (!mRes.ok) continue;
           const m = await mRes.json();
           const p = m.periods?.[0] || {};
@@ -2041,9 +2042,9 @@
           flagList.innerHTML = '<div class="flag-clean">✓ No statistical anomalies detected vs. trailing history</div>';
         } else {
           flagList.innerHTML = flags.flags.map(f => `
-            <div class="flag-badge ${f.severity}">
+            <div class="flag-badge ${escapeAttr(f.severity)}">
               <div class="flag-dot"></div>
-              <span><strong>${f.metric}</strong> — ${f.note}</span>
+              <span><strong>${escapeAttr(f.metric)}</strong> — ${escapeAttr(f.note)}</span>
             </div>`).join('');
         }
       }
@@ -2101,7 +2102,7 @@
           const barColors = ['#4f8ef7','#34d399','#fbbf24','#f87171','#a78bfa','#fb923c'];
           segBody.innerHTML = segments.segments.map((s, i) => `
             <div class="seg-row">
-              <div class="seg-name" tabindex="0" data-tip="${escapeAttr(`${s.name}: ${fmtCurrency(s.value)} (${s.share_pct?.toFixed(1) ?? '—'}% of reported segment total in the latest quarter).`)}">${s.name}</div>
+              <div class="seg-name" tabindex="0" data-tip="${escapeAttr(`${s.name}: ${fmtCurrency(s.value)} (${s.share_pct?.toFixed(1) ?? '—'}% of reported segment total in the latest quarter).`)}">${escapeAttr(s.name)}</div>
               <div class="seg-bar-wrap"><div class="seg-bar" style="width:${s.share_pct}%;background:${barColors[i % barColors.length]}"></div></div>
               <div class="seg-val">${fmtCurrency(s.value)}</div>
               <div class="seg-pct">${s.share_pct?.toFixed(1)}%</div>
@@ -2115,7 +2116,7 @@
       const tblBody = document.getElementById('tbl-body');
       if (tblBody) tblBody.innerHTML = (metrics?.periods || []).map(p => `
         <tr>
-          <td>${p.period}</td>
+          <td>${escapeAttr(p.period)}</td>
           <td>${fmtCurrency(p.revenue)}</td>
           <td class="${colorClass(p.revenue_yoy_pct)}">${fmtPct(p.revenue_yoy_pct)}</td>
           <td>${p.gross_margin_pct != null ? p.gross_margin_pct.toFixed(1) + '%' : '—'}</td>
@@ -2146,7 +2147,7 @@
       EdgarWolf &mdash; Questions or feedback? <a href="mailto:jason@edgarwolf.com">jason@edgarwolf.com</a>
       &nbsp;&middot;&nbsp; <a href="/privacy">Privacy Policy</a>
       &nbsp;&middot;&nbsp; <a href="/terms">Terms of Service</a>
-      &nbsp;&middot;&nbsp; v1.5.3
+      &nbsp;&middot;&nbsp; v1.5.4
     </div>
   </footer>
 </body>

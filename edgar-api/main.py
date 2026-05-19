@@ -82,7 +82,7 @@ from routers import (
     digest,
 )
 
-app = FastAPI(title="EDGAR Financial Metrics API", version="1.5.3", lifespan=lifespan)
+app = FastAPI(title="EDGAR Financial Metrics API", version="1.5.4", lifespan=lifespan)
 
 # ---------------------------------------------------------------------------
 # Per-IP rate limiting middleware
@@ -93,6 +93,12 @@ app = FastAPI(title="EDGAR Financial Metrics API", version="1.5.3", lifespan=lif
 _RATE_LIMIT_REQUESTS = int(os.getenv("APP_RATE_LIMIT_REQUESTS", "200"))
 _RATE_LIMIT_WINDOW   = float(os.getenv("APP_RATE_LIMIT_WINDOW_SECONDS", "60"))
 _ip_windows: dict[str, collections.deque] = {}
+_cleanup_counter = 0
+_CLEANUP_INTERVAL = 10_000
+
+# Paths subject to per-IP rate limiting.
+_RATE_LIMITED_PREFIXES = ("/company", "/feed")
+_RATE_LIMITED_EXACT    = {"/digest/subscribe", "/subscription/restore"}
 
 
 @app.middleware("http")
@@ -101,19 +107,28 @@ async def request_logger(request: Request, call_next):
     response = await call_next(request)
     elapsed = time.monotonic() - start
     logger.info("%s %s %d %.3fs", request.method, request.url.path, response.status_code, elapsed)
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
     return response
 
 
 @app.middleware("http")
 async def per_ip_rate_limit(request: Request, call_next):
+    global _cleanup_counter
     path = request.url.path
-    if path.startswith("/company") or path.startswith("/feed"):
+    rate_limited = any(path.startswith(p) for p in _RATE_LIMITED_PREFIXES) or path in _RATE_LIMITED_EXACT
+    if rate_limited:
         ip = request.client.host if request.client else "unknown"
         now = time.monotonic()
         window = _ip_windows.setdefault(ip, collections.deque())
         # Drop timestamps outside the window.
         while window and now - window[0] > _RATE_LIMIT_WINDOW:
             window.popleft()
+        if not window:
+            _ip_windows.pop(ip, None)
+            window = _ip_windows.setdefault(ip, collections.deque())
         if len(window) >= _RATE_LIMIT_REQUESTS:
             retry_after = int(_RATE_LIMIT_WINDOW - (now - window[0])) + 1
             logger.warning("Rate limit hit for IP %s on %s", ip, path)
@@ -123,6 +138,14 @@ async def per_ip_rate_limit(request: Request, call_next):
                 headers={"Retry-After": str(retry_after)},
             )
         window.append(now)
+        # Periodically evict IPs whose last request was over two windows ago.
+        _cleanup_counter += 1
+        if _cleanup_counter >= _CLEANUP_INTERVAL:
+            _cleanup_counter = 0
+            cutoff = now - _RATE_LIMIT_WINDOW * 2
+            stale = [k for k, v in list(_ip_windows.items()) if not v or v[-1] < cutoff]
+            for k in stale:
+                _ip_windows.pop(k, None)
     return await call_next(request)
 
 

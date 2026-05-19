@@ -1,6 +1,6 @@
 # EdgarWolf — Claude Context Doc
 
-**Current version: v1.5.3** (2026-05-17) — see `CHANGELOG.md` for full release history.
+**Current version: v1.5.4** (2026-05-18) — see `CHANGELOG.md` for full release history.
 
 Paste this file at the start of every Claude conversation to restore full context.
 Update metrics, version, and priorities at the end of every relevant session.
@@ -150,14 +150,16 @@ Dev tier bypass: `?dev_tier=pro` (localhost only). Amber toggle button in header
 
 ---
 
-## 9. Technical State (v1.5.3, May 17)
+## 9. Technical State (v1.5.4, May 18)
 
-Solid: rate limiting (200/min), stale cache fallback, WAL thread-safety, CIK validation, HTTP 207 on partial failures, CSP header, health endpoint, entity type detection, robots.txt, PostHog localhost guard, `subscription_success` event once per customer.
+Solid: proxy-aware rate limiting (200/min per real client IP, with memory cleanup), stale cache fallback, WAL thread-safety, CIK validation, HTTP 207 on partial failures, full browser security header set (CSP + X-Frame-Options + X-Content-Type-Options + Referrer-Policy + HSTS), Stripe webhook signature verification (hard-fails on missing secret), full HTML output encoding via escapeAttr(), debug param gated to dev only, dev test endpoints gated by DEV_SECRET, health endpoint, entity type detection, robots.txt, PostHog localhost guard, `subscription_success` event once per customer.
 
-Stripe, Watchlist API, Email alerts, QA (Postman/Newman), Railway persistent volume — all LIVE. See `DECISIONS_ARCHIVE.md` for full technical decision log.
+Stripe, Watchlist API, Email alerts, QA (Postman/Newman), Railway persistent volume — all LIVE. See `DECISIONS_ARCHIVE.md` for full technical decision log and `SECURITY.md` for full security posture.
 
 ---
 
-_Last updated: May 18, 2026 — v1.5.3_
+_Last updated: May 18, 2026 — v1.5.4_
 
 _May 18 session: Posted $UNH on X (news-driven Company Spotlight — Berkshire sold entire stake, FSS 92/100, 8-K 6 days before 10-Q). Posted $SOFI Contrarian/Green (profitable trajectory, bottom-line only — XBRL unreliable for fintechs). First StockTwits post live ($UNH Bearish). PostHog 24hr: first upgrade_modal_open (Minneapolis iPhone, $AAPL page, May 17 8:12 AM CT — warm returning lead, came back same day), Philippines = new country, $UNH clicked same day as post. Fixed signal_board_skip analytics bug — was firing 154× per board load, now fires once with aggregate stats. Trimmed context doc, created DECISIONS_ARCHIVE.md. Day 7: Builder Update — plan tomorrow morning._
+
+_May 18 session 2 (v1.5.4 — security hardening): Full security review of the codebase identified 10 issues across CRITICAL/HIGH/MEDIUM/LOW severity. All fixed and shipped in one release. Highlights: patched reflected XSS on the `/success` Stripe redirect page (session_id and tier were interpolated directly into a `<script>` tag); added the full standard set of browser security headers (X-Frame-Options, X-Content-Type-Options, Referrer-Policy, HSTS) on every response; fixed proxy-aware rate limiting by adding `--proxy-headers --forwarded-allow-ips='*'` to uvicorn so the real client IP is used instead of Railway's LB; expanded rate limiting to /digest/subscribe and /subscription/restore; hardened Stripe webhook to fail closed when secret is missing; added escapeAttr() to all remaining innerHTML injection points (flags, provenance panel, trust panel, quarterly table, segments); gated `?debug=true` to dev only; replaced IP-based dev endpoint check with `DEV_SECRET` env var. Created SECURITY.md as the canonical security posture document — organized by category, suitable to share with customers/partners/investors who ask about site security._
