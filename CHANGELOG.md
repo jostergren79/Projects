@@ -10,6 +10,13 @@ Versioning follows [Semantic Versioning](https://semver.org/):
 
 ---
 
+## [1.5.5] — 2026-05-18
+
+### Security (hotfix)
+- **Fixed incomplete XSS fix on `/success` page.** The v1.5.4 patch wrapped query-parameter values in `json.dumps()` to neutralize basic string-breakout payloads, but `json.dumps` does not escape `<` or `>`. A payload containing `</script>` would still terminate the surrounding script block and allow HTML injection. Live-site testing immediately after v1.5.4 deploy caught this. The fix is a new `_script_safe_json()` helper that additionally escapes `<`, `>`, and `&` as Unicode sequences (`<`, `>`, `&`) — JavaScript decodes these back inside string literals but the HTML parser treats them as inert data. Applied to all three `localStorage.setItem` interpolations on the success page.
+
+---
+
 ## [1.5.4] — 2026-05-18
 
 ### Security

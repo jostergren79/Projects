@@ -292,6 +292,23 @@ async def stripe_webhook(request: Request):
     return {"ok": True}
 
 
+def _script_safe_json(value: str) -> str:
+    """Encode a value for safe interpolation inside an HTML <script> block.
+
+    json.dumps alone is not sufficient: it does not escape '<' or '>', so a
+    string containing '</script>' will end the script tag and allow HTML
+    injection. We additionally escape '<', '>', and '&' as Unicode sequences
+    — JavaScript decodes these back to the original characters inside string
+    literals, but the HTML parser sees them as harmless data.
+    """
+    return (
+        _json.dumps(value)
+        .replace("<", "\\u003c")
+        .replace(">", "\\u003e")
+        .replace("&", "\\u0026")
+    )
+
+
 @router.get("/success")
 async def payment_success(session_id: str = "", tier: str = "pro"):
     """
@@ -324,9 +341,9 @@ async def payment_success(session_id: str = "", tier: str = "pro"):
     a:hover {{ filter: brightness(1.1); }}
   </style>
   <script>
-    localStorage.setItem('edgarwolf_tier', {_json.dumps(tier)});
-    localStorage.setItem('edgarwolf_tier_label', {_json.dumps(tier_label)});
-    localStorage.setItem('edgarwolf_session', {_json.dumps(session_id)});
+    localStorage.setItem('edgarwolf_tier', {_script_safe_json(tier)});
+    localStorage.setItem('edgarwolf_tier_label', {_script_safe_json(tier_label)});
+    localStorage.setItem('edgarwolf_session', {_script_safe_json(session_id)});
   </script>
 </head>
 <body>

@@ -82,7 +82,7 @@ from routers import (
     digest,
 )
 
-app = FastAPI(title="EDGAR Financial Metrics API", version="1.5.4", lifespan=lifespan)
+app = FastAPI(title="EDGAR Financial Metrics API", version="1.5.5", lifespan=lifespan)
 
 # ---------------------------------------------------------------------------
 # Per-IP rate limiting middleware

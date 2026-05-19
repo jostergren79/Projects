@@ -1,6 +1,6 @@
 # EdgarWolf — Claude Context Doc
 
-**Current version: v1.5.4** (2026-05-18) — see `CHANGELOG.md` for full release history.
+**Current version: v1.5.5** (2026-05-18) — see `CHANGELOG.md` for full release history.
 
 Paste this file at the start of every Claude conversation to restore full context.
 Update metrics, version, and priorities at the end of every relevant session.
