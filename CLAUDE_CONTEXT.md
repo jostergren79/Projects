@@ -70,7 +70,7 @@ _Update these at the end of every session._
 | MRR | $0 | May 18, 2026 |
 | Paying users | 0 | May 18, 2026 |
 | Free signups | 0 | May 18, 2026 |
-| X-attributed visits | 20+ (US, Germany, France, UK) | May 18, 2026 |
+| X-attributed visits | 20+ (US, Germany, France, UK, Philippines) | May 18, 2026 |
 | First upgrade modal open | 1 (Minneapolis, iPhone, $AAPL page, May 17 8:12 AM CT) | May 18, 2026 |
 
 ---
@@ -82,9 +82,10 @@ _Update these at the end of every session._
 - **$GIS:** FSS 100/100. Filing velocity ELEVATED. Revenue YoY -23%, 3.3 SD below avg.
 - **$UNH (May 18):** FSS 92/100 ELEVATED. 8-K filed 6 days before 10-Q. CIK 0000731766.
 - **$JACK:** FSS 92/100. Net income -$25.9M, EPS -$1.35, Revenue -12.4% YoY.
+- **$SOFI (May 18):** Contrarian/Green. Net income trajectory: -$267M (Q3 2023) → +$71M → +$202M → +$167M (Q1 2026). Four straight profitable quarters. XBRL revenue concepts unreliable for fintechs/banks — use bottom-line figures only.
 
 **Channels:**
-- **X (PRIMARY):** Personal account. 6 rotating themes: Company Spotlight, Methodology, Sector Sweep, Contrarian/Green, Builder Update, Retrospective. Days 1–6 done. Day 7 next: Retrospective or Builder Update. 4 replies/day target. Monday pre-market = peak window. CIK-direct URL on every company-specific post.
+- **X (PRIMARY):** Personal account. 6 rotating themes: Company Spotlight, Methodology, Sector Sweep, Contrarian/Green, Builder Update, Retrospective. **Day 7 next: Builder Update.** 4 replies/day target. Monday pre-market = peak window. CIK-direct URL on every company-specific post.
 - **StockTwits:** LIVE as of May 18. First post: $UNH Bearish. Sentiment tag required. Same data-forward format as X.
 - **r/SecurityAnalysis:** Post drafted, waiting on mod approval (requested May 10).
 - **Finance Substack writers:** Not started — free Pro access in exchange for mention.
@@ -102,7 +103,7 @@ _Update these at the end of every session._
 _Replace completed items each session. Keep this list short._
 
 **Immediate:**
-- [ ] Continue daily X posting — Day 7: Retrospective or Builder Update
+- [ ] Day 7 X post — Builder Update (plan in morning, fold in fresh PostHog data)
 - [ ] 4 X replies/day — active threads, still-climbing
 - [ ] Send beta invites to 2–3 crypto friends (free Pro access)
 - [ ] Identify 10 finance Substack writers, send personal outreach
@@ -159,4 +160,4 @@ Stripe, Watchlist API, Email alerts, QA (Postman/Newman), Railway persistent vol
 
 _Last updated: May 18, 2026 — v1.5.3_
 
-_May 18 session: Posted $UNH on X (Day 6, news-driven Company Spotlight — Berkshire sold entire stake, FSS 92/100 ELEVATED, 8-K 6 days before 10-Q). First StockTwits post live ($UNH Bearish). PostHog 24hr review: 101 events, first upgrade_modal_open signal (Minneapolis iPhone, $AAPL page, 8:12 AM CT May 17 — no conversion yet), $UNH click same day as post. Hottest tweet link: t.co/bY6paAnYd8 (14 sessions, drove $MELI views). $MSFT post at 1.2K views, 7 link clicks. Trimmed context doc — settled decisions moved to DECISIONS_ARCHIVE.md._
+_May 18 session: Posted $UNH on X (news-driven Company Spotlight — Berkshire sold entire stake, FSS 92/100, 8-K 6 days before 10-Q). Posted $SOFI Contrarian/Green (profitable trajectory, bottom-line only — XBRL unreliable for fintechs). First StockTwits post live ($UNH Bearish). PostHog 24hr: first upgrade_modal_open (Minneapolis iPhone, $AAPL page, May 17 8:12 AM CT — warm returning lead, came back same day), Philippines = new country, $UNH clicked same day as post. Fixed signal_board_skip analytics bug — was firing 154× per board load, now fires once with aggregate stats. Trimmed context doc, created DECISIONS_ARCHIVE.md. Day 7: Builder Update — plan tomorrow morning._
