@@ -99,6 +99,7 @@ Feature gating LIVE since May 10, 2026. Differentiation is feature **depth**, no
 
 **Channels:**
 - **X (PRIMARY):** personal account. 6 rotating themes — Company Spotlight, Methodology, Sector Sweep, Contrarian/Green, Builder Update, Retrospective. 4 replies/day target. Monday pre-market = peak window. CIK-direct URL (`?cik=<CIK>`) on every company-specific post.
+- **Sector Sweeps run (log each new one here to avoid repeats):** consumer staples / packaged food; RF + analog semis ($SWKS $QRVO $ADI $ON $MCHP, May 22 2026). Verify live data per name before drafting — z-score flags fire in BOTH directions and high FSS is often filing-velocity, not margin, driven.
 - **StockTwits:** live since May 18. Bearish/Bullish sentiment tag required. Same data-forward format as X.
 - **r/SecurityAnalysis:** post drafted, awaiting mod approval.
 - **Finance Substack writers / crypto friends:** outreach not started (free Pro / beta invites).

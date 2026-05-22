@@ -19,7 +19,7 @@ _Not refreshed this session — pull PostHog (project 424339) at next session st
 | Countries (rolling 500-event window) | 4: US, Germany, France, Philippines | May 21, 2026 |
 | First upgrade modal open | 1 (Minneapolis, iPhone, $AAPL page, May 17 8:12 AM CT) | May 18, 2026 |
 | X followers / combined 2nd-degree reach | 4 / ~10.3k combined (Ann Barbour 6.8k, Ashton ~2.3k) | May 21, 2026 |
-| Last X post | Day 9 Retrospective | May 21, 2026 |
+| Last X post | Day 10 Sector Sweep — RF/analog semis ($SWKS/$QRVO/$ADI/$ON/$MCHP), 7 tweets | May 22, 2026 |
 
 ---
 
@@ -39,7 +39,8 @@ _Replace completed items each session. Keep this list short._
 4. [ ] Trace `POST /analytics/event 400` (fires twice/page after auth) — `routers/analytics.py` validation.
 5. [ ] Short-TTL (60s) cache for the per-page Stripe re-verify in `/auth/whoami` + `/watchlist` (2 Stripe calls/page; fine at 0 users, v1.7.x ticket).
 6. [ ] Postman collection regen (still references removed `/subscription/*` + `X-Customer-Id`).
-7. [ ] **Distribution:** Day 10 X post (Sector Sweep), 4 replies/day, beta invites to crypto friends, 10 finance Substack writers, r/SecurityAnalysis when mod approves.
+7. [ ] **Day 11 X post — Company Spotlight, methodology-forward (QUEUED for tomorrow; don't draft until then).** Use ONE company as the vehicle to explain *how* EdgarWolf reads a filing: z-scores vs the company's OWN trailing 8-quarter history (MEDIUM ≥2σ, HIGH ≥3σ, fires in BOTH directions), and the Filing Stress Score as a composite — margin z-scores + filing velocity (8-K clustering / 8-K-before-10-Q timing) + XBRL coverage + peer context, not margins alone. Lead candidate: $ENPH (gross margin -3.8σ HIGH, clean data pulled May 22), but confirm against fresh data tomorrow. Pull live numbers + cross-check METHODOLOGY.md before drafting. (Builder Update + Retrospective both recently used — skip them.)
+8. [ ] **Ongoing distribution:** 4 replies/day, beta invites to crypto friends, 10 finance Substack writers, r/SecurityAnalysis when mod approves.
 
 **Open design question (parked — Jason to ratify):**
 - **Q:** Is weekly `MAGIC_LINK_SECRET` rotation the right security control?
