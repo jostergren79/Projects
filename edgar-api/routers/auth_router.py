@@ -35,6 +35,7 @@ from auth import (
     set_session_cookie,
     verify_token,
 )
+from cache import upsert_user
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -204,9 +205,24 @@ async def auth_verify(token: str = ""):
     if not customer_id:
         return HTMLResponse(content=_LINK_EXPIRED_HTML, status_code=400)
 
+    # The checkout webhook only persists users.tier for self-serve checkouts,
+    # so dashboard-created subs (comps/enterprise/manual) stay invisible to the
+    # Pro+ alert cron until the user signs in. Upsert here. The magic-link token
+    # carries only customer_id, so fetch the alert-recipient email from Stripe.
+    tier = _active_tier_for_customer(customer_id)
+    if tier:
+        try:
+            cust = stripe.Customer.retrieve(customer_id)
+            email = (cust.get("email") if isinstance(cust, dict) else cust.email) or ""
+        except stripe.StripeError as exc:
+            logger.error("Stripe customer retrieve failed for %s: %s", customer_id, exc)
+            email = ""
+        if email:
+            upsert_user(customer_id, email, tier)
+
     response = RedirectResponse(url="/?signed_in=1", status_code=303)
     set_session_cookie(response, customer_id)
-    logger.info("EVENT auth_verified customer_id=%s", customer_id)
+    logger.info("EVENT auth_verified customer_id=%s tier=%s", customer_id, tier or "none")
     return response
 
 

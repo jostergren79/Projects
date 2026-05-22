@@ -10,6 +10,21 @@ Versioning follows [Semantic Versioning](https://semver.org/):
 
 ---
 
+## [1.6.1] — 2026-05-21
+
+### Fixed
+- **`/auth/verify` now upserts the user record.** Before this, only the
+  `checkout.session.completed` webhook wrote `users.tier`. Subscriptions created
+  in the Stripe dashboard (comps, enterprise, manual) were therefore never
+  persisted locally, and the Pro+ alert cron's `WHERE tier = 'pro_plus'` filter
+  silently excluded them — so the hourly job started, found no Pro+ watchlists,
+  and exited without ever sending. On sign-in, `/auth/verify` now fetches the
+  active tier and email from Stripe and calls `upsert_user`, so any paying
+  customer who signs in becomes visible to the alert pipeline. Unblocks
+  end-to-end Pro+ email-alert delivery.
+
+---
+
 ## [1.6.0] — 2026-05-19
 
 ### Security
