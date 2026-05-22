@@ -112,7 +112,8 @@ Then open http://127.0.0.1:8000. Dev tier bypass: `?dev_tier=pro` (localhost onl
 | [`METHODOLOGY.md`](METHODOLOGY.md) | Every derived metric and scoring formula. Updated alongside any new scoring/classification/polling/trigger logic. |
 | [`SECURITY.md`](SECURITY.md) | Canonical security posture — transport, API hardening, payments, auth, data handling, secrets, ops |
 | [`CHANGELOG.md`](CHANGELOG.md) | Release history (Keep a Changelog format, SemVer) |
-| [`CLAUDE_CONTEXT.md`](CLAUDE_CONTEXT.md) | Session-restore context for Claude Code workflows |
+| [`CLAUDE.md`](CLAUDE.md) | Stable project context, rules, and the start/end session sequences (auto-loaded by Claude Code) |
+| [`STATE.md`](STATE.md) | Live state for Claude Code sessions — metrics, active priorities, next-session plan |
 | [`DECISIONS_ARCHIVE.md`](DECISIONS_ARCHIVE.md) | Settled architectural / product decisions |
 
 ---

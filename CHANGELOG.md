@@ -344,7 +344,7 @@ Initial public launch with monetization live.
 At the end of each working session:
 1. Update `CHANGELOG.md` with all changes under a new version heading.
 2. Bump `VERSION` file.
-3. Add version to `CLAUDE_CONTEXT.md` (top of doc, Current Version field).
+3. Update `STATE.md` (current version, metrics, priorities) — see the end-of-session sequence in `CLAUDE.md`.
 4. Commit: `git commit -m "Release vX.Y.Z"`
 5. Tag: `git tag -a vX.Y.Z -m "vX.Y.Z — <one-line summary>"`
 6. Push: `git push origin main --tags`

@@ -1,6 +1,6 @@
 # EdgarWolf — Decisions Archive
 
-Settled decisions that no longer need active context. Graduated from CLAUDE_CONTEXT.md.
+Settled decisions that no longer need active context. Graduated from the active-decisions list in CLAUDE.md.
 Read this only when something breaks or you're re-evaluating infrastructure.
 
 ---
