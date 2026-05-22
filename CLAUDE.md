@@ -56,7 +56,7 @@ Run these before closing out, every session:
 - Peer comparison, CSV/JSON export, Metric Trust panel, natural-language summary
 - Analytics: PostHog (US Cloud, project 424339) + Railway logs. Session recordings + heatmaps on.
 - Stripe: Pro $19/mo, Pro+ $99/mo (LIVE). Customer Portal live.
-- Email alerts (Pro+): hourly M–F 8 AM–6 PM ET cron, fires on new 10-Q/10-K/8-K + anomaly signal. **Prod-validation status tracked in STATE.md.**
+- Email alerts (Pro+): hourly M–F 8 AM–6 PM ET cron, fires on new 10-Q/10-K/8-K + anomaly signal. **LIVE — validated end-to-end in prod May 22, 2026 (scheduled cron delivered a real $CAG 8-K alert).**
 - Free-tier digest capture — email + welcome via Resend. (Weekly digest send job not yet built.)
 
 **Key files:**
@@ -84,7 +84,7 @@ Run these before closing out, every session:
 |------|-------|----------|
 | Standard | $0 | Signal board, search, KPI grid, narrative summary, 8-quarter charts, data table. Unlimited lookups. |
 | Pro | $19/mo | + Exception Flags, Filing Stress Score, Filing Signals, peer comparison, segment breakdown, source filing, server-side watchlist, CSV/JSON export. |
-| Pro+ | $99/mo | + email alerts (prod-validation status in STATE.md). |
+| Pro+ | $99/mo | + email alerts (LIVE — validated in prod May 22, 2026). |
 
 Feature gating LIVE since May 10, 2026. Differentiation is feature **depth**, not access. **$99/mo is justified only with email alerts working** — without them it's a $19 product.
 
@@ -135,4 +135,4 @@ Solid: proxy-aware rate limiting (200/min per real client IP, w/ memory cleanup)
 
 **Auth (v1.6.0):** magic-link sign-in via Resend (HMAC-SHA256, 15-min TTL) → 30-day httpOnly Secure SameSite=Lax `ew_session` cookie. customer_id never reaches the frontend. `/auth/request` always returns `{ok:true}` (anti-enumeration). Stripe lookup uses `Customer.list(email=)`, not `.search(query=)`. Email log lines masked (`j***@gmail.com`).
 
-Stripe, Watchlist API, QA (Postman/Newman), Railway persistent volume — all live. Full security posture in `SECURITY.md`; technical decision log in `DECISIONS_ARCHIVE.md`.
+Stripe, Watchlist API, Pro+ email alerts (validated end-to-end in prod May 22, 2026), QA (Postman/Newman), Railway persistent volume — all live. Full security posture in `SECURITY.md`; technical decision log in `DECISIONS_ARCHIVE.md`.
