@@ -895,6 +895,18 @@
       } catch (_) {}
     }
 
+    // Fire the conversion event exactly once, only after a real Stripe checkout.
+    // The /success page sets edgarwolf_pending_conversion (gated on a Stripe-
+    // verified active subscription); we consume it here so subscription_success
+    // reflects genuine conversions, not paid-user page loads. The flag is cleared
+    // before sending so a failed/again load can never double-count.
+    function fireConversionIfPending() {
+      const tier = localStorage.getItem('edgarwolf_pending_conversion');
+      if (!tier) return;
+      localStorage.removeItem('edgarwolf_pending_conversion');
+      trackEvent('subscription_success', { tier, source: 'checkout' });
+    }
+
     function identifyToPostHog() {
       // The frontend no longer holds the Stripe customer_id (it lives only in
       // the httpOnly ew_session cookie). Track tier as a person property on
@@ -1187,10 +1199,10 @@
         applyTierBadge(data.tier, data.label);
         identifyToPostHog();
         if (data.tier !== 'standard') {
-          if (!localStorage.getItem('subscription_success_fired')) {
-            trackEvent('subscription_success', { tier: data.tier, source: 'whoami' });
-            localStorage.setItem('subscription_success_fired', '1');
-          }
+          // Note: subscription_success is NOT fired here. Firing on every
+          // paid-tier whoami over-counts conversions (existing subscribers on a
+          // fresh browser). The real conversion is fired once from
+          // fireConversionIfPending() after a Stripe-verified checkout.
           syncWatchlistFromServer();
         }
         // Re-evaluate the digest banner now that tier + subscription state are fresh.
@@ -1453,6 +1465,7 @@
 
     document.addEventListener('DOMContentLoaded', () => {
       identifyToPostHog();
+      fireConversionIfPending();
       checkSubscriptionStatus();
       initDigestBanner();
       const params   = new URLSearchParams(window.location.search);

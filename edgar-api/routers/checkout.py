@@ -277,6 +277,15 @@ async def payment_success(session_id: str = "", tier: str = "pro"):
         tier = verified_tier
         tier_label = "Pro+" if tier == "pro_plus" else "Pro"
 
+    # Only signal a conversion to analytics when Stripe has verified the checkout
+    # session as complete with an *active* subscription. This excludes comps and
+    # trials (not "active") and unverified loads, so the frontend's
+    # subscription_success event reflects genuine paid conversions only.
+    conversion_js = (
+        f"localStorage.setItem('edgarwolf_pending_conversion', {_script_safe_json(tier)});"
+        if verified_tier in ("pro", "pro_plus") else ""
+    )
+
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -300,6 +309,7 @@ async def payment_success(session_id: str = "", tier: str = "pro"):
   <script>
     localStorage.setItem('edgarwolf_tier', {_script_safe_json(tier)});
     localStorage.setItem('edgarwolf_tier_label', {_script_safe_json(tier_label)});
+    {conversion_js}
   </script>
 </head>
 <body>
