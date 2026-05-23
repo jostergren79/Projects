@@ -8,16 +8,17 @@ Current version: **v1.7.0** (2026-05-22). Release history in `CHANGELOG.md`.
 
 ## Current metrics
 
-_Refreshed May 22 (session start). PostHog showed 6 `subscription_success` (pro_plus) since May 20 — but Stripe confirms all are the single comp account, not new customers (the event over-fires from authenticated page state; see tech debt). Real revenue unchanged._
+_Refreshed May 22 (late session, post-analytics pass). **Numbers below are external-only** — Jason's 4 own IPs (`71.34.14.90`, `97.116.24.43`, + 2 IPv6) are now filtered out in PostHog (Settings → internal/test users). PostHog's 6 `subscription_success` are still over-fire — Stripe confirms all are the single comp account, $0 real revenue (see current-state note)._
 
 | Metric | Value | Updated |
 |--------|-------|---------|
 | MRR | $0 | May 22, 2026 |
 | Paying users | 0 (+1 comp Pro+: `cus_UUN2ChsZV2aaRC`, $0 MRR) | May 22, 2026 |
-| Free signups (digest) | 0 (9 banner views, 0 signups) | May 22, 2026 |
-| X-attributed visits (PostHog, week 1) | 25 distinct visitors | May 21, 2026 |
-| Countries (rolling 500-event window) | 4: US, Germany, France, Philippines | May 21, 2026 |
-| First upgrade modal open | 1 (Minneapolis, iPhone, $AAPL page, May 17 8:12 AM CT) | May 18, 2026 |
+| Free signups (digest) | 0 (22 external banner views, 0 signups) | May 22, 2026 |
+| External engaged visitors (PostHog, Jason's IPs filtered, 30d) | 21 people / 4 countries; 18 in last 7 days | May 22, 2026 |
+| External funnel (30d) | 22 page_views → 6 company_views → 3 searches; 0 upgrade-modal, 0 watchlist | May 22, 2026 |
+| Upgrade-modal opens / watchlist adds (external) | 0 / 0 — all 6 modal opens + 5 adds were Jason's own IPs; the May 17 "first modal open" was self-generated, not a real signal | May 22, 2026 |
+| Countries | 4: US, Germany, France, Philippines | May 22, 2026 |
 | X followers / combined 2nd-degree reach | 4 / ~10.3k combined (Ann Barbour 6.8k, Ashton ~2.3k) | May 21, 2026 |
 | Last X post | Day 10 Sector Sweep — RF/analog semis ($SWKS/$QRVO/$ADI/$ON/$MCHP), 7 tweets | May 22, 2026 |
 
@@ -42,7 +43,7 @@ _Replace completed items each session. Keep this list short._
 5. [ ] Short-TTL (60s) cache for the per-page Stripe re-verify in `/auth/whoami` + `/watchlist` (2 Stripe calls/page; fine at 0 users, v1.7.x ticket).
 6. [ ] Postman collection regen (still references removed `/subscription/*` + `X-Customer-Id`).
 7. [ ] **Day 11 X post — Company Spotlight, methodology-forward (QUEUED for tomorrow; don't draft until then).** Use ONE company as the vehicle to explain *how* EdgarWolf reads a filing: z-scores vs the company's OWN trailing 8-quarter history (MEDIUM ≥2σ, HIGH ≥3σ, fires in BOTH directions), and the Filing Stress Score as a composite — margin z-scores + filing velocity (8-K clustering / 8-K-before-10-Q timing) + XBRL coverage + peer context, not margins alone. Lead candidate: $ENPH (gross margin -3.8σ HIGH, clean data pulled May 22), but confirm against fresh data tomorrow. Pull live numbers + cross-check METHODOLOGY.md before drafting. (Builder Update + Retrospective both recently used — skip them.)
-8. [ ] **Ongoing distribution:** 4 replies/day, beta invites to crypto friends, 10 finance Substack writers, r/SecurityAnalysis when mod approves.
+8. [ ] **Ongoing distribution:** 4 replies/day, beta invites to crypto friends, 10 finance Substack writers, r/SecurityAnalysis when mod approves. **Data-backed (May 22 analytics):** `?cik=` company posts are the *only* engagement driver — 6/6 external company views came from direct company-link entries; signal-board/homepage landers (15) produced **0** click-throughs. Keep every company post CIK-linked; **CPB + MSFT are proven draws.** Open Q worth a cheap test: why do homepage landers bounce without drilling into a company?
 
 **Open design question (parked — Jason to ratify):**
 - **Q:** Is weekly `MAGIC_LINK_SECRET` rotation the right security control?
@@ -52,7 +53,7 @@ _Replace completed items each session. Keep this list short._
 - [ ] Submit to SaaSWorthy, Product Hunt, G2, Capterra, AlternativeTo.
 - [ ] Expand sitemap to /privacy and /terms.
 - [ ] Chart.js defensive fix: `responsive: true, maintainAspectRatio: false` + sized wrappers.
-- [ ] Filter localhost from PostHog dashboards (Settings → Project → Test accounts).
+- [ ] PostHog: internal-user IP filter now configured (Jason's 4 IPs; IPv6 truncation typo fixed). **Remaining:** flip "Enable this filter on all new insights" ON so it auto-applies (analysis-level; historical events stay stored). Also still filter localhost.
 
 ---
 
@@ -66,6 +67,8 @@ _**Session-start verification.** Prod was healthy on v1.6.1. PostHog showed 6 `s
 
 _All three of this session's pushes are deployed + verified live: **v1.7.0** (digest + all-tier banner + one-click subscribe), the **`subscription_success` conversion fix** (fires once on Stripe-verified checkout, no bump), and the **7-day banner-dismissal TTL** (no bump). **Watch next:** the first real Sunday digest send (next Sunday 08:00 ET) — `EVENT digest_sent` in `railway logs`; and treat `subscription_success` as accurate only **after the conversion fix deployed (22:25 CDT May 22 = 03:25 UTC May 23)** — all 6 events to date predate it (latest pair 08:46 CDT / 13:46 UTC May 22) and are the comp account / over-fire, so the fix's post-deploy behavior is **still unobserved** (no real checkout has occurred since). Don't read those 6 as the fix failing._
 
-_**End-of-day verification-only check-in (22:58 CDT May 22), no code changed:** re-confirmed prod healthy on v1.7.0 (`/health` ok, `/openapi.json` = 1.7.0), all commits pushed. Independently re-verified revenue via Stripe — only 2 subscriptions ever exist, both the comp account `cus_UUN2ChsZV2aaRC` (1 active $99, 1 canceled May 10); **still $0 real MRR, 0 external paying customers.** Nothing new in PostHog since the prior session. The follow-up commit after the "End May 22 session" commit is just this clarification._
+_**End-of-day verification-only check-in (22:58 CDT May 22), no code changed:** re-confirmed prod healthy on v1.7.0 (`/health` ok, `/openapi.json` = 1.7.0), all commits pushed. Independently re-verified revenue via Stripe — only 2 subscriptions ever exist, both the comp account `cus_UUN2ChsZV2aaRC` (1 active $99, 1 canceled May 10); **still $0 real MRR, 0 external paying customers.** Nothing new in PostHog since the prior session._
 
-_Still open (carried, untouched this session): ratify the MAGIC_LINK_SECRET rotation decision; close the `customer.subscription.created/updated` webhook gap (sign-in covers it for now); reconcile the `/test/run-alert-check` 403 (cron unaffected); the `/analytics/event 400`. Non-product: still watching for any reply from ai_eng@spacex.com._
+_**Late-night analytics pass (May 22): PostHog filtered to external-only + a real-traffic read.** Configured PostHog's internal/test-user filter to exclude Jason's 4 IPs (`71.34.14.90`, `97.116.24.43`, 2 IPv6). First attempt pasted truncated IPv6 strings (literal `...`) that matched 0 events — fixed with the full addresses. Filter is analysis-level (events still stored); **"Enable on all new insights" toggle still needs flipping ON.** **External reality (Jason's IPs excluded, 30d):** 21 engaged people / 4 countries, 18 in the last 7 days — the X push is bringing real, recent humans. Funnel is shallow: 22 page_views → 6 company_views → 3 searches; **0 external upgrade-modal opens, 0 watchlist adds, 0 digest signups** (22 banner views). **Correction:** all `upgrade_modal_open` (6) + `watchlist_add` (5) came from Jason's own IPs — the May 17 "first upgrade modal open" logged as an external signal was self-generated. The 3 "external" `subscription_success` are pre-fix over-fire, not real (Stripe = $0). **Engagement-source finding (most actionable):** there is NO `company_view` tracking gap — the `?cik=` path fires it correctly (`edgar-frontend/edgar.html:1456`, inside `_loadByCikInline`; data confirms 6 `direct_cik` landers = 6 `company_views`). Landing split by `page_view.source`: **6 direct-company (`?cik=`) vs 15 signal-board/homepage** — and ALL 6 company views came from the direct-company entries; the 15 homepage landers produced **0 click-throughs**. Referrer split of the 6: **4 from X/t.co (CPB×2, MSFT×2)**, 2 "direct" (AAPL, UNH — likely X mobile, referrer stripped). **Takeaway: `?cik=` company posts are the sole engagement driver; the signal-board/homepage converts cold traffic at ~0. Keep every company post CIK-linked.**_
+
+_Still open (carried, not addressed in this analytics pass): ratify the MAGIC_LINK_SECRET rotation decision; close the `customer.subscription.created/updated` webhook gap (sign-in covers it for now); reconcile the `/test/run-alert-check` 403 (cron unaffected); the `/analytics/event 400`. Non-product: still watching for any reply from ai_eng@spacex.com._
