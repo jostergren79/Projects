@@ -395,3 +395,62 @@ also serves as the "last checked" marker — if no alert was warranted on the
 most recent poll, a `checked_at` row is written with a null `accession_number`
 so the next poll knows where to start. This prevents re-evaluating the same
 filing window repeatedly.
+
+---
+
+## 16. Weekly Filing Stress Digest
+
+**File:** `edgar-api/scheduler.py` — `run_weekly_digest()`, `_build_digest_rankings()`
+
+A weekly email surfacing the most statistically unusual large-cap filings of the
+past week. Distinct from Pro+ alerts (§13–14): alerts are per-filing and scoped
+to a user's watchlist; the digest is a marketwide, weekly, top-N read open to
+**all tiers**.
+
+### Schedule
+Sundays at 08:00 US/Eastern (`CronTrigger(day_of_week="sun", hour=8)`), on the
+same `AsyncIOScheduler` as the alert job. `max_instances=1`,
+`misfire_grace_time=3600`.
+
+### Candidate universe
+The **S&P 100** (~100 large, recognizable names), hardcoded as `_SP100` in
+`scheduler.py` using SEC `company_tickers` ticker formatting (e.g. `BRK-B`).
+Tickers absent from the SEC map are skipped. The set is bounded so the weekly
+scan stays well under SEC rate limits (2.0s between companies, per §13).
+
+Rationale: a true "every filer this week" universe (hundreds–thousands of
+companies) is infeasible within SEC rate limits and XBRL compute. A curated
+large-cap set yields a credible, recognizable digest at bounded cost. Expanding
+the universe (e.g. S&P 500) is a future option.
+
+### Selection algorithm
+1. Fetch the SEC ticker→CIK map once (cached).
+2. For each S&P 100 company, fetch submissions and find the most recent
+   **material filing** (10-Q / 10-K / 8-K, per §13's `_MATERIAL_FORMS`) whose
+   `filingDate` falls within the trailing **7 days** (`_DIGEST_WINDOW_DAYS`).
+3. For companies that filed in-window, compute the Filing Stress Score (§9) and
+   z-score flags (§8) via the live `company_anomalies` / `company_flags`
+   functions — the same code paths the UI and alerts use.
+4. Rank by FSS descending; take the top **10** (`_DIGEST_TOP_N`).
+
+Only in-window companies are scored, so XBRL compute is incurred for the active
+subset only (typically far fewer than 100 in a given week).
+
+### Empty-week handling
+If no S&P 100 company filed a material form in the window, the job logs
+`EVENT digest_skipped reason=no_filings` and sends nothing — never an empty
+digest. If fewer than 10 qualify, the digest contains however many did.
+
+### Delivery
+Sent to every active (`unsubscribed_at IS NULL`) row in `digest_subscribers`,
+one email each with a per-recipient one-click unsubscribe link. The ranked list
+is identical across recipients. Telemetry: `EVENT digest_start`,
+`EVENT digest_sent recipients=… companies=…`, `EVENT digest_skipped`.
+
+### Subscription sources
+- **Anonymous / Standard:** email-capture form on the in-app banner →
+  `POST /digest/subscribe`.
+- **Signed-in Pro / Pro+:** one-click button → `POST /digest/subscribe-me`,
+  which resolves the subscriber email server-side from the session cookie's
+  `customer_id` (local `users` table, Stripe fallback) so no address is typed or
+  exposed to the client.

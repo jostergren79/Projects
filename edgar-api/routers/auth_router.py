@@ -35,7 +35,7 @@ from auth import (
     set_session_cookie,
     verify_token,
 )
-from cache import upsert_user
+from cache import get_user_email, is_digest_subscriber, upsert_user
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -246,10 +246,11 @@ async def auth_whoami(request: Request):
         return {"tier": "standard", "label": "Standard"}
 
     tier = _active_tier_for_customer(customer_id)
-    if tier == "pro_plus":
-        return {"tier": "pro_plus", "label": "Pro+"}
-    if tier == "pro":
-        return {"tier": "pro", "label": "Pro"}
+    if tier in ("pro_plus", "pro"):
+        email = get_user_email(customer_id)
+        digest_subscribed = is_digest_subscriber(email) if email else False
+        label = "Pro+" if tier == "pro_plus" else "Pro"
+        return {"tier": tier, "label": label, "digest_subscribed": digest_subscribed}
 
     # Cookie is valid but subscription is no longer active.
     response = JSONResponse(content={"tier": "standard", "label": "Standard"})

@@ -404,3 +404,29 @@ def remove_digest_subscriber(email: str) -> bool:
             return cur.rowcount > 0
         finally:
             conn.close()
+
+
+def is_digest_subscriber(email: str) -> bool:
+    """Return True if email has an active (non-unsubscribed) digest subscription."""
+    conn = open_cache_connection()
+    try:
+        row = conn.execute(
+            "SELECT 1 FROM digest_subscribers WHERE email = ? AND unsubscribed_at IS NULL",
+            (email,),
+        ).fetchone()
+    finally:
+        conn.close()
+    return row is not None
+
+
+def get_active_digest_subscribers() -> list:
+    """Return all active (non-unsubscribed) digest subscriber emails, oldest first."""
+    conn = open_cache_connection()
+    try:
+        rows = conn.execute(
+            "SELECT email FROM digest_subscribers "
+            "WHERE unsubscribed_at IS NULL ORDER BY subscribed_at"
+        ).fetchall()
+    finally:
+        conn.close()
+    return [r[0] for r in rows]

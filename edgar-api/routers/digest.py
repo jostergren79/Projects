@@ -14,17 +14,19 @@ import re
 import urllib.parse
 
 import resend
+import stripe
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse
 
-from auth import mask_email
-from cache import add_digest_subscriber, remove_digest_subscriber
+from auth import mask_email, read_session_customer_id
+from cache import add_digest_subscriber, get_user_email, remove_digest_subscriber
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 APP_URL = os.getenv("APP_URL", "https://www.edgarwolf.com")
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "")
 
 
 def _send_digest_welcome(to_email: str) -> None:
@@ -81,6 +83,44 @@ async def digest_subscribe(request: Request):
 
     is_new = add_digest_subscriber(email, source)
     logger.info("EVENT digest_signup email=%s source=%s new=%s", mask_email(email), source, is_new)
+
+    if is_new:
+        _send_digest_welcome(email)
+
+    return {"ok": True, "new": is_new}
+
+
+def _email_from_stripe(customer_id: str) -> str:
+    """Fallback email lookup when the local users row is missing (e.g. DB reset)."""
+    if not customer_id or not stripe.api_key:
+        return ""
+    try:
+        cust = stripe.Customer.retrieve(customer_id)
+        return (cust.get("email") if isinstance(cust, dict) else cust.email) or ""
+    except stripe.StripeError as exc:
+        logger.error("Stripe customer retrieve failed for %s: %s", customer_id, exc)
+        return ""
+
+
+@router.post("/digest/subscribe-me")
+async def digest_subscribe_me(request: Request):
+    """One-click digest subscribe for signed-in users.
+
+    The subscriber email is resolved server-side from the session cookie's
+    customer_id (local users table, with a Stripe fallback) — it never crosses
+    the wire. Backs the in-app "Get the weekly digest" button shown to
+    Pro/Pro+ users, whose address is already known.
+    """
+    customer_id = read_session_customer_id(request)
+    if not customer_id:
+        raise HTTPException(status_code=401, detail="Sign in to subscribe.")
+
+    email = (get_user_email(customer_id) or _email_from_stripe(customer_id)).strip().lower()
+    if not email or not _EMAIL_RE.match(email):
+        raise HTTPException(status_code=409, detail="Couldn't resolve your account email. Try signing in again.")
+
+    is_new = add_digest_subscriber(email, "account")
+    logger.info("EVENT digest_signup email=%s source=account new=%s", mask_email(email), is_new)
 
     if is_new:
         _send_digest_welcome(email)

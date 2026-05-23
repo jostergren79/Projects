@@ -135,9 +135,9 @@
     #digest-banner form { display: flex; gap: 8px; flex: 0 1 auto; }
     #digest-banner input[type="email"] { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); padding: 8px 12px; font-size: .85rem; min-width: 220px; }
     #digest-banner input[type="email"]:focus { outline: none; border-color: var(--accent); }
-    #digest-banner button[type="submit"] { background: var(--accent); border: none; border-radius: var(--radius); color: #fff; padding: 8px 16px; font-size: .85rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
-    #digest-banner button[type="submit"]:hover { filter: brightness(1.1); }
-    #digest-banner button[type="submit"][disabled] { opacity: .6; cursor: not-allowed; }
+    #digest-banner button[type="submit"], #digest-banner #digest-oneclick { background: var(--accent); border: none; border-radius: var(--radius); color: #fff; padding: 8px 16px; font-size: .85rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    #digest-banner button[type="submit"]:hover, #digest-banner #digest-oneclick:hover { filter: brightness(1.1); }
+    #digest-banner button[type="submit"][disabled], #digest-banner #digest-oneclick[disabled] { opacity: .6; cursor: not-allowed; }
     #digest-banner .digest-dismiss { background: none; border: none; color: var(--muted); font-size: 1.1rem; cursor: pointer; padding: 4px 8px; line-height: 1; }
     #digest-banner .digest-dismiss:hover { color: var(--text); }
     #digest-banner .digest-msg { font-size: .82rem; color: var(--muted); }
@@ -488,13 +488,14 @@
   <div id="digest-banner" role="region" aria-label="Weekly Filing Stress digest signup">
     <div class="digest-inner">
       <div class="digest-copy">
-        <strong>Free weekly digest:</strong> the 10 SEC filings that hit ELEVATED stress this week. Recent flags: $GIS 100/100, $CAG triple margin, $FIG -58pp op margin.
+        <strong>Weekly Filing Stress digest:</strong> the 10 S&amp;P 100 filings with the highest stress scores each week. Recent flags: $GIS 100/100, $CAG triple margin, $FIG -58pp op margin.
         <span class="digest-sub">No spam. One click to unsubscribe.</span>
       </div>
       <form id="digest-form" onsubmit="submitDigest(event)">
         <input type="email" id="digest-email" placeholder="you@example.com" required maxlength="254" autocomplete="email" />
         <button type="submit" id="digest-submit">Subscribe</button>
       </form>
+      <button type="button" id="digest-oneclick" onclick="subscribeDigestSignedIn()" style="display:none">Get the weekly digest</button>
       <span id="digest-msg" class="digest-msg" aria-live="polite"></span>
       <button class="digest-dismiss" onclick="dismissDigestBanner()" aria-label="Dismiss">×</button>
     </div>
@@ -907,18 +908,36 @@
       } catch (_) {}
     }
 
-    // ── Digest banner (free-tier email capture) ───────────────────────────────
+    // ── Digest banner (weekly Filing Stress digest signup) ─────────────────────
+    // Free/anonymous users get an email-capture form; signed-in Pro/Pro+ users
+    // get a one-click subscribe that uses their account email (resolved server-side).
+    let _digestViewTracked = false;
 
     function initDigestBanner() {
-      // Don't show to paid users — they already gave us their email via Stripe.
-      const tier = localStorage.getItem('edgarwolf_tier') || 'standard';
-      if (tier !== 'standard') return;
-      if (localStorage.getItem('digest_dismissed') === '1') return;
-      if (localStorage.getItem('digest_subscribed') === '1') return;
       const banner = document.getElementById('digest-banner');
       if (!banner) return;
-      banner.style.display = 'block';
-      trackEvent('digest_banner_view');
+      const form = document.getElementById('digest-form');
+      const oneclick = document.getElementById('digest-oneclick');
+      const tier = localStorage.getItem('edgarwolf_tier') || 'standard';
+
+      let show = false;
+      if (localStorage.getItem('digest_dismissed') !== '1') {
+        if (tier === 'standard') {
+          show = localStorage.getItem('digest_subscribed') !== '1';
+          if (show) { form.style.display = ''; oneclick.style.display = 'none'; }
+        } else {
+          // Signed-in: one-click using their account email. Server is the source
+          // of truth for subscribed state (cached from /auth/whoami).
+          show = localStorage.getItem('edgarwolf_digest_subscribed') !== '1';
+          if (show) { form.style.display = 'none'; oneclick.style.display = ''; }
+        }
+      }
+
+      banner.style.display = show ? 'block' : 'none';
+      if (show && !_digestViewTracked) {
+        _digestViewTracked = true;
+        trackEvent('digest_banner_view', { tier });
+      }
     }
 
     function dismissDigestBanner() {
@@ -926,6 +945,41 @@
       const banner = document.getElementById('digest-banner');
       if (banner) banner.style.display = 'none';
       trackEvent('digest_banner_dismiss');
+    }
+
+    // One-click subscribe for signed-in users — email is resolved server-side
+    // from the session cookie, so nothing is typed and no address crosses the wire.
+    async function subscribeDigestSignedIn() {
+      const btn = document.getElementById('digest-oneclick');
+      const msg = document.getElementById('digest-msg');
+      msg.textContent = '';
+      msg.className = 'digest-msg';
+      btn.disabled = true;
+      btn.textContent = 'Subscribing…';
+      try {
+        const res = await fetch(`${API}/digest/subscribe-me`, {
+          method: 'POST',
+          credentials: 'include',
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          msg.textContent = data.detail || 'Something went wrong. Please try again.';
+          msg.className = 'digest-msg error';
+          btn.disabled = false;
+          btn.textContent = 'Get the weekly digest';
+          return;
+        }
+        localStorage.setItem('edgarwolf_digest_subscribed', '1');
+        trackEvent('digest_signup', { source: 'account', is_new: !!data.new });
+        btn.style.display = 'none';
+        msg.textContent = data.new ? 'Subscribed! Check your inbox for a welcome email.' : "You're already subscribed.";
+        msg.className = 'digest-msg success';
+      } catch (_) {
+        msg.textContent = 'Network error. Please try again.';
+        msg.className = 'digest-msg error';
+        btn.disabled = false;
+        btn.textContent = 'Get the weekly digest';
+      }
     }
 
     async function submitDigest(e) {
@@ -1127,6 +1181,9 @@
         localStorage.setItem('edgarwolf_tier', data.tier);
         localStorage.setItem('edgarwolf_tier_label', data.label);
         localStorage.setItem('edgarwolf_tier_checked_at', String(Date.now()));
+        if (typeof data.digest_subscribed === 'boolean') {
+          localStorage.setItem('edgarwolf_digest_subscribed', data.digest_subscribed ? '1' : '0');
+        }
         applyTierBadge(data.tier, data.label);
         identifyToPostHog();
         if (data.tier !== 'standard') {
@@ -1136,6 +1193,8 @@
           }
           syncWatchlistFromServer();
         }
+        // Re-evaluate the digest banner now that tier + subscription state are fresh.
+        initDigestBanner();
       } catch (_) {
         if (cachedTier && cachedTier !== 'standard') applyTierBadge(cachedTier, cachedLabel);
       }
@@ -2130,7 +2189,7 @@
       EdgarWolf &mdash; Questions or feedback? <a href="mailto:jason@edgarwolf.com">jason@edgarwolf.com</a>
       &nbsp;&middot;&nbsp; <a href="/privacy">Privacy Policy</a>
       &nbsp;&middot;&nbsp; <a href="/terms">Terms of Service</a>
-      &nbsp;&middot;&nbsp; v1.6.1
+      &nbsp;&middot;&nbsp; v1.7.0
     </div>
   </footer>
 </body>

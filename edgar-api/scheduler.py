@@ -13,6 +13,8 @@ import asyncio
 import html
 import logging
 import os
+import urllib.parse
+from datetime import date, timedelta
 
 import resend
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -21,13 +23,19 @@ from apscheduler.triggers.cron import CronTrigger
 from auth import mask_email
 from cache import (
     get_all_pro_plus_watchlists,
+    get_active_digest_subscribers,
     get_last_checked,
     set_last_checked,
     has_alert_been_sent,
     log_alert_sent,
     clear_cached_json,
 )
-from edgar_client import fetch_company_submissions, normalize_cik_to_10_digits
+from edgar_client import (
+    fetch_company_submissions,
+    get_submissions,
+    get_ticker_map,
+    normalize_cik_to_10_digits,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +44,29 @@ _MATERIAL_FORMS = {"10-Q", "10-K", "8-K"}
 
 # Seconds to wait between company checks to stay well under SEC rate limits.
 _INTER_COMPANY_DELAY = 2.0
+
+# ── Weekly digest config ───────────────────────────────────────────────────────
+APP_URL = os.getenv("APP_URL", "https://www.edgarwolf.com")
+_DIGEST_WINDOW_DAYS = 7
+_DIGEST_TOP_N = 10
+
+# Candidate universe for the weekly digest: the S&P 100 (large, recognizable
+# names). Bounded (~100 companies) so the Sunday scan stays well under SEC rate
+# limits. Tickers use SEC company_tickers formatting (e.g. BRK-B); any ticker
+# not present in the SEC map is skipped gracefully. See METHODOLOGY.md §16.
+_SP100 = (
+    "AAPL", "ABBV", "ABT", "ACN", "ADBE", "AIG", "AMD", "AMGN", "AMT", "AMZN",
+    "AVGO", "AXP", "BA", "BAC", "BK", "BKNG", "BLK", "BMY", "BRK-B", "C",
+    "CAT", "CHTR", "CL", "CMCSA", "COF", "COP", "COST", "CRM", "CSCO", "CVS",
+    "CVX", "DE", "DHR", "DIS", "DOW", "DUK", "EMR", "F", "FDX", "GD",
+    "GE", "GILD", "GM", "GOOG", "GOOGL", "GS", "HD", "HON", "IBM", "INTC",
+    "INTU", "ISRG", "JNJ", "JPM", "KHC", "KO", "LIN", "LLY", "LMT", "LOW",
+    "MA", "MCD", "MDLZ", "MDT", "MET", "META", "MMM", "MO", "MRK", "MS",
+    "MSFT", "NEE", "NFLX", "NKE", "NVDA", "ORCL", "PEP", "PFE", "PG", "PM",
+    "PYPL", "QCOM", "RTX", "SBUX", "SCHW", "SO", "SPG", "T", "TGT", "TMO",
+    "TMUS", "TSLA", "TXN", "UNH", "UNP", "UPS", "USB", "V", "VZ", "WFC",
+    "WMT", "XOM",
+)
 
 
 def _build_alert_html(
@@ -255,4 +286,198 @@ alert_scheduler.add_job(
     name="Pro+ filing alerts",
     max_instances=1,  # Never overlap if a run takes longer than 60 min.
     misfire_grace_time=300,
+)
+
+
+# ── Weekly Filing Stress digest ─────────────────────────────────────────────────
+
+async def _build_digest_rankings() -> list:
+    """Scan the S&P 100, keep names that filed a material form in the last 7
+    days, score each by Filing Stress Score, and return the top 10 (highest
+    FSS first). The candidate universe is bounded so the scan stays well under
+    SEC rate limits. See METHODOLOGY.md §16.
+    """
+    # Imported here to avoid circular imports at module load (mirrors the alert job).
+    from routers.anomaly_flags import company_flags
+    from routers.company_lookup import company_anomalies
+
+    try:
+        ticker_map = await get_ticker_map()
+    except Exception as e:
+        logger.error("Digest: ticker map fetch failed: %s", e)
+        return []
+
+    cutoff = (date.today() - timedelta(days=_DIGEST_WINDOW_DAYS)).isoformat()
+    scored: list = []
+
+    for ticker in _SP100:
+        entry = ticker_map.get(ticker)
+        if not entry:
+            continue
+        cik10 = normalize_cik_to_10_digits(entry.get("cik_str", ""))
+        name = entry.get("title", ticker)
+
+        try:
+            subs = await get_submissions(cik10)
+        except Exception as e:
+            logger.warning("Digest: submissions fetch failed for %s (CIK %s): %s", ticker, cik10, e)
+            await asyncio.sleep(_INTER_COMPANY_DELAY)
+            continue
+
+        recent = subs.get("filings", {}).get("recent", {})
+        forms = recent.get("form", [])
+        dates = recent.get("filingDate", [])
+
+        # recent[] is newest-first; take the most recent material filing in-window.
+        new_filing = None
+        for i, form in enumerate(forms):
+            if form not in _MATERIAL_FORMS:
+                continue
+            fd = dates[i] if i < len(dates) else ""
+            if fd and fd >= cutoff:
+                new_filing = {"form": form, "filed": fd}
+                break
+
+        if not new_filing:
+            await asyncio.sleep(_INTER_COMPANY_DELAY)
+            continue
+
+        # Filed this week — compute the anomaly profile (reuses the live endpoints).
+        try:
+            anomalies = await company_anomalies(cik10)
+            flags_result = await company_flags(cik10)
+        except Exception as e:
+            logger.warning("Digest: anomaly fetch failed for %s (CIK %s): %s", ticker, cik10, e)
+            await asyncio.sleep(_INTER_COMPANY_DELAY)
+            continue
+
+        flags = flags_result.get("flags", [])
+        top_flag = next((f for f in flags if f.get("severity") in ("HIGH", "MEDIUM")), None)
+        scored.append({
+            "cik": cik10,
+            "ticker": ticker,
+            "name": name,
+            "form": new_filing["form"],
+            "filed": new_filing["filed"],
+            "fss": anomalies.get("filing_stress_score", 0),
+            "status": anomalies.get("status", "LOW"),
+            "flag_metric": (top_flag or {}).get("metric", ""),
+            "flag_note": (top_flag or {}).get("note", ""),
+        })
+        await asyncio.sleep(_INTER_COMPANY_DELAY)
+
+    scored.sort(key=lambda r: r["fss"], reverse=True)
+    return scored[:_DIGEST_TOP_N]
+
+
+def _build_digest_html(ranked: list, unsub_email: str) -> str:
+    # Company names / tickers originate from SEC data (operator-controlled);
+    # escape every interpolation, same as the alert email.
+    unsub_url = f"{APP_URL}/digest/unsubscribe?email={urllib.parse.quote(unsub_email)}"
+
+    rows = ""
+    for r in ranked:
+        safe_name   = html.escape(r["name"] or "")
+        safe_ticker = html.escape(r["ticker"] or "")
+        safe_form   = html.escape(r["form"] or "")
+        safe_filed  = html.escape(r["filed"] or "")
+        safe_status = html.escape(r["status"] or "")
+        safe_cik    = html.escape(r["cik"] or "")
+        score = int(r["fss"])
+        color = "#e53e3e" if r["status"] == "ELEVATED" else "#f6ad55" if r["status"] == "MODERATE" else "#48bb78"
+        url = f"{APP_URL}/?cik={safe_cik}"
+
+        sub = f"{safe_form} filed {safe_filed}"
+        note = html.escape(r.get("flag_note") or "")
+        metric = html.escape(r.get("flag_metric") or "")
+        if note:
+            sub += f" &middot; {metric + ' ' if metric else ''}{note}"
+
+        rows += f"""
+        <tr>
+          <td style="padding:10px 0;border-bottom:1px solid #eee">
+            <a href="{url}" style="color:#2b6cb0;font-weight:600;text-decoration:none">{safe_name} ({safe_ticker})</a>
+            <div style="color:#888;font-size:12px;margin-top:2px">{sub}</div>
+          </td>
+          <td style="padding:10px 0;border-bottom:1px solid #eee;text-align:right;font-weight:700;color:{color};white-space:nowrap">
+            {score}/100 {safe_status}
+          </td>
+        </tr>"""
+
+    return f"""
+    <div style="font-family:sans-serif;max-width:600px;margin:0 auto;color:#1a1a1a">
+      <h2 style="color:#2b6cb0;margin-bottom:2px">Filing Stress digest</h2>
+      <p style="color:#888;font-size:13px;margin-top:0">
+        The {len(ranked)} highest Filing Stress Scores among S&amp;P 100 names that filed this week.
+      </p>
+      <table style="width:100%;border-collapse:collapse;font-size:14px;margin-top:8px">
+        {rows}
+      </table>
+      <p style="color:#555;font-size:13px;line-height:1.6;margin-top:20px">
+        Scores combine margin and revenue z-scores against each company's own trailing
+        8-quarter history, filing velocity, and XBRL coverage. Higher = more statistically unusual.
+      </p>
+      <hr style="border:none;border-top:1px solid #eee;margin:20px 0">
+      <p style="font-size:12px;color:#888;line-height:1.6">
+        You're receiving this because you subscribed to the EdgarWolf Filing Stress digest.
+        <a href="{unsub_url}" style="color:#888">Unsubscribe in one click</a>.
+        Questions? Reply to this email — it goes straight to Jason.
+      </p>
+    </div>
+    """
+
+
+async def run_weekly_digest() -> None:
+    """Weekly Sunday job — emails the top-FSS S&P 100 filings of the past week
+    to every active digest subscriber. See METHODOLOGY.md §16."""
+    subscribers = get_active_digest_subscribers()
+    if not subscribers:
+        logger.info("EVENT digest_skipped reason=no_subscribers")
+        return
+
+    logger.info("EVENT digest_start subscribers=%d", len(subscribers))
+    ranked = await _build_digest_rankings()
+    if not ranked:
+        logger.info("EVENT digest_skipped reason=no_filings subscribers=%d", len(subscribers))
+        return
+
+    api_key = os.getenv("RESEND_API_KEY")
+    if not api_key:
+        logger.error("Digest: RESEND_API_KEY not set — cannot send")
+        return
+
+    resend.api_key = api_key
+    from_addr = os.getenv("RESEND_FROM", "EdgarWolf <alerts@edgarwolf.com>")
+    subject = f"Filing Stress digest — top {len(ranked)} this week"
+
+    sent = 0
+    for email in subscribers:
+        html_body = _build_digest_html(ranked, email)
+        try:
+            resend.Emails.send({
+                "from": from_addr,
+                "to": [email],
+                "subject": subject,
+                "html": html_body,
+            })
+            sent += 1
+        except Exception as e:
+            logger.error("Digest: send failed to %s: %s", mask_email(email), e)
+        await asyncio.sleep(0.3)  # Gentle pacing for the Resend API.
+
+    logger.info("EVENT digest_sent recipients=%d companies=%d", sent, len(ranked))
+
+
+alert_scheduler.add_job(
+    run_weekly_digest,
+    CronTrigger(
+        day_of_week="sun",
+        hour=8,
+        minute=0,
+        timezone="America/New_York",
+    ),
+    id="weekly_digest",
+    name="Weekly Filing Stress digest",
+    max_instances=1,
+    misfire_grace_time=3600,  # Sunday window is forgiving; allow a late start.
 )

@@ -10,6 +10,33 @@ Versioning follows [Semantic Versioning](https://semver.org/):
 
 ---
 
+## [1.7.0] — 2026-05-22
+
+### Added
+- **Weekly Filing Stress digest (Sunday 08:00 ET), now offered to every tier.**
+  New `run_weekly_digest()` job scans the S&P 100 for material filings
+  (10-Q/10-K/8-K) in the trailing 7 days, scores each by Filing Stress Score,
+  and emails the top 10 to all active digest subscribers with a one-click
+  unsubscribe link. This is the send job behind the capture form that had been
+  collecting emails — subscribers were promised a Sunday email that now actually
+  ships. See METHODOLOGY.md §16.
+- **One-click digest subscribe for signed-in users.** `POST /digest/subscribe-me`
+  resolves the subscriber's email server-side from the session cookie's
+  `customer_id` (local `users` table, Stripe fallback), so Pro/Pro+ users
+  subscribe without typing an address and none is exposed to the client.
+  `/auth/whoami` now returns `digest_subscribed` so the banner renders the
+  correct state.
+
+### Changed
+- **Digest banner is no longer hidden from paid users.** Previously gated to
+  `tier === 'standard'`. The digest is now positioned as marketwide
+  discovery/retention content (distinct from per-watchlist Pro+ alerts) and is
+  shown to all tiers: standard/anonymous visitors get the email form, signed-in
+  users get the one-click button. Banner copy updated to the S&P 100 top-10
+  framing.
+
+---
+
 ## [1.6.1] — 2026-05-21
 
 ### Fixed
