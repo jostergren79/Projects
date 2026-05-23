@@ -32,6 +32,7 @@ _Replace completed items each session. Keep this list short._
 - [x] Digest banner opened to **all tiers**: standard/anonymous → email form; signed-in Pro/Pro+ → one-click "Get the weekly digest" (`POST /digest/subscribe-me`, email resolved server-side from session — never crosses the wire). `/auth/whoami` now returns `digest_subscribed`.
 - [x] Validated locally on live SEC data (AAPL/NVDA 100, UNH 92, GE 70, JPM 62; HTML render + 401 guard + cache helpers all pass).
 - [x] Deployed + verified May 22: prod `/openapi.json` = 1.7.0, `/health` ok, `/digest/subscribe-me` live. **Still pending:** first real Sunday send (next Sunday 08:00 ET) — watch for `EVENT digest_sent` in `railway logs`.
+- [x] Same-day banner hotfix: dismissal now expires after **7 days** (was a permanent `digest_dismissed='1'` flag that never returned, even in incognito within a session). Stored as a timestamp; legacy `'1'` values parse as epoch → already expired → banner re-surfaces for everyone. Frontend-only, no version bump.
 
 **▶ NEXT SESSION:**
 1. [ ] **Ratify the `MAGIC_LINK_SECRET` rotation decision** (see Open design question below). Drop rotation → v1.6.2 = server-side sessions table (jti revocation) + Sentry hook on auth/email errors. Keep → dual-key fallback (`MAGIC_LINK_SECRET_PREVIOUS`).

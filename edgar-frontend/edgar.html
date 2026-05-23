@@ -925,6 +925,16 @@
     // get a one-click subscribe that uses their account email (resolved server-side).
     let _digestViewTracked = false;
 
+    // Dismissing the banner hides it for this long, then it returns. Stored as a
+    // timestamp (legacy '1' values parse to epoch ~1970 → already expired → re-show).
+    const _DIGEST_DISMISS_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+    function digestDismissed() {
+      const ts = parseInt(localStorage.getItem('digest_dismissed') || '', 10);
+      if (!ts) return false;
+      return (Date.now() - ts) < _DIGEST_DISMISS_TTL_MS;
+    }
+
     function initDigestBanner() {
       const banner = document.getElementById('digest-banner');
       if (!banner) return;
@@ -933,7 +943,7 @@
       const tier = localStorage.getItem('edgarwolf_tier') || 'standard';
 
       let show = false;
-      if (localStorage.getItem('digest_dismissed') !== '1') {
+      if (!digestDismissed()) {
         if (tier === 'standard') {
           show = localStorage.getItem('digest_subscribed') !== '1';
           if (show) { form.style.display = ''; oneclick.style.display = 'none'; }
@@ -953,7 +963,7 @@
     }
 
     function dismissDigestBanner() {
-      localStorage.setItem('digest_dismissed', '1');
+      localStorage.setItem('digest_dismissed', String(Date.now()));
       const banner = document.getElementById('digest-banner');
       if (banner) banner.style.display = 'none';
       trackEvent('digest_banner_dismiss');
