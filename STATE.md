@@ -2,20 +2,20 @@
 
 **Updated every session.** Stable context, rules, and the start/end session sequences are in **`CLAUDE.md`** (auto-loaded). This file holds only the volatile state: metrics, active priorities, the next-session plan, and a current-state note.
 
-Current version: **v1.7.0** (2026-05-22). Release history in `CHANGELOG.md`.
+Current version: **v1.7.1** (2026-05-24). Release history in `CHANGELOG.md`.
 
 ---
 
 ## Current metrics
 
-_Refreshed May 22 (late session, post-analytics pass). **Numbers below are external-only** — Jason's 4 own IPs (`71.34.14.90`, `97.116.24.43`, + 2 IPv6) are now filtered out in PostHog (Settings → internal/test users). PostHog's 6 `subscription_success` are still over-fire — Stripe confirms all are the single comp account, $0 real revenue (see current-state note)._
+_Refreshed May 24. **Numbers below are external-only** — Jason's 4 own IPs (`71.34.14.90`, `97.116.24.43`, + 2 IPv6) are filtered out in PostHog (Settings → internal/test users). Note `71.34.14.90` is the **home-network public IP, now shared by ≥2 people** (Jason + family member Sam, via NAT) — so household activity is correctly filtered as internal. There are now **two $0 comp Pro+ accounts** (`cus_UUN2ChsZV2aaRC` and Sam `cus_UZVNfwfk7hlPBv`); Stripe confirms $0 real revenue (see current-state note)._
 
 | Metric | Value | Updated |
 |--------|-------|---------|
 | MRR | $0 | May 22, 2026 |
-| Paying users | 0 (+1 comp Pro+: `cus_UUN2ChsZV2aaRC`, $0 MRR) | May 22, 2026 |
+| Paying users | 0 (+2 comp Pro+: `cus_UUN2ChsZV2aaRC` + Sam `cus_UZVNfwfk7hlPBv` — both $0 MRR, no card on file) | May 24, 2026 |
 | Free signups (digest) | 0 (22 external banner views, 0 signups) | May 22, 2026 |
-| External engaged visitors (PostHog, Jason's IPs filtered, 30d) | 21 people / 4 countries; 18 in last 7 days | May 22, 2026 |
+| External engaged visitors (PostHog, Jason's IPs filtered, 7d) | 24 people / 4 countries (US 21, DE/FR/PH 1 each) | May 24, 2026 |
 | External funnel (30d) | 22 page_views → 6 company_views → 3 searches; 0 upgrade-modal, 0 watchlist | May 22, 2026 |
 | Upgrade-modal opens / watchlist adds (external) | 0 / 0 — all 6 modal opens + 5 adds were Jason's own IPs; the May 17 "first modal open" was self-generated, not a real signal | May 22, 2026 |
 | Countries | 4: US, Germany, France, Philippines | May 22, 2026 |
@@ -32,7 +32,7 @@ _Replace completed items each session. Keep this list short._
 - [x] `run_weekly_digest()` Sunday 08:00 ET cron — scans S&P 100, keeps names that filed a 10-Q/10-K/8-K in the last 7 days, ranks top-10 by FSS, emails active `digest_subscribers` with one-click unsubscribe. The send job that never existed before; subscribers had been promised a Sunday email and it now ships. (METHODOLOGY §16.)
 - [x] Digest banner opened to **all tiers**: standard/anonymous → email form; signed-in Pro/Pro+ → one-click "Get the weekly digest" (`POST /digest/subscribe-me`, email resolved server-side from session — never crosses the wire). `/auth/whoami` now returns `digest_subscribed`.
 - [x] Validated locally on live SEC data (AAPL/NVDA 100, UNH 92, GE 70, JPM 62; HTML render + 401 guard + cache helpers all pass).
-- [x] Deployed + verified May 22: prod `/openapi.json` = 1.7.0, `/health` ok, `/digest/subscribe-me` live. **Still pending:** first real Sunday send (next Sunday 08:00 ET) — watch for `EVENT digest_sent` in `railway logs`.
+- [x] Deployed + verified May 22: prod `/openapi.json` = 1.7.0, `/health` ok, `/digest/subscribe-me` live. **First real Sunday send CONFIRMED** — fired 2026-05-24 12:03:59 UTC (08:03 ET): `EVENT digest_sent recipients=2 companies=10`, apscheduler job executed successfully, next run 2026-05-31 08:00 EDT. (`digest_sent` is a server-log line only, not a PostHog event — Railway logs are the source of truth.)
 - [x] Same-day banner hotfix: dismissal now expires after **7 days** (was a permanent `digest_dismissed='1'` flag that never returned, even in incognito within a session). Stored as a timestamp; legacy `'1'` values parse as epoch → already expired → banner re-surfaces for everyone. Frontend-only, no version bump.
 
 **▶ NEXT SESSION:**
@@ -51,9 +51,11 @@ _Replace completed items each session. Keep this list short._
 
 ---
 
-## Current state — May 23, 2026
+## Current state — May 24, 2026
 
 _Session history lives in `CHANGELOG.md` + git log; settled decisions in `DECISIONS_ARCHIVE.md`._
+
+_**May 24 session (Sunday) — shipped v1.7.1, confirmed the first real weekly digest send, and identified a 2nd comp account.** **(1) v1.7.1 — net-loss display fix shipped, tagged, pushed (commit `46798d3`).** Loss-making quarters were dropping the negative sign so a loss read like a profit. Two halves of one display bug, both fixed: the backend narrative summary (`narrative_summary.py` `_fmt_currency` used `abs()`; this had been left **uncommitted** by the May 23 separate task — committed now) and the frontend dashboard (`edgar.html`: KPI tile now reads "Net Loss" in red when net income < 0; `fmtCurrency` renders "-$7M" not "$-7M"; negative EPS "-$0.06" in both the KPI tile and the quarterly data table). Display-only — API/data were always correctly signed (prod returns ENPH `net_income: -7406000`); verified in-browser against live SEC data via headless Chrome. Shipped as a SemVer patch (bug fix); the pre-existing CHANGELOG `[Unreleased]` "no-bump" note was folded into the v1.7.1 release. **(2) Weekly digest — first real Sunday send CONFIRMED:** fired 2026-05-24 12:03:59 UTC (08:03 ET), `EVENT digest_sent recipients=2 companies=10`, apscheduler job executed successfully, next run 2026-05-31 08:00 EDT — so v1.7.0's digest is now validated end-to-end in prod. (`digest_sent` is a server-log line, not a PostHog event.) **(3) Second comp found — Sam Ostergren (`cus_UZVNfwfk7hlPBv`), family.** Chasing a signed-in NVDA browse that logged under Jason's IP led here: it was Sam on the home network — NAT collapses every home device to one public IP (`71.34.14.90`), the same IP the app logs and PostHog filters as internal, so household activity is indistinguishable from Jason's and correctly excluded from external numbers (no misattribution bug; uvicorn runs `--forwarded-allow-ips='*'`, so the logged IP is Railway's `X-Forwarded-For` client IP). Sam has an `active` Pro+ $99/mo sub created 2026-05-23 20:41 UTC, but **$0 collected: no payment method on file, $0 invoice** — Jason confirms it's an intentional family comp via coupon (a 2nd alongside `cus_UUN2ChsZV2aaRC`). **Caveat:** Stripe showed no coupon attached at the subscription level and no card on file — if the comp isn't durable, the next renewal could try to bill $99, fail, and silently lapse Sam's access; worth confirming the 100%-off is attached to the subscription. Real MRR unchanged: **$0, 0 external paying users.** **(4) Conversion-fix still unobserved externally:** Sam's May 23 checkout was the first since the `subscription_success` fix deployed (2026-05-23 03:25 UTC), but it's on the filtered home IP, so post-fix conversion behavior remains unverified in external analytics. **(5) Railway CLI had to be re-linked** this session (`railway link -p mindful-vision` from the repo dir; prior memory had assumed it was pre-linked). Prod healthy; v1.7.1 pushed (Railway auto-deploys — verify `/openapi.json` = 1.7.1)._
 
 _**May 23 session — Day 11 X post shipped; `MAGIC_LINK_SECRET` rotation killed (both docs-only, no code).** Posted the Day 11 Company Spotlight: a methodology-forward $ENPH read (Q1 2026 — gross margin 35.5% = -3.8σ HIGH vs its own trailing 8-quarter history; operating margin -4.9% = -2.2σ MEDIUM; FSS 62 MODERATE; revenue $283M, -20.6% YoY; net loss, EPS -$0.06). Built as a single image-led **4:5 portrait data card** (EdgarWolf dark palette, rendered via headless Chrome, legibility verified at ~400px mobile + ~510px desktop) with a **sentence-case** caption + `?cik=0001463101` link. Locked a strategy shift now in CLAUDE.md: own-content = single image-led posts, not multi-tweet threads; case by job (sentence case for own posts, lowercase in replies). Separately ruled out weekly `MAGIC_LINK_SECRET` rotation as theater — never implemented in code, no SECURITY.md claim; settled in DECISIONS_ARCHIVE.md (if revocation is ever needed: `jti` sessions table + Sentry hook on auth errors, not rotation). Prod healthy v1.7.0; external PostHog traffic flat (2 people, US only, 0 conversions) as of May 23. Flagged a real bug to a separate task: narrative summary renders a net loss as positive net income ($ENPH showed "$7M" for a -$7.4M loss). No code shipped → no version bump._
 
