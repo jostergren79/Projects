@@ -231,6 +231,13 @@ All other sentences in the summary (revenue amount, margin direction, EPS) are
 constructed by substituting computed values into fixed templates. No inference or
 generation is involved.
 
+**Bottom-line wording:** the net income sentence reads "Net income was $X" when net
+income is ≥ 0 and "Net loss was $X" (positive magnitude, with the word "loss" carrying
+the sign) when it is negative. Dollar figures (`_fmt_currency`) preserve their sign, so
+a negative value renders with a leading "−" rather than as a bare positive magnitude.
+Margins are rendered as signed percentages, so negative operating/gross margins already
+display correctly.
+
 ---
 
 ## 11. Recent Filers Discovery

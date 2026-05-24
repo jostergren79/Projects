@@ -10,6 +10,28 @@ Versioning follows [Semantic Versioning](https://semver.org/):
 
 ---
 
+## [1.7.1] — 2026-05-24
+
+### Fixed
+- **Loss-making quarters showed net income/EPS without a proper negative sign,
+  making a loss read like a profit.** Two halves of one display bug:
+  - *Narrative summary (backend):* `_fmt_currency()` formatted with `abs()`, so a
+    net loss rendered as a positive dollar figure — ENPH Q1 2026 read "Net income
+    was $7M" while EPS showed the loss as "$-0.06", an internally contradictory
+    sentence. The formatter now preserves sign and the bottom-line sentence reads
+    "Net loss was $X" when net income is negative.
+  - *Dashboard (frontend):* the KPI tile labelled a loss "Net Income" in neutral
+    styling, and `fmtCurrency` placed the minus after the `$` ("$-7M"). The tile now
+    reads "Net Loss" in the negative (red) color when net income is below zero, and
+    `fmtCurrency` renders "-$7M". Negative EPS renders "-$0.06" (was "$-0.06") in
+    both the KPI tile and the quarterly data table.
+
+  Display-only — `data.*` / API values were already correctly signed (prod returns
+  ENPH `net_income: -7406000`), so no data or API change. Verified in-browser against
+  live SEC data. See METHODOLOGY.md §10.
+
+---
+
 ## [1.7.0] — 2026-05-22
 
 ### Added

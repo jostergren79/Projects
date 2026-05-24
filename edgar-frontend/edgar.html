@@ -1617,8 +1617,10 @@
 
     function fmtCurrency(val) {
       if (val == null) return '—';
-      if (Math.abs(val) >= 1e9) return '$' + (val / 1e9).toFixed(2) + 'B';
-      return '$' + (val / 1e6).toFixed(0) + 'M';
+      const sign = val < 0 ? '-' : '';
+      const abs = Math.abs(val);
+      if (abs >= 1e9) return sign + '$' + (abs / 1e9).toFixed(2) + 'B';
+      return sign + '$' + (abs / 1e6).toFixed(0) + 'M';
     }
 
     function fmtPct(val, decimals = 1) {
@@ -2088,8 +2090,8 @@
         { label: 'Gross Margin',   value: latest?.gross_margin_pct != null ? latest.gross_margin_pct.toFixed(1) + '%' : '—', sub: 'Latest quarter', subClass: 'neu', source: sourceLabel(src.gross_margin_pct) },
         { label: 'Op. Margin',     value: latest?.operating_margin_pct != null ? latest.operating_margin_pct.toFixed(1) + '%' : '—', sub: 'Latest quarter', subClass: 'neu', source: sourceLabel(src.operating_margin_pct) },
         { label: 'Net Margin',     value: latest?.net_margin_pct != null ? latest.net_margin_pct.toFixed(1) + '%' : '—', sub: 'Latest quarter', subClass: 'neu', source: sourceLabel(src.net_margin_pct) },
-        { label: 'EPS (Diluted)',  value: latest?.eps_diluted != null ? '$' + latest.eps_diluted.toFixed(2) : '—', sub: 'Latest quarter', subClass: 'neu', source: sourceLabel(src.eps_diluted) },
-        { label: 'Net Income',     value: fmtCurrency(latest?.net_income), sub: fmtCurrency(latest?.revenue) + ' revenue', subClass: 'neu', source: sourceLabel(src.net_income) },
+        { label: 'EPS (Diluted)',  value: latest?.eps_diluted != null ? (latest.eps_diluted < 0 ? '-' : '') + '$' + Math.abs(latest.eps_diluted).toFixed(2) : '—', sub: 'Latest quarter', subClass: 'neu', source: sourceLabel(src.eps_diluted) },
+        { label: (latest?.net_income != null && latest.net_income < 0) ? 'Net Loss' : 'Net Income', value: fmtCurrency(latest?.net_income), sub: fmtCurrency(latest?.revenue) + ' revenue', subClass: colorClass(latest?.net_income), source: sourceLabel(src.net_income) },
       ];
 
       document.getElementById('kpi-grid').innerHTML = kpis.map(k => `
@@ -2187,7 +2189,7 @@
           <td>${p.gross_margin_pct != null ? p.gross_margin_pct.toFixed(1) + '%' : '—'}</td>
           <td>${p.operating_margin_pct != null ? p.operating_margin_pct.toFixed(1) + '%' : '—'}</td>
           <td>${p.net_margin_pct != null ? p.net_margin_pct.toFixed(1) + '%' : '—'}</td>
-          <td>${p.eps_diluted != null ? '$' + p.eps_diluted.toFixed(2) : '—'}</td>
+          <td>${p.eps_diluted != null ? (p.eps_diluted < 0 ? '-' : '') + '$' + Math.abs(p.eps_diluted).toFixed(2) : '—'}</td>
         </tr>`).join('');
 
       document.getElementById('back-bar').style.display = 'block';
@@ -2212,7 +2214,7 @@
       EdgarWolf &mdash; Questions or feedback? <a href="mailto:jason@edgarwolf.com">jason@edgarwolf.com</a>
       &nbsp;&middot;&nbsp; <a href="/privacy">Privacy Policy</a>
       &nbsp;&middot;&nbsp; <a href="/terms">Terms of Service</a>
-      &nbsp;&middot;&nbsp; v1.7.0
+      &nbsp;&middot;&nbsp; v1.7.1
     </div>
   </footer>
 </body>

@@ -31,12 +31,13 @@ def _validate_cik(cik: str) -> None:
 
 
 def _fmt_currency(val, unit="M"):
-    """Format large dollar values into readable strings."""
+    """Format large dollar values into readable strings, preserving sign."""
     if val is None:
         return "N/A"
+    sign = "-" if val < 0 else ""
     if unit == "B" or abs(val) >= 1_000_000_000:
-        return f"${abs(val)/1_000_000_000:.1f}B"
-    return f"${abs(val)/1_000_000:.0f}M"
+        return f"{sign}${abs(val)/1_000_000_000:.1f}B"
+    return f"{sign}${abs(val)/1_000_000:.0f}M"
 
 
 def _fmt_pct(val, decimals=1):
@@ -159,13 +160,17 @@ async def company_summary(cik: str):
         else:
             sentences.append(f"Operating margin was {om:.1f}%.")
 
-    # 4. Net income + EPS
+    # 4. Net income / net loss + EPS
     if ni is not None:
-        ni_str = _fmt_currency(ni)
-        if eps is not None:
-            sentences.append(f"Net income was {ni_str}, or ${eps:.2f} per diluted share.")
+        if ni < 0:
+            ni_clause = f"Net loss was {_fmt_currency(abs(ni))}"
         else:
-            sentences.append(f"Net income was {ni_str}.")
+            ni_clause = f"Net income was {_fmt_currency(ni)}"
+        if eps is not None:
+            eps_str = f"{'-' if eps < 0 else ''}${abs(eps):.2f}"
+            sentences.append(f"{ni_clause}, or {eps_str} per diluted share.")
+        else:
+            sentences.append(f"{ni_clause}.")
 
     # 5. Outlook tone
     if rev_yoy is not None and gm is not None:
