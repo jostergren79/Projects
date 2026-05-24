@@ -98,7 +98,7 @@ Feature gating LIVE since May 10, 2026. Differentiation is feature **depth**, no
 - **$SOFI:** Contrarian/Green; four straight profitable quarters. XBRL revenue concepts unreliable for fintechs/banks — use bottom-line figures only.
 
 **Channels:**
-- **X (PRIMARY):** personal account. 6 rotating themes — Company Spotlight, Methodology, Sector Sweep, Contrarian/Green, Builder Update, Retrospective. 4 replies/day target. Monday pre-market = peak window. CIK-direct URL (`?cik=<CIK>`) on every company-specific post.
+- **X (PRIMARY):** personal account. 6 rotating themes — Company Spotlight, Methodology, Sector Sweep, Contrarian/Green, Builder Update, Retrospective. 4 replies/day target. Monday pre-market = peak window. CIK-direct URL (`?cik=<CIK>`) on every company-specific post. **Data-card pipeline:** build HTML in the dashboard palette (CSS vars in `edgar-frontend/edgar.html`) → render with headless Chrome `--screenshot --force-device-scale-factor=2` (4:5, 1080×1350) → verify legibility by downscaling to ~400px (mobile feed width) with `sips`.
 - **Sector Sweeps run (log each new one here to avoid repeats):** consumer staples / packaged food; RF + analog semis ($SWKS $QRVO $ADI $ON $MCHP, May 22 2026). Verify live data per name before drafting — z-score flags fire in BOTH directions and high FSS is often filing-velocity, not margin, driven.
 - **StockTwits:** live since May 18. Bearish/Bullish sentiment tag required. Same data-forward format as X.
 - **r/SecurityAnalysis:** post drafted, awaiting mod approval.
@@ -114,8 +114,8 @@ Settled decisions live in `DECISIONS_ARCHIVE.md`.
 - **Take the job** — full-time offer regardless of company; EdgarWolf = side income until $8k/mo sustained.
 - **Distribution first** — product is good enough; distribution is the only job for the next 30 days. Manual everything until 10 paying users.
 - **Founder angle** — outsider IT builder, not finance pro. All copy reflects this.
-- **X strategy** — lead with filing data, not product pitches. CIK-direct URLs always. Borrowed-audience via reply threads. Mid-traffic beats mega-threads for a new account (exception: still-climbing mega-threads). Never tag/DM engagement targets; never ask for RTs.
-- **X writing style** — **no em-dashes** (readers spot them as LLM tells; use periods, short sentences, or ` - `). Terse, declarative, data-forward; lowercase-casual where natural. Match Jason's own cadence.
+- **X strategy** — lead with filing data, not product pitches. CIK-direct URLs always. Borrowed-audience via reply threads is the daily driver. **Own-content (May 23): single image-led posts, not multi-tweet threads** — one screenshot-worthy data card (portrait 4:5; dominates the mobile feed, where the clicks come from); reserve threads for occasional pinned/evergreen anchors. Mid-traffic beats mega-threads for a new account (exception: still-climbing mega-threads). Never tag/DM engagement targets; never ask for RTs.
+- **X writing style** — **no em-dashes** (readers spot them as LLM tells; use periods, short sentences, or ` - `). Terse, declarative, data-forward. **Case by job (May 23):** sentence case for own standalone posts (credibility on first contact for a data/finance product); lowercase-casual in replies (native, low-ego, conversational). Match Jason's own cadence.
 - **StockTwits** — Bearish/Bullish tag required; same data-forward format as X.
 - **Methodology-doc rule** — update `METHODOLOGY.md` before/alongside any new scoring, classification, polling, or trigger logic.
 - **PostHog** — project 424339, US Cloud. Query programmatically at session start. Key events: `page_view`, `company_view`, `upgrade_modal_open`, `subscription_success`.

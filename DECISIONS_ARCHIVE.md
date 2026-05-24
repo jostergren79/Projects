@@ -28,6 +28,10 @@ Read this only when something breaks or you're re-evaluating infrastructure.
 - **Stale session pattern:** Recurring `/subscription/status` calls on the same `cs_live_` ID = stale browser holding old localStorage, not a new conversion.
 - **bfcache fix:** Prevents stuck Loading... buttons after returning from Stripe Checkout.
 
+## Auth & Security
+
+- **No `MAGIC_LINK_SECRET` rotation (decided May 23, 2026):** Weekly secret rotation rejected as security theater at this scale — the secret never leaves the Railway env, and rotation was never implemented in code (no `MAGIC_LINK_SECRET_PREVIOUS` dual-key fallback ever existed). If token revocation is ever genuinely needed, the right controls are a server-side sessions table keyed by `jti` (sessions are currently unrevokable JWTs) + a Sentry/email hook on `auth.py` errors (would have caught the silent Resend-key invalidity) — not rotation.
+
 ## Data & Caching
 
 - **Watchlist keyed by CIK:** Ticker unreliable (empty for many EDGAR companies). CIK always present.
