@@ -10,6 +10,19 @@ Versioning follows [Semantic Versioning](https://semver.org/):
 
 ---
 
+## [Unreleased]
+
+### Changed
+- **Analytics: per-device internal opt-out so household traffic stops inflating
+  "external" PostHog counts.** Visiting `?internal=1` sets a `localStorage` flag;
+  the frontend then skips PostHog init entirely and `trackEvent` no-ops, so that
+  browser emits zero analytics events (`?internal=0` clears it). Device-based, so it
+  survives the Verizon-cellular / reassigned-home-IPv6 rotation that the static 4-IP
+  filter could not catch. Requires Jason + Sam to visit `?internal=1` once per device.
+  Analytics guard only — no version bump.
+
+---
+
 ## [1.7.1] — 2026-05-24
 
 ### Fixed
