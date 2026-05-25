@@ -2,25 +2,27 @@
 
 **Updated every session.** Stable context, rules, and the start/end session sequences are in **`CLAUDE.md`** (auto-loaded). This file holds only the volatile state: metrics, active priorities, the next-session plan, and a current-state note.
 
-Current version: **v1.7.1** (2026-05-24). Release history in `CHANGELOG.md`.
+Current version: **v1.7.1** (2026-05-24); prod also carries one unreleased analytics-guard change — the per-device `?internal=1` opt-out, deployed 2026-05-25, no version bump. Release history in `CHANGELOG.md`.
 
 ---
 
 ## Current metrics
 
-_Refreshed May 24. **Numbers below are external-only** — Jason's 4 own IPs (`71.34.14.90`, `97.116.24.43`, + 2 IPv6) are filtered out in PostHog (Settings → internal/test users). Note `71.34.14.90` is the **home-network public IP, now shared by ≥2 people** (Jason + family member Sam, via NAT) — so household activity is correctly filtered as internal. There are now **two $0 comp Pro+ accounts** (`cus_UUN2ChsZV2aaRC` and Sam `cus_UZVNfwfk7hlPBv`); Stripe confirms $0 real revenue (see current-state note)._
+_Refreshed May 25. **Numbers below are external-only** — Jason's 4 own IPs (`71.34.14.90`, `97.116.24.43`, + 2 IPv6) are filtered out. Note `71.34.14.90` is the **home-network public IP shared by ≥2 people** (Jason + Sam, via NAT). As of May 25 the durable filter is the per-device `?internal=1` opt-out (the static IP list leaked on rotating cellular/IPv6 — see current-state note); IP filter is now legacy/historical fallback. Two $0 comp Pro+ accounts (`cus_UUN2ChsZV2aaRC`, Sam `cus_UZVNfwfk7hlPBv`); Stripe confirms $0 real revenue._
 
 | Metric | Value | Updated |
 |--------|-------|---------|
 | MRR | $0 | May 22, 2026 |
 | Paying users | 0 (+2 comp Pro+: `cus_UUN2ChsZV2aaRC` + Sam `cus_UZVNfwfk7hlPBv` — both $0 MRR; Sam = "Founder Discount" 100% off forever) | May 24, 2026 |
-| Free signups (digest) | 0 (22 external banner views, 0 signups) | May 22, 2026 |
-| External engaged visitors (PostHog, Jason's IPs filtered, 7d) | 24 people / 4 countries (US 21, DE/FR/PH 1 each) | May 24, 2026 |
-| External funnel (30d) | 22 page_views → 6 company_views → 3 searches; 0 upgrade-modal, 0 watchlist | May 22, 2026 |
-| Upgrade-modal opens / watchlist adds (external) | 0 / 0 — all 6 modal opens + 5 adds were Jason's own IPs; the May 17 "first modal open" was self-generated, not a real signal | May 22, 2026 |
-| Countries | 4: US, Germany, France, Philippines | May 22, 2026 |
+| Free signups (digest) | 0 external (a May 23 `digest_signup` was on the home IP = internal) | May 25, 2026 |
+| External engaged visitors (PostHog, 7d) | 22 people / 3 countries (US 20, FR 1, PH 1); **last 24h = 1** (traffic quiet) | May 25, 2026 |
+| External funnel (7d) | 31 page_views (22 ppl) → 3 company_views → 4 searches; the 1 `upgrade_modal_open` + 1 `checkout_start` were **Sam's comp checkout on Verizon cellular IPv6**, not external | May 25, 2026 |
+| Real external conversions | 0; `subscription_success` after the conversion fix (03:25 UTC May 23) = **0** — fix now observed suppressing Sam's post-fix comp checkout correctly | May 25, 2026 |
+| Countries | 3: US, France, Philippines (Germany aged out of the 7d window) | May 25, 2026 |
+| Top referrers (3d, external) | google 14 hits/7 ppl, t.co (X) 3, direct 3; **LinkedIn = 0** (post ~2h old — watch next session) | May 25, 2026 |
 | X followers / combined 2nd-degree reach | 4 / ~10.3k combined (Ann Barbour 6.8k, Ashton ~2.3k) | May 21, 2026 |
-| Last X post | Day 12 Contrarian/Green — $APEI strengthening turnaround (single image-led 4:5 card + `?cik=` link) | May 24, 2026 |
+| Last X post | Day 13 Company Spotlight/Methodology — $AAP earnings-quality flip (flat $24M net income YoY; operating income −$131M→+$69M; 4:5 card + `?cik=0001158449`) | May 25, 2026 |
+| Last LinkedIn post | Build-in-public retrospective (15 days / 17 releases) — tested channel, ambivalent on continuing; watching referrals | May 25, 2026 |
 
 ---
 
@@ -28,32 +30,33 @@ _Refreshed May 24. **Numbers below are external-only** — Jason's 4 own IPs (`7
 
 _Replace completed items each session. Keep this list short._
 
-**✅ v1.7.0 — SHIPPED (May 22): weekly digest, all tiers.**
-- [x] `run_weekly_digest()` Sunday 08:00 ET cron — scans S&P 100, keeps names that filed a 10-Q/10-K/8-K in the last 7 days, ranks top-10 by FSS, emails active `digest_subscribers` with one-click unsubscribe. The send job that never existed before; subscribers had been promised a Sunday email and it now ships. (METHODOLOGY §16.)
-- [x] Digest banner opened to **all tiers**: standard/anonymous → email form; signed-in Pro/Pro+ → one-click "Get the weekly digest" (`POST /digest/subscribe-me`, email resolved server-side from session — never crosses the wire). `/auth/whoami` now returns `digest_subscribed`.
-- [x] Validated locally on live SEC data (AAPL/NVDA 100, UNH 92, GE 70, JPM 62; HTML render + 401 guard + cache helpers all pass).
-- [x] Deployed + verified May 22: prod `/openapi.json` = 1.7.0, `/health` ok, `/digest/subscribe-me` live. **First real Sunday send CONFIRMED** — fired 2026-05-24 12:03:59 UTC (08:03 ET): `EVENT digest_sent recipients=2 companies=10`, apscheduler job executed successfully, next run 2026-05-31 08:00 EDT. (`digest_sent` is a server-log line only, not a PostHog event — Railway logs are the source of truth.)
-- [x] Same-day banner hotfix: dismissal now expires after **7 days** (was a permanent `digest_dismissed='1'` flag that never returned, even in incognito within a session). Stored as a timestamp; legacy `'1'` values parse as epoch → already expired → banner re-surfaces for everyone. Frontend-only, no version bump.
+**✅ Shipped this session (May 25):**
+- [x] **Day 13 X post** — $AAP earnings-quality-flip data card (flat $24M net income YoY, operating income −$131M→+$69M, gross margin +2.2pp→45.1%; quarter ended Apr 26 2026, 10-Q filed May 21). All figures verified vs prod `reported` XBRL; built via the headless-Chrome pipeline (`aap_card.html`→`aap_quality_flip.png`, 1080×1350, legibility-checked at 400px), sentence-case caption, `?cik=0001158449`. Posted live.
+- [x] **PostHog filter-leak fix** — per-device `?internal=1` opt-out (sets `localStorage.edgarwolf_internal`; frontend then skips PostHog init + `trackEvent` no-ops → device emits zero events; `?internal=0` clears). IP-independent, so it survives the cellular/IPv6 rotation that defeated the 4-IP filter (mirrors the localhost guard). Verified end-to-end (node --check + headless set/persist/clear vs access log); committed `93559b2`, pushed, **deployed live** (no version bump — analytics guard; CHANGELOG `[Unreleased]`).
 
 **▶ NEXT SESSION:**
-1. [ ] **Webhook gap follow-up:** also handle `customer.subscription.created`/`updated` so dashboard-created subs self-heal without requiring sign-in (auth-verify covers the sign-in path; this covers the rest).
-2. [ ] **`/test/run-alert-check` returned 403** with the Railway `DEV_SECRET` via `X-Dev-Secret` — reconcile deployed value vs `railway variables`. Non-blocking (the cron path works; only the manual trigger is affected).
-3. [ ] Trace `POST /analytics/event 400` (fires twice/page after auth) — `routers/analytics.py` validation.
-4. [ ] Short-TTL (60s) cache for the per-page Stripe re-verify in `/auth/whoami` + `/watchlist` (2 Stripe calls/page; fine at 0 users, v1.7.x ticket).
-5. [ ] Postman collection regen (still references removed `/subscription/*` + `X-Customer-Id`).
-6. [ ] **Ongoing distribution:** 4 replies/day, beta invites to crypto friends, 10 finance Substack writers, r/SecurityAnalysis when mod approves. **Data-backed (May 22 analytics):** `?cik=` company posts are the *only* engagement driver — 6/6 external company views came from direct company-link entries; signal-board/homepage landers (15) produced **0** click-throughs. Keep every company post CIK-linked; **CPB + MSFT are proven draws.** Open Q worth a cheap test: why do homepage landers bounce without drilling into a company?
+1. [ ] **Confirm device-flagging** — did Jason + Sam visit `?internal=1` on each device? Until they do, household cellular/IPv6 still leaks into "external." Then re-read external metrics (should be cleaner).
+2. [ ] **Watch LinkedIn referrals** — Jason posted a build-in-public retrospective May 25 (tested channel, ambivalent). Baseline = 0 `lnkd.in`/`linkedin.com` referrals at ~2h; check whether it drove real click-throughs.
+3. [ ] **Webhook gap follow-up:** also handle `customer.subscription.created`/`updated` so dashboard-created subs self-heal without requiring sign-in.
+4. [ ] **`/test/run-alert-check` 403** with `DEV_SECRET` via `X-Dev-Secret` — reconcile deployed value vs `railway variables`. Non-blocking (cron path works).
+5. [ ] Trace `POST /analytics/event 400` (fires twice/page after auth) — `routers/analytics.py` validation.
+6. [ ] Short-TTL (60s) cache for the per-page Stripe re-verify in `/auth/whoami` + `/watchlist`.
+7. [ ] Postman collection regen (still references removed `/subscription/*` + `X-Customer-Id`).
+8. [ ] **Ongoing distribution:** 4 replies/day, beta invites, finance Substack writers, r/SecurityAnalysis when mod approves. **`?cik=` company posts are the only proven engagement driver** (6/6 external company views came from direct company-link entries; homepage landers convert at ~0). Keep every company post CIK-linked; CPB + MSFT proven draws.
 
 **Tech debt / soon:**
 - [ ] Submit to SaaSWorthy, Product Hunt, G2, Capterra, AlternativeTo.
 - [ ] Expand sitemap to /privacy and /terms.
 - [ ] Chart.js defensive fix: `responsive: true, maintainAspectRatio: false` + sized wrappers.
-- [ ] PostHog: internal-user IP filter now configured (Jason's 4 IPs; IPv6 truncation typo fixed). **Remaining:** flip "Enable this filter on all new insights" ON so it auto-applies (analysis-level; historical events stay stored). Also still filter localhost.
+- [x] ~~PostHog internal-traffic filter leak~~ — fixed via per-device `?internal=1` opt-out (May 25). **Still open:** flip PostHog's "Enable filter on all new insights" ON; filter localhost.
 
 ---
 
-## Current state — May 24, 2026
+## Current state — May 25, 2026
 
 _Session history lives in `CHANGELOG.md` + git log; settled decisions in `DECISIONS_ARCHIVE.md`._
+
+_**May 25 session (Monday) — shipped a Day 13 X post and fixed the PostHog filter leak; no real revenue change ($0 MRR, 0 external paying).** **(1) Start-of-session catch:** PostHog appeared to show the first-ever external conversion activity (1 `upgrade_modal_open` + 1 `checkout_start`, vs 0 before). Traced it — it was **Sam's comp Pro+ checkout on a Verizon cellular IPv6** (`2600:1014:...`, not in the 4-IP filter) that completed as his $0 comp sub at 20:41 UTC May 23, not a real external customer. Also confirmed `subscription_success` after the conversion fix (03:25 UTC May 23) = **0** — the fix is now observed suppressing Sam's post-fix comp checkout correctly (previously "unobserved"). **(2) Day 13 X post (Company Spotlight/Methodology):** $AAP earnings-quality flip — net income flat at $24M YoY, but operating income swung −$131M→+$69M and gross margin +2.2pp to 45.1% (quarter ended Apr 26 2026, 10-Q filed May 21). All figures verified vs prod `reported` XBRL; card built via the headless-Chrome pipeline (`aap_card.html`→`aap_quality_flip.png`, 1080×1350, legibility-checked at 400px), sentence-case caption, `?cik=0001158449`. Posted live. **(3) Filter-leak fix shipped + deployed:** per-device `?internal=1` opt-out (localStorage flag → frontend skips PostHog init + `trackEvent` no-ops; `?internal=0` clears). IP-independent, so it beats the cellular/home-IPv6 rotation the static 4-IP list couldn't catch (mirrors the localhost guard). Verified end-to-end (node --check; headless set/persist-across-reload/clear vs the uvicorn access log), committed `93559b2`, pushed, deployed live (prod serves the new code ~110s after push; `/health` ok). No version bump (analytics guard); CHANGELOG `[Unreleased]`. **ACTION for Jason + Sam:** visit `https://www.edgarwolf.com/?internal=1` once on every device/browser, or household traffic keeps leaking; pre-May-25 events stay in PostHog so the legacy IP filter still applies to historical queries. `reference_posthog` memory updated with the new mechanism. **(4) New channel:** Jason posted a build-in-public retrospective to LinkedIn (15 days / 17 releases). Tested channel, ambivalent on continuing; asked to watch referrals. Baseline = 0 `lnkd.in` referrals at ~2h (top 3-day external referrers: google 14 hits/7 ppl, t.co 3, direct 3). Prod healthy on v1.7.1 (+ the unreleased analytics guard)._
 
 _**May 24 session (Sunday) — shipped v1.7.1, confirmed the first real weekly digest send, and identified a 2nd comp account.** **(1) v1.7.1 — net-loss display fix shipped, tagged, pushed (commit `46798d3`).** Loss-making quarters were dropping the negative sign so a loss read like a profit. Two halves of one display bug, both fixed: the backend narrative summary (`narrative_summary.py` `_fmt_currency` used `abs()`; this had been left **uncommitted** by the May 23 separate task — committed now) and the frontend dashboard (`edgar.html`: KPI tile now reads "Net Loss" in red when net income < 0; `fmtCurrency` renders "-$7M" not "$-7M"; negative EPS "-$0.06" in both the KPI tile and the quarterly data table). Display-only — API/data were always correctly signed (prod returns ENPH `net_income: -7406000`); verified in-browser against live SEC data via headless Chrome. Shipped as a SemVer patch (bug fix); the pre-existing CHANGELOG `[Unreleased]` "no-bump" note was folded into the v1.7.1 release. **(2) Weekly digest — first real Sunday send CONFIRMED:** fired 2026-05-24 12:03:59 UTC (08:03 ET), `EVENT digest_sent recipients=2 companies=10`, apscheduler job executed successfully, next run 2026-05-31 08:00 EDT — so v1.7.0's digest is now validated end-to-end in prod. (`digest_sent` is a server-log line, not a PostHog event.) **(3) Second comp found — Sam Ostergren (`cus_UZVNfwfk7hlPBv`), family.** Chasing a signed-in NVDA browse that logged under Jason's IP led here: it was Sam on the home network — NAT collapses every home device to one public IP (`71.34.14.90`), the same IP the app logs and PostHog filters as internal, so household activity is indistinguishable from Jason's and correctly excluded from external numbers (no misattribution bug; uvicorn runs `--forwarded-allow-ips='*'`, so the logged IP is Railway's `X-Forwarded-For` client IP). Sam has an `active` Pro+ $99/mo sub created 2026-05-23 20:41 UTC with a **"Founder Discount" — 100% off forever** (Stripe dashboard), so every invoice nets **$0.00** — incl. the Jun 23 renewal preview. Durable family comp, a 2nd alongside `cus_UUN2ChsZV2aaRC`, **no lapse risk.** (An earlier in-session caveat about a possible $99 renewal/lapse was a false alarm: the Stripe API read checked the deprecated singular `discount` field and missed the `discounts` array where the coupon actually lives.) Real MRR unchanged: **$0, 0 external paying users.** **(4) Conversion-fix still unobserved externally:** Sam's May 23 checkout was the first since the `subscription_success` fix deployed (2026-05-23 03:25 UTC), but it's on the filtered home IP, so post-fix conversion behavior remains unverified in external analytics. **(5) Railway CLI had to be re-linked** this session (`railway link -p mindful-vision` from the repo dir; prior memory had assumed it was pre-linked). **(6) Day 12 X post shipped (Contrarian/Green):** single image-led 4:5 card on **$APEI** — a for-profit-education turnaround (Q1 2026 vs YoY: revenue +6.2%, op margin +5.0pp to 12.4%, net income ~doubled to $17.7M, EPS $0.41→$0.94; signal board **+3/3 Strengthening**, 0 margin z-score flags; FSS 87 but velocity-driven, so omitted from the card). Sentence-case caption, CIK-direct link (`?cik=0001201792`), posted to X (confirmed live). Card built via the headless-Chrome pipeline in the dashboard palette (palette in `edgar.html`, render 540×675 @2x → 1080×1350, legibility-checked). Prod healthy; v1.7.1 pushed (Railway auto-deploys — verify `/openapi.json` = 1.7.1)._
 
