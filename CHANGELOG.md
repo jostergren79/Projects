@@ -10,16 +10,28 @@ Versioning follows [Semantic Versioning](https://semver.org/):
 
 ---
 
-## [Unreleased]
+## [1.7.2] — 2026-05-26
 
 ### Changed
+- **Stripe re-verify is now cached for 60s, shared across `/auth/whoami` and
+  `/watchlist`.** `/auth/whoami` previously hit Stripe on every uncached call; it now
+  reads/writes the same `session_tier_cache` entry as `/watchlist` (keyed by
+  customer_id via `session_tier_cache_key`), so a page-load burst of tier checks
+  collapses to a single Stripe call. The watchlist cache TTL dropped from 1 hour to
+  60s, so a lapsed/cancelled subscription loses access within ~1 minute instead of up
+  to an hour.
 - **Analytics: per-device internal opt-out so household traffic stops inflating
   "external" PostHog counts.** Visiting `?internal=1` sets a `localStorage` flag;
   the frontend then skips PostHog init entirely and `trackEvent` no-ops, so that
   browser emits zero analytics events (`?internal=0` clears it). Device-based, so it
   survives the Verizon-cellular / reassigned-home-IPv6 rotation that the static 4-IP
   filter could not catch. Requires Jason + Sam to visit `?internal=1` once per device.
-  Analytics guard only — no version bump.
+  (Deployed 2026-05-25 ahead of this release tag.)
+
+### Internal
+- Postman QA collection regenerated: dropped the dead `/subscription/*` group and the
+  `X-Customer-Id` header bypass (auth is the `ew_session` cookie now); added an `Auth`
+  group covering `/auth/whoami`, `/auth/request`, `/auth/verify`, and `/auth/logout`.
 
 ---
 

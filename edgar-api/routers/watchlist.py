@@ -9,8 +9,8 @@ Endpoints:
 
 Authentication: customer_id is read from the signed httpOnly session cookie
 set by /auth/verify or /success. The Stripe subscription is verified on the
-first request and the result is cached in SQLite for 1 hour — so Stripe is
-not hit on every call.
+first request and the result is cached in SQLite for 60 seconds (shared with
+/auth/whoami) — so Stripe is not hit on every call.
 
 Note: /watchlist/sync no longer accepts an `email` field. The user's email
 is set canonically via the Stripe webhook (checkout.session.completed); the
@@ -30,6 +30,7 @@ from cache import (
     get_watchlist,
     get_watchlist_count,
     remove_from_watchlist,
+    session_tier_cache_key,
     store_cached_session_tier,
 )
 
@@ -43,7 +44,6 @@ _PRICE_IDS = {
     "pro_plus": os.getenv("STRIPE_PRO_PLUS_PRICE_ID", "price_1TVNfH1C3cijZqBOyp7Y5qJH"),
 }
 
-_CUST_PREFIX = "cust:"
 WATCHLIST_LIMIT = 50
 
 
@@ -57,7 +57,7 @@ def _require_customer(request: Request) -> str:
     if not customer_id:
         raise HTTPException(status_code=401, detail="Sign in required")
 
-    cache_key = f"{_CUST_PREFIX}{customer_id}"
+    cache_key = session_tier_cache_key(customer_id)
     cached = get_cached_session_tier(cache_key)
     if cached:
         return customer_id

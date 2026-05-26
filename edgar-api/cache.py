@@ -21,7 +21,7 @@ from pathlib import Path
 _data_dir = os.getenv("DATA_DIR")
 CACHE_PATH = Path(_data_dir) / "edgar_cache.db" if _data_dir else Path(__file__).parent / "data" / "edgar_cache.db"
 TTL_SECONDS = 6 * 60 * 60  # 6 hours
-SESSION_TTL_SECONDS = 60 * 60  # 1 hour
+SESSION_TTL_SECONDS = 60  # 60s: collapses a page-load burst of Stripe re-verifies (whoami + watchlist) into one call, while a lapsed sub loses access within ~1 min
 
 _write_lock = threading.Lock()
 
@@ -167,7 +167,13 @@ def cache_clear(key: str) -> None:
     clear_cached_json(key)
 
 
-# ── Session tier cache (Stripe verification result, 1-hour TTL) ─────────────
+# ── Session tier cache (Stripe verification result, 60s TTL) ────────────────
+
+def session_tier_cache_key(customer_id: str) -> str:
+    """Cache key for a customer's verified tier. Shared by /auth/whoami and
+    /watchlist so a single Stripe re-verify warms the cache for both."""
+    return f"cust:{customer_id}"
+
 
 def get_cached_session_tier(session_id: str) -> Optional[str]:
     conn = open_cache_connection()

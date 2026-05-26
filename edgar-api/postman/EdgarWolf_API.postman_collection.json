@@ -668,21 +668,22 @@
       ]
     },
     {
-      "name": "Subscription",
+      "name": "Auth",
+      "description": "Cookie-based magic-link auth. Replaces the removed /subscription/* endpoints. Newman runs unauthenticated, so these exercise the public/anti-enumeration behavior; the signed-in path needs a real ew_session cookie from the magic-link flow.",
       "item": [
         {
-          "name": "GET /subscription/status \u2014 no session \u2192 standard",
+          "name": "GET /auth/whoami \u2014 no session \u2192 standard",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/subscription/status",
+              "raw": "{{base_url}}/auth/whoami",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
-                "subscription",
-                "status"
+                "auth",
+                "whoami"
               ]
             }
           },
@@ -704,18 +705,32 @@
           ]
         },
         {
-          "name": "GET /subscription/restore \u2014 no email \u2192 standard",
+          "name": "POST /auth/request \u2014 unknown email \u2192 ok (anti-enumeration)",
           "request": {
-            "method": "GET",
-            "header": [],
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"qa-nonexistent@example.com\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
             "url": {
-              "raw": "{{base_url}}/subscription/restore",
+              "raw": "{{base_url}}/auth/request",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
-                "subscription",
-                "restore"
+                "auth",
+                "request"
               ]
             }
           },
@@ -726,8 +741,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('defaults to standard', () => {",
-                  "  pm.expect(pm.response.json().tier).to.equal('standard');",
+                  "pm.test('always ok:true (no found/not-found signal)', () => {",
+                  "  pm.expect(pm.response.json().ok).to.equal(true);",
                   "});"
                 ]
               }
@@ -735,18 +750,52 @@
           ]
         },
         {
-          "name": "GET /subscription/status-by-customer \u2014 no customer_id \u2192 standard",
+          "name": "GET /auth/verify?token=bad \u2014 invalid token \u2192 400",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/subscription/status-by-customer",
+              "raw": "{{base_url}}/auth/verify?token=bad",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
-                "subscription",
-                "status-by-customer"
+                "auth",
+                "verify"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "bad"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/logout \u2014 clears session \u2192 ok",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
               ]
             }
           },
@@ -757,9 +806,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('defaults to standard', () => {",
-                  "  pm.expect(pm.response.json().tier).to.equal('standard');",
-                  "});"
+                  "pm.test('ok true', () => pm.expect(pm.response.json().ok).to.equal(true));"
                 ]
               }
             }
@@ -1045,9 +1092,10 @@
     },
     {
       "name": "Watchlist",
+      "description": "Auth is the signed httpOnly ew_session cookie (magic-link flow), not a header \u2014 the old X-Customer-Id bypass is gone. Newman runs unauthenticated, so these assert the 401 gate on every method. The authed read/write path needs a real session cookie and is verified manually.",
       "item": [
         {
-          "name": "GET /watchlist \u2014 no header \u2192 401",
+          "name": "GET /watchlist \u2014 no session cookie \u2192 401",
           "request": {
             "method": "GET",
             "header": [],
@@ -1074,42 +1122,15 @@
           ]
         },
         {
-          "name": "GET /watchlist \u2014 invalid customer ID format \u2192 401",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "X-Customer-Id",
-                "value": "not-a-stripe-id"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/watchlist",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "watchlist"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('status 401', () => pm.response.to.have.status(401));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "POST /watchlist \u2014 no header \u2192 401",
+          "name": "POST /watchlist \u2014 no session cookie \u2192 401",
           "request": {
             "method": "POST",
-            "header": [],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": {
               "raw": "{{base_url}}/watchlist",
               "host": [
@@ -1142,55 +1163,7 @@
           ]
         },
         {
-          "name": "POST /watchlist \u2014 missing cik \u2192 400 (dev mode, no Stripe key required)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "X-Customer-Id",
-                "value": "cus_test"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/watchlist",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "watchlist"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\"ticker\": \"AAPL\", \"name\": \"Apple Inc\"}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "// Only meaningful locally when STRIPE_SECRET_KEY is unset (dev bypass active)",
-                  "pm.test('status 400 or 401 or 403', () => {",
-                  "  pm.expect([400, 401, 403]).to.include(pm.response.code);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "DELETE /watchlist/{cik} \u2014 no header \u2192 401",
+          "name": "DELETE /watchlist/{cik} \u2014 no session cookie \u2192 401",
           "request": {
             "method": "DELETE",
             "header": [],
@@ -1218,10 +1191,15 @@
           ]
         },
         {
-          "name": "POST /watchlist/sync \u2014 no header \u2192 401",
+          "name": "POST /watchlist/sync \u2014 no session cookie \u2192 401",
           "request": {
             "method": "POST",
-            "header": [],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": {
               "raw": "{{base_url}}/watchlist/sync",
               "host": [
@@ -1249,100 +1227,6 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 401', () => pm.response.to.have.status(401));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "POST /watchlist/sync \u2014 items not a list \u2192 400 (dev mode)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "X-Customer-Id",
-                "value": "cus_test"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/watchlist/sync",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "watchlist",
-                "sync"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\"items\": \"not-a-list\"}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "// Only meaningful locally when STRIPE_SECRET_KEY is unset (dev bypass active)",
-                  "pm.test('status 400 or 401 or 403', () => {",
-                  "  pm.expect([400, 401, 403]).to.include(pm.response.code);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "GET /watchlist \u2014 returns count and limit fields (dev mode)",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "X-Customer-Id",
-                "value": "cus_test"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/watchlist",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "watchlist"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "// Only meaningful locally when STRIPE_SECRET_KEY is unset (dev bypass active)",
-                  "if (pm.response.code === 200) {",
-                  "  pm.test('has items array', () => {",
-                  "    const b = pm.response.json();",
-                  "    pm.expect(b).to.have.property('items');",
-                  "    pm.expect(b.items).to.be.an('array');",
-                  "  });",
-                  "  pm.test('has count and limit', () => {",
-                  "    const b = pm.response.json();",
-                  "    pm.expect(b).to.have.property('count');",
-                  "    pm.expect(b).to.have.property('limit');",
-                  "    pm.expect(b.limit).to.equal(50);",
-                  "  });",
-                  "}"
                 ]
               }
             }

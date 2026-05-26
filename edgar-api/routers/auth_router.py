@@ -35,7 +35,14 @@ from auth import (
     set_session_cookie,
     verify_token,
 )
-from cache import get_user_email, is_digest_subscriber, upsert_user
+from cache import (
+    get_cached_session_tier,
+    get_user_email,
+    is_digest_subscriber,
+    session_tier_cache_key,
+    store_cached_session_tier,
+    upsert_user,
+)
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -238,14 +245,22 @@ async def auth_whoami(request: Request):
     """Return the current user's tier based on the session cookie.
 
     Re-checks the active subscription against Stripe so cancelled/lapsed
-    subs are reflected immediately instead of waiting for the 30-day
-    cookie to expire.
+    subs are reflected instead of waiting for the 30-day cookie to expire.
+    The result is cached for SESSION_TTL_SECONDS (60s) in the shared
+    session_tier_cache — the same entry /watchlist reads — so a page-load
+    burst of calls collapses to one Stripe hit. A lapse surfaces within 60s.
     """
     customer_id = read_session_customer_id(request)
     if not customer_id:
         return {"tier": "standard", "label": "Standard"}
 
-    tier = _active_tier_for_customer(customer_id)
+    cache_key = session_tier_cache_key(customer_id)
+    tier = get_cached_session_tier(cache_key)
+    if tier not in ("pro", "pro_plus"):
+        tier = _active_tier_for_customer(customer_id)
+        if tier in ("pro", "pro_plus"):
+            store_cached_session_tier(cache_key, tier)
+
     if tier in ("pro_plus", "pro"):
         email = get_user_email(customer_id)
         digest_subscribed = is_digest_subscriber(email) if email else False
