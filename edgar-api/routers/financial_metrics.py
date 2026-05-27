@@ -138,7 +138,7 @@ def _normalize_row_to_quarter_value(row: dict, fy_fp_map: dict) -> Optional[floa
         # If Q2/Q3 looks cumulative, derive true quarter amount from prior fp.
         if days is not None and days > 120:
             prev_fp = "Q1" if fp == "Q2" else "Q2"
-            prev = fy_fp_map.get((row.get("fy"), prev_fp))
+            prev = fy_fp_map.get((row.get("start"), prev_fp))
             if prev and prev.get("value") is not None:
                 return val - prev["value"]
             return None
@@ -234,14 +234,18 @@ def _extract_quarterly_rows_for_concept(facts: dict, concept: str) -> list:
 
     rows = _dedupe_by_context_keep_latest_filing(rows)
 
-    # Build lookup for cumulative-to-quarter differencing by fiscal-year period.
+    # Build lookup for cumulative-to-quarter differencing.
+    # Key is (start_date, fp): YTD contexts within the same fiscal year share the same
+    # fiscal-year start date, so Q3-cumulative (start=2025-06-01) pairs with Q2-cumulative
+    # (start=2025-06-01) even when EDGAR re-tags prior-year comparative periods with the
+    # current filing's fy label — which would break a (fy, fp) key.
     fy_fp_map = {}
     for r in rows:
-        fy = r.get("fy")
         fp = r.get("fp")
-        if fy is None or fp is None:
+        start = r.get("start")
+        if fp is None or not start:
             continue
-        key = (fy, fp)
+        key = (start, fp)
         prev = fy_fp_map.get(key)
         if prev is None or (r.get("filed") or "") > (prev.get("filed") or ""):
             fy_fp_map[key] = r
