@@ -17,10 +17,12 @@ Routes:
   GET /feed/recent                 → recent 10-Q / 10-K filers for signal board discovery
 """
 
+import io
 import logging
 import collections
 import os
 import pathlib
+import re
 import time
 from contextlib import asynccontextmanager
 
@@ -210,6 +212,143 @@ def config_js():
     )
 
 
+# ---------------------------------------------------------------------------
+# Dynamic OG image generation
+# ---------------------------------------------------------------------------
+_og_cache: dict = {}               # cik10 → PNG bytes
+_OG_CACHE_MAX = 500
+_html_content = None               # cached edgar.html text
+
+
+async def _fetch_company_og_info(cik: str):
+    """Return (name, ticker) for a CIK via the lightweight EDGAR submissions endpoint."""
+    try:
+        cik10 = cik.zfill(10)
+        url = f"https://data.sec.gov/submissions/CIK{cik10}.json"
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            r = await client.get(url, headers={"User-Agent": "EdgarWolf contact@edgarwolf.com"})
+        if r.status_code != 200:
+            return None
+        data = r.json()
+        name = data.get("name", "")
+        tickers = data.get("tickers", [])
+        ticker = tickers[0] if tickers else ""
+        return name, ticker
+    except Exception:
+        return None
+
+
+def _build_og_image(name: str, ticker: str, cik10: str) -> bytes:
+    """Generate a 1200×630 branded OG image with Pillow."""
+    from PIL import Image, ImageDraw, ImageFont
+
+    W, H = 1200, 630
+    BG      = (15,  17,  23)   # --bg
+    SURFACE = (26,  29,  39)   # --surface
+    ACCENT  = (79,  142, 247)  # --accent
+    TEXT    = (232, 234, 246)  # --text
+    MUTED   = (139, 144, 184)  # --muted
+    BORDER  = (46,  51,  82)   # --border
+
+    def _font(size: int, bold: bool = True) -> ImageFont.ImageFont:
+        candidates = [
+            f"/usr/share/fonts/truetype/dejavu/DejaVuSans-{'Bold' if bold else ''}.ttf",
+            f"/usr/share/fonts/dejavu-sans-fonts/DejaVuSans-{'Bold' if bold else ''}.ttf",
+            "/System/Library/Fonts/Supplemental/Arial Bold.ttf" if bold else "/System/Library/Fonts/Supplemental/Arial.ttf",
+        ]
+        for p in candidates:
+            if os.path.exists(p):
+                try:
+                    return ImageFont.truetype(p, size)
+                except Exception:
+                    pass
+        return ImageFont.load_default(size=size)
+
+    img  = Image.new("RGB", (W, H), BG)
+    draw = ImageDraw.Draw(img)
+
+    # Top bar
+    draw.rectangle([(0, 0), (W, 72)], fill=SURFACE)
+    draw.line([(0, 72), (W, 72)], fill=BORDER, width=1)
+    draw.text((48, 22), "EdgarWolf", font=_font(28), fill=ACCENT)
+    draw.text((W - 48, 26), "SEC filing anomaly detection", font=_font(18, bold=False), fill=MUTED, anchor="ra")
+
+    # Company name + ticker
+    display_name = (name[:42] + "...") if len(name) > 42 else name
+    draw.text((48, 130), display_name, font=_font(54), fill=TEXT)
+    if ticker:
+        draw.text((48, 206), f"${ticker}", font=_font(40), fill=ACCENT)
+
+    # Divider
+    draw.line([(48, 280), (W - 48, 280)], fill=BORDER, width=1)
+
+    # Tagline block
+    draw.text((48, 308), "Know what's in the filing before the market does.", font=_font(28), fill=TEXT)
+    draw.text((48, 358), "Z-score anomaly flags  ·  Filing Stress Scores  ·  8-quarter trends", font=_font(19, bold=False), fill=MUTED)
+
+    # Bottom bar
+    draw.rectangle([(0, H - 60), (W, H)], fill=SURFACE)
+    draw.line([(0, H - 60), (W, H - 60)], fill=BORDER, width=1)
+    draw.text((48, H - 30), f"edgarwolf.com/?cik={cik10}", font=_font(19, bold=False), fill=ACCENT, anchor="lm")
+
+    buf = io.BytesIO()
+    img.save(buf, "PNG", optimize=True)
+    return buf.getvalue()
+
+
+async def _serve_cik_html(cik: str):
+    """Return HTMLResponse with dynamic OG tags for the given CIK."""
+    import html as _html
+    from fastapi.responses import HTMLResponse
+
+    global _html_content
+    if _html_content is None:
+        _html_content = (_PUBLIC / "edgar.html").read_text(encoding="utf-8")
+
+    info = await _fetch_company_og_info(cik)
+    if not info:
+        return FileResponse(_PUBLIC / "edgar.html")
+
+    name, ticker = info
+    cik10  = cik.zfill(10)
+    label  = f"{_html.escape(name)} ({_html.escape(ticker)})" if ticker else _html.escape(name)
+    og_title = f"{label} — EdgarWolf Filing Analysis"
+    og_desc  = f"Z-score anomaly flags, Filing Stress Score, and 8-quarter trends for {_html.escape(name)} from SEC EDGAR."
+    og_image = f"https://www.edgarwolf.com/og/{cik10}.png"
+    og_url   = f"https://www.edgarwolf.com/?cik={cik10}"
+
+    page = _html_content
+    page = re.sub(r'(<meta property="og:url"\s+content=")[^"]*(")', rf'\g<1>{og_url}\g<2>', page)
+    page = re.sub(r'(<meta property="og:title"\s+content=")[^"]*(")', rf'\g<1>{og_title}\g<2>', page)
+    page = re.sub(r'(<meta property="og:description"\s+content=")[^"]*(")', rf'\g<1>{og_desc}\g<2>', page)
+    page = re.sub(r'(<meta property="og:image"\s+content=")[^"]*(")', rf'\g<1>{og_image}\g<2>', page)
+    page = re.sub(r'(<meta name="twitter:title"\s+content=")[^"]*(")', rf'\g<1>{og_title}\g<2>', page)
+    page = re.sub(r'(<meta name="twitter:description"\s+content=")[^"]*(")', rf'\g<1>{og_desc}\g<2>', page)
+    page = re.sub(r'(<meta name="twitter:image"\s+content=")[^"]*(")', rf'\g<1>{og_image}\g<2>', page)
+
+    return HTMLResponse(content=page)
+
+
+@app.get("/og/{cik}.png")
+async def og_image_for_cik(cik: str):
+    from fastapi.responses import Response
+    cik10 = cik.removesuffix(".png").zfill(10)
+    if cik10 not in _og_cache:
+        info = await _fetch_company_og_info(cik10)
+        if not info:
+            return FileResponse(_PUBLIC / "og-image.png", media_type="image/png")
+        name, ticker = info
+        png = _build_og_image(name, ticker, cik10)
+        if len(_og_cache) >= _OG_CACHE_MAX:
+            _og_cache.pop(next(iter(_og_cache)))
+        _og_cache[cik10] = png
+    return Response(
+        content=_og_cache[cik10],
+        media_type="image/png",
+        headers={"Cache-Control": "public, max-age=3600"},
+    )
+
+
 @app.get("/og-image.png")
 def og_image():
     return FileResponse(_PUBLIC / "og-image.png", media_type="image/png")
@@ -236,12 +375,16 @@ def favicon_32():
 
 
 @app.get("/")
-def root():
+async def root(cik: str = None):
+    if cik:
+        return await _serve_cik_html(cik)
     return FileResponse(_PUBLIC / "edgar.html")
 
 
 @app.get("/edgar")
-def edgar_page():
+async def edgar_page(cik: str = None):
+    if cik:
+        return await _serve_cik_html(cik)
     return FileResponse(_PUBLIC / "edgar.html")
 
 
