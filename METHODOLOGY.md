@@ -60,6 +60,14 @@ A row is considered a single quarter when its inclusive day span falls between 7
 120 days. Rows that cannot be normalized (e.g., missing the prior period for differencing)
 are excluded rather than shown with potentially wrong values.
 
+**Pairing the cumulative base (v1.7.3 fix).** The "preceding period" to subtract is matched
+on `(start_date, fp)`, **not** `(fy, fp)`. Later 10-Q filings embed prior-year comparative
+periods re-tagged with the current filing's `fy` label, so a `(fy, fp)` key could select a
+prior-year cumulative as the differencing base — producing impossible per-quarter values
+(e.g., Micron showed ~$3.3B/qtr instead of ~$2.8B, with wildly wrong YoY %). YTD rows
+within one fiscal year always share that year's start date, so keying on `start_date` pairs
+them unambiguously regardless of how EDGAR tags the `fy` field.
+
 ---
 
 ## 3. Gross Profit Derivation

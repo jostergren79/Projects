@@ -24,8 +24,8 @@ Read this only when something breaks or you're re-evaluating infrastructure.
 
 - **Integration:** Checkout, webhook, Customer Portal all live. Webhook at `https://www.edgarwolf.com/webhook/stripe`.
 - **Price IDs:** Pro = `price_1TWTJz1C3cijZqBOyfX4VwHC` ($19.00/mo), Pro+ = `price_1TVNfH1C3cijZqBOyp7Y5qJH` ($99/mo). Old $19.99 price archived.
-- **Session-based auth:** Stripe session_id + customer_id stored in localStorage, verified against Stripe API on load (cached 1h). Full per-user auth needed long-term.
-- **Stale session pattern:** Recurring `/subscription/status` calls on the same `cs_live_` ID = stale browser holding old localStorage, not a new conversion.
+- **Auth (v1.6.0+):** Magic-link sign-in via Resend (HMAC-SHA256, 15-min TTL) → 30-day httpOnly Secure SameSite=Lax `ew_session` cookie. customer_id never reaches the frontend. `/auth/request` always returns `{ok:true}` (anti-enumeration). Tier verified via `GET /auth/whoami` (reads cookie, re-checks Stripe). Session-based localStorage auth was removed in v1.6.0 — do not reference it when debugging auth.
+- **Stale session pattern:** Recurring `/subscription/status` calls on the same `cs_live_` ID = stale browser holding old localStorage, not a new conversion. (Endpoint itself removed in v1.6.0; these calls only appear in pre-v1.6.0 logs.)
 - **bfcache fix:** Prevents stuck Loading... buttons after returning from Stripe Checkout.
 
 ## Auth & Security
@@ -44,7 +44,7 @@ Read this only when something breaks or you're re-evaluating infrastructure.
 - **PostHog localhost guard (May 16):** Skips init on `127.0.0.1`/`localhost`/`0.0.0.0`. Pre-existing localhost recordings remain in storage — filter via Settings → Project → Test accounts.
 - **`subscription_success` event (May 16):** Fires once per customer on first paid-tier verify. Guarded by `subscription_success_fired` localStorage flag.
 - **JSON-LD structured data (May 17, commit 950b3ba):** schema.org SoftwareApplication in edgar.html `<head>`. All three tiers. Google Rich Results confirmed valid within hours.
-- **OG image:** 1200×630 PNG at `/og-image.png`. Shows $GIS data. Regenerate with `edgar-api/generate_og_image.py`. Static for now — dynamic per-company is a future item.
+- **OG image:** Static fallback at `/og-image.png` (shows $GIS data, regenerate with `edgar-api/generate_og_image.py`). Dynamic per-CIK images shipped in v1.7.3: `GET /og/{cik}.png` generates a branded 1200×630 PNG (Pillow, memory-cached, max 500 entries); `/?cik=` pages inject dynamic og/twitter meta tags. Validated live — X composer shows correct company preview.
 - **Digest banner copy (May 16):** Leads with weekly value (ELEVATED stress filings) + 3 concrete receipts ($GIS 100/100, $CAG triple margin, $FIG -58pp op margin).
 
 ## Content & Marketing History
@@ -65,7 +65,7 @@ Read this only when something breaks or you're re-evaluating infrastructure.
 
 ## QA
 
-- **Postman collection:** `edgar-api/postman/` — 28 requests, 49 assertions. Newman runner: `run_qa.sh [local|production]`.
+- **Postman collection:** `edgar-api/postman/` — Newman runner: `run_qa.sh [local|production]`. Regenerated in v1.7.2: dropped dead `/subscription/*` group + `X-Customer-Id` header bypass; added Auth group (`/auth/whoami`, `/auth/request`, `/auth/verify`, `/auth/logout`). Current count (after the v1.7.2 regen): 37 requests / 62 assertions (was 40/66 at v1.5.0, 28/49 at v1.2.0).
 - **Dev tier toggle:** Amber button in header, localhost only. Toggles Standard/Pro/Pro+ without reload.
 
 ## Decisions No Longer Relevant

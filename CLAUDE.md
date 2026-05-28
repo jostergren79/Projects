@@ -20,9 +20,14 @@ Current version: see `VERSION` (release history in `CHANGELOG.md`).
 
 ---
 
+## Trigger phrases
+
+- **`claude start`** — Jason types this to open a session. Immediately and automatically run the full start-of-session sequence below. No confirmation needed; just execute all steps and present the summary.
+- **`claude end session`** — Jason types this to close a session. Immediately and automatically run the full end-of-session sequence below. Do not skip steps even for distribution-only sessions (no code shipped). Never close a session without completing this sequence.
+
 ## Start-of-session sequence
 
-Run these before starting work, every session:
+Run all steps automatically when Jason types `claude start`:
 
 1. **Read `STATE.md`** — current metrics, active priorities, and the NEXT SESSION plan. (This file, `CLAUDE.md`, auto-loads.)
 2. **Pull live metrics from PostHog** (project 424339, US Cloud — see Active Decisions). Compare against the STATE.md metrics table; note anything new (visits, countries, upgrade-modal opens, signups, conversions).
@@ -32,9 +37,9 @@ Run these before starting work, every session:
 
 ## End-of-session sequence
 
-Run these before closing out, every session:
+Run all steps automatically when Jason types `claude end session`. Required even for distribution-only sessions — STATE.md must always reflect what happened:
 
-1. **Update `STATE.md`** — metrics table, active priorities, the NEXT SESSION order-of-operations, and the current-state note. The current-state note must read cold: a future session should resume with zero extra context.
+1. **Update `STATE.md`** — metrics table (pull fresh PostHog if not already done), active priorities (mark completed items done, remove them), the NEXT SESSION order-of-operations, and the current-state note. The current-state note must read cold: a future session should resume with zero extra context. Include X posts made, replies sent, any engagement data Jason provides.
 2. **If anything shipped:** add a `CHANGELOG.md` entry; bump `VERSION` + the frontend footer + `main.py` `version=`. (Skip the bump for metadata-only changes — copy, analytics guards, JSON-LD.)
 3. **If scoring / classification / polling / trigger logic changed:** update `METHODOLOGY.md` in the same change.
 4. **Save durable memory** — any new user / feedback / project / reference facts worth carrying to future sessions.
