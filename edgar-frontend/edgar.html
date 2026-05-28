@@ -501,12 +501,12 @@
   <div id="digest-banner" role="region" aria-label="Weekly Filing Stress digest signup">
     <div class="digest-inner">
       <div class="digest-copy">
-        <strong>Weekly Filing Stress digest:</strong> the 10 S&amp;P 100 filings with the highest stress scores each week. Recent flags: $GIS 100/100, $CAG triple margin, $FIG -58pp op margin.
-        <span class="digest-sub">No spam. One click to unsubscribe.</span>
+        <strong>Every Sunday: the 10 most-flagged S&amp;P 100 filings.</strong> This week: $GIS 100/100 ELEVATED, $CAG triple-margin flag, $FIG -58pp op margin. Free, no spam.
+        <span class="digest-sub">One click to unsubscribe, anytime.</span>
       </div>
       <form id="digest-form" onsubmit="submitDigest(event)">
         <input type="email" id="digest-email" placeholder="you@example.com" required maxlength="254" autocomplete="email" />
-        <button type="submit" id="digest-submit">Subscribe</button>
+        <button type="submit" id="digest-submit">Send me Sunday's</button>
       </form>
       <button type="button" id="digest-oneclick" onclick="subscribeDigestSignedIn()" style="display:none">Get the weekly digest</button>
       <span id="digest-msg" class="digest-msg" aria-live="polite"></span>
@@ -516,13 +516,13 @@
 
   <div class="search-wrap">
     <h2>Public Company Financials</h2>
-    <p>Search any US stock ticker or company name to see key metrics from the latest SEC filing</p>
+    <p>Pull any US public company's latest SEC filing. See where its margins, revenue, and filing behavior break from the norm.</p>
     <div class="search-row">
       <input type="text" id="ticker-input" placeholder="e.g. AAPL or Apple" maxlength="80" />
       <button id="search-btn" onclick="search()">Analyze</button>
     </div>
     <div class="examples">
-      Try:
+      Try a live example:
       <span onclick="quickSearch('AAPL')">AAPL</span>
       <span onclick="quickSearch('POST')">POST</span>
       <span onclick="quickSearch('WMT')">WMT</span>
@@ -696,7 +696,7 @@
     <div class="modal-box" style="max-width:700px">
       <button class="modal-close" onclick="closeUpgradeModal()" aria-label="Close">&times;</button>
       <h2 id="upgrade-modal-title">Choose Your Plan</h2>
-      <p class="modal-sub">Full access to every signal. Cancel anytime.</p>
+      <p class="modal-sub" id="upgrade-modal-sub">Full access to every signal. Cancel anytime.</p>
       <div class="plan-cards">
         <div id="plan-card-pro" class="plan-card selected" onclick="selectPlan('pro')">
           <div class="plan-name">Pro</div>
@@ -952,6 +952,11 @@
     function initDigestBanner() {
       const banner = document.getElementById('digest-banner');
       if (!banner) return;
+      // Only surface the digest ask once the visitor has seen real value — i.e.
+      // a company dashboard is on screen. On cold page load / the search view
+      // (no company yet) keep it hidden so we never ask for an email before
+      // showing anything. Every dashboard-render path re-invokes this.
+      if (!currentCompany) { banner.style.display = 'none'; return; }
       const form = document.getElementById('digest-form');
       const oneclick = document.getElementById('digest-oneclick');
       const tier = localStorage.getItem('edgarwolf_tier') || 'standard';
@@ -1040,7 +1045,7 @@
           msg.textContent = data.detail || 'Something went wrong. Please try again.';
           msg.className = 'digest-msg error';
           btn.disabled = false;
-          btn.textContent = 'Subscribe';
+          btn.textContent = "Send me Sunday's";
           return;
         }
         localStorage.setItem('digest_subscribed', '1');
@@ -1053,7 +1058,7 @@
         msg.textContent = 'Network error. Please try again.';
         msg.className = 'digest-msg error';
         btn.disabled = false;
-        btn.textContent = 'Subscribe';
+        btn.textContent = "Send me Sunday's";
       }
     }
 
@@ -1083,8 +1088,22 @@
         selectPlan('pro');
       }
 
+      // Make the ask concrete: if the visitor opened this from a company
+      // dashboard, name that company in the subhead instead of generic copy.
+      // Strip a trailing period so names like "Apple Inc." don't render as
+      // "Apple Inc.. Cancel anytime."
+      const sub = document.getElementById('upgrade-modal-sub');
+      const coName = (currentCompany && currentCompany.name)
+        ? currentCompany.name.replace(/\.+$/, '')
+        : null;
+      if (sub) {
+        sub.textContent = coName
+          ? `Unlock Exception Flags, Filing Stress Score, and peer comparison for ${coName}. Cancel anytime.`
+          : 'Full access to every signal. Cancel anytime.';
+      }
+
       modal.classList.add('open');
-      trackEvent('upgrade_modal_open');
+      trackEvent('upgrade_modal_open', { company: coName });
     }
 
     function closeUpgradeModal() {
@@ -2052,6 +2071,9 @@
       currentTicker = company?.ticker || null;
       currentCik = company?.cik || null;
       document.getElementById('signal-board').style.display = 'none';
+      // A company is now on screen — re-evaluate the digest banner so it can
+      // surface post-value (gated by the currentCompany check inside).
+      initDigestBanner();
       document.getElementById('watchlist-panel').style.display = 'none';
 
       // Company header
@@ -2228,7 +2250,7 @@
       EdgarWolf &mdash; Questions or feedback? <a href="mailto:jason@edgarwolf.com">jason@edgarwolf.com</a>
       &nbsp;&middot;&nbsp; <a href="/privacy">Privacy Policy</a>
       &nbsp;&middot;&nbsp; <a href="/terms">Terms of Service</a>
-      &nbsp;&middot;&nbsp; v1.7.3
+      &nbsp;&middot;&nbsp; v1.7.4
     </div>
   </footer>
 </body>

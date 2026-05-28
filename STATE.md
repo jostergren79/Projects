@@ -2,7 +2,7 @@
 
 **Updated every session.** Stable context, rules, and the start/end session sequences are in **`CLAUDE.md`** (auto-loaded). This file holds only the volatile state: metrics, active priorities, the next-session plan, and a current-state note.
 
-Current version: **v1.7.3** (2026-05-27) — XBRL cumulative-to-quarter differencing fix (`fy_fp_map` keyed by `(start_date, fp)`) + dynamic per-CIK OG images (`GET /og/{cik}.png`). (v1.7.2 = 60s shared Stripe re-verify cache across `/auth/whoami` + `/watchlist` + the per-device `?internal=1` analytics guard.) Release history in `CHANGELOG.md`.
+Current version: **v1.7.4** (2026-05-28) — conversion-focused frontend release: digest banner now surfaces after a company loads (new copy + "Send me Sunday's" CTA), landing subhead rewritten to the anomaly value prop, and the upgrade modal names the viewed company. (v1.7.3 = XBRL `(start_date, fp)` differencing fix + dynamic per-CIK OG images.) Release history in `CHANGELOG.md`.
 
 ---
 
@@ -29,15 +29,17 @@ _Refreshed May 28. **Numbers below are external-only** — Jason's 4 own IPs (`7
 
 _Replace completed items each session. Keep this list short._
 
-**✅ Shipped (May 27) — v1.7.3:**
-- [x] **XBRL cumulative-to-quarter differencing fix** — `fy_fp_map` now keyed by `(start_date, fp)` instead of `(fy, fp)`. Fixes bad per-quarter values on any filer (e.g. Micron) where EDGAR re-tags prior-year comparative periods with the current filing's `fy` label. 7/7 tests green.
-- [x] **Dynamic OG images per CIK** — `GET /og/{cik}.png` generates branded 1200×630 PNG (company name, ticker, EdgarWolf wordmark) using Pillow; cached in memory. `root()` / `edgar_page()` now inject dynamic og/twitter meta tags when `?cik=` is present. Validated live on prod — ServiceNow shows correctly in X composer.
+**✅ Shipped (May 28) — v1.7.4 (conversion-focused, frontend-only):**
+- [x] **Digest banner gated to post-company-view** — shows after a dashboard loads (not cold landing); copy → "Every Sunday: the 10 most-flagged S&P 100 filings…", CTA "Subscribe" → "Send me Sunday's". `digest_banner_view` now fires deeper in the funnel — track view→signup *rate*, not raw views.
+- [x] **Landing subhead → anomaly value prop** — "…See where its margins, revenue, and filing behavior break from the norm." Matches the X data-card promise. Chip lead-in → "Try a live example:".
+- [x] **Upgrade modal context-aware** — subhead names the viewed company ("…for {company}. Cancel anytime."); `upgrade_modal_open` tagged with `company`. Trailing-period strip fixes the "Apple Inc.." double-period.
+- [x] Verified on real devices (iPhone 14 Pro Max 430px + iPhone SE 375px): no horizontal overflow; banner, landing, modal all clean.
 
 **▶ NEXT SESSION:**
 
 1. [ ] **$AZO Q3 Spotlight** — Q3 XBRL **not yet ingested as of May 28** (latest period still Feb 2026 / Q2). Day 15 post used Q2 data (21%→16% op margin compression). Watch for Q3 ingestion; post a fresh Spotlight once the data lands.
 2. [ ] **Methodology-post idea** — "the model stayed quiet on UNH, Boeing, Intel" (fresh data, 0 flags despite headlines). Flag deviations, not headlines — strong differentiation angle.
-3. [x] ~~**Sanity-check $EL** (Estée Lauder)~~ — ✅ **Done May 28.** Confirmed: 37.5% figure was XBRL artifact, fixed by v1.7.3. Actual margins are 10–12% op, 54–56% gross, trending down. Not a post candidate.
+3. [ ] **Watch v1.7.4 conversion metrics** — did the gated digest banner lift signups (view→signup *rate*)? Did the company-named upgrade modal lift `upgrade_modal_open`→checkout? Baseline to beat: 22 banner views / 0 signups, 1 modal open / 0 convert.
 4. [ ] **Confirm device-flagging** — did Jason + Sam visit `?internal=1` on every device/browser? Still unconfirmed. Household cellular/IPv6 leaks until done.
 5. [ ] **LinkedIn channel decision** — DM sent to Allie K. Miller (May 27); still 0 referrals from the May 25 build post. Watch for reply + referrals; decide whether to keep posting.
 6. [ ] **Webhook self-heal:** handle `customer.subscription.created`/`updated` so dashboard-created subs self-heal without requiring sign-in.
@@ -57,6 +59,6 @@ _Replace completed items each session. Keep this list short._
 
 _Session history lives in `CHANGELOG.md` + git log; settled decisions in `DECISIONS_ARCHIVE.md`. This note keeps only the latest 1–2 sessions._
 
-_**May 28 session — health check + start sequence only; no code, no posts. (1) Prod:** v1.7.3 live, cache healthy. **(2) PostHog:** 5 external pageviews May 26–28 (Google + direct only). 0 t.co referrals confirmed — Day 14 ($TTWO, GTA VI hook) and Day 15 ($AZO, margin compression) both generated 0 site click-throughs. One direct ?cik=0000789019 (MSFT) visit May 26 — source unknown. 0 upgrade modals, 0 conversions, $0 MRR. **(3) $AZO Q3:** latest EDGAR period still Feb 2026 (Q2); Q3 10-Q not yet ingested. Card on hold. **(4) $EL sanity check:** confirmed closed — 37.5% op margin was XBRL artifact fixed by v1.7.3; actual is 10–12% op / 54–56% gross, trending down, not a post candidate. **(5) LinkedIn:** 0 reply from Allie K. Miller yet; 0 referrals from May 25 build post. **(6) Doc cleanup committed this session:** CLAUDE.md (trigger phrases + hardened session sequences), DECISIONS_ARCHIVE.md (3 stale sections: Stripe auth model, OG image, Postman count), METHODOLOGY.md (XBRL §2 pairing fix), STATE.md (version header + metrics refresh + $EL closed + $AZO Q3 status)._
+_**May 28 session — shipped v1.7.4 (conversion-focused frontend release) + doc cleanup; no revenue change ($0 MRR, 0 external paying).** **(1) Conversion levers (v1.7.4, `edgar-frontend/edgar.html` only):** PostHog showed traffic arriving (mostly Google) but not converting — 22 digest-banner views / 0 signups, 1 upgrade-modal open that bailed. Fixed three leak points: (a) digest banner now surfaces AFTER a company dashboard loads (gated on `currentCompany`, re-invoked from `renderDashboard`), not on cold landing; copy → "Every Sunday: the 10 most-flagged S&P 100 filings…", CTA "Subscribe" → "Send me Sunday's"; (b) landing subhead → anomaly value prop matching the X cards; (c) upgrade-modal subhead names the viewed company, `upgrade_modal_open` tagged with `company`. **(2) Verification:** JS `node --check`; headless + real-device (iPhone 14 Pro Max 430px & iPhone SE 375px via DevTools device mode) — no horizontal overflow, all three surfaces clean. The "clipping" chased in headless was a layout-viewport-vs-canvas artifact (`innerWidth` pinned ~500 regardless of `--window-size`), proven by in-page `scrollWidth == innerWidth`. Caught + fixed an em-dash in banner copy (house style) and a double-period bug ("Apple Inc.." → trailing-period strip). **(3) Doc cleanup (committed earlier this session, 75d03fe):** CLAUDE.md trigger phrases (`claude start` / `claude end session`) + hardened session sequences; DECISIONS_ARCHIVE 3 stale sections (Stripe auth model, OG image, Postman count); METHODOLOGY XBRL §2 pairing. **(4) Health/PostHog:** prod healthy; May 28 quiet — 0 conversions, 0 signups, 0 upgrade modals. **(5) $AZO Q3** not yet ingested (latest Feb 2026 / Q2); **$EL** confirmed XBRL-artifact, closed. **(6) LinkedIn:** 0 reply from Allie K. Miller, 0 referrals from the May 25 build post._
 
 _**May 27 session — shipped v1.7.3 (XBRL fix + dynamic OG images); distribution work; no revenue change ($0 MRR, 0 external paying). XBRL `fy_fp_map` re-keyed by `(start_date, fp)`. Dynamic OG images at `/og/{cik}.png`. Day 15 $AZO card posted. DM sent to Allie K. Miller (LinkedIn). X analytics: $MSFT post 1.4K impressions = top performer; replies into large threads = growth lever.**_

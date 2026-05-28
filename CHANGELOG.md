@@ -10,6 +10,41 @@ Versioning follows [Semantic Versioning](https://semver.org/):
 
 ---
 
+## [1.7.4] — 2026-05-28
+
+Conversion-focused release. PostHog showed traffic arriving (mostly via Google) but
+not converting: 22 digest-banner views with 0 signups, and a single upgrade-modal open
+that bailed. These changes target the three leak points — digest capture, landing
+clarity, and the upgrade ask.
+
+### Changed
+- **Digest banner now surfaces after a company dashboard loads, not on cold landing.**
+  `initDigestBanner()` returns early (hiding the banner) unless a company is on screen
+  (`currentCompany`), and `renderDashboard()` re-invokes it — so every load path (search,
+  `?cik=` deep link, dev-toggle re-render) asks for an email only *after* the visitor has
+  seen real value. Copy rewritten to lead with the offer ("Every Sunday: the 10
+  most-flagged S&P 100 filings…") and the CTA changed from "Subscribe" to "Send me
+  Sunday's". **Measurement note:** `digest_banner_view` now fires deeper in the funnel, so
+  track view→signup *rate*, not raw view counts.
+- **Landing subhead rewritten to the anomaly value prop** — "Pull any US public company's
+  latest SEC filing. See where its margins, revenue, and filing behavior break from the
+  norm." — to match the X data-card promise instead of describing search mechanics. The
+  example-chip lead-in changed to "Try a live example:".
+- **Upgrade modal is now context-aware.** When opened from a company dashboard, the
+  subhead names the company: "Unlock Exception Flags, Filing Stress Score, and peer
+  comparison for {company}. Cancel anytime." A trailing-period strip keeps names like
+  "Apple Inc." from rendering a double period. `upgrade_modal_open` now carries a
+  `company` property for funnel analysis.
+
+### Notes
+- Frontend-only (`edgar-frontend/edgar.html`); no API or schema changes.
+- Verified on real-device viewports (iPhone 14 Pro Max 430px + iPhone SE 375px): no
+  horizontal overflow; banner, landing, and modal all render cleanly. (Apparent clipping
+  in earlier headless captures was a layout-viewport-vs-canvas artifact in `--headless=new`,
+  not a CSS bug — confirmed via in-page `scrollWidth == innerWidth` measurement.)
+
+---
+
 ## [1.7.3] — 2026-05-27
 
 ### Fixed
