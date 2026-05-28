@@ -10,6 +10,28 @@ Versioning follows [Semantic Versioning](https://semver.org/):
 
 ---
 
+## [1.7.3] — 2026-05-27
+
+### Fixed
+- **XBRL cumulative-to-quarter differencing for filers with comparative re-tagged periods.**
+  EDGAR re-uses the same `(fy, fp)` labels on prior-year comparative periods included in
+  later 10-Q filings. This caused `fy_fp_map` to pick a comparative prior-year cumulative
+  value as the differencing base, producing impossible per-quarter figures (e.g. Micron
+  showed ~$3.3B/qtr instead of the correct ~$2.8B, and wildly wrong YoY %). Fixed by
+  keying the map on `(start_date, fp)` instead of `(fy, fp)` — YTD cumulative rows within
+  the same fiscal year always share the same fiscal-year start date, so the pairing is
+  unambiguous regardless of how EDGAR tags the `fy` field on comparative rows.
+
+### Added
+- **Dynamic OG images per CIK for social link previews.** `GET /og/{cik}.png` generates
+  a branded 1200×630 PNG (company name, ticker, EdgarWolf wordmark) using Pillow; result
+  is cached in memory (max 500 entries). When `/?cik=` is present, the served HTML now
+  injects dynamic `og:image`, `og:title`, `og:description`, `twitter:image`,
+  `twitter:title`, and `twitter:description` tags, so X/LinkedIn previews show the actual
+  company instead of the static General Mills default.
+
+---
+
 ## [1.7.2] — 2026-05-26
 
 ### Changed
