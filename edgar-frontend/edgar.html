@@ -1635,11 +1635,13 @@
         const summary   = dash.summary   && !dash.summary.error   ? dash.summary   : null;
         const anomalies = dash.anomalies && !dash.anomalies.error ? dash.anomalies : null;
 
-        renderDashboard(company, metrics, segments, flags, summary, companyObject, anomalies);
-        trackEvent('search', { query, cik, name: company.name });
-        // Update URL so this page is shareable and the back button works cleanly.
+        // Update URL before render so all in-render events (digest banner, etc.)
+        // capture the company URL rather than the homepage URL.
         history.pushState({}, '', '?cik=' + cik);
         document.getElementById('back-bar').style.display = 'block';
+        renderDashboard(company, metrics, segments, flags, summary, companyObject, anomalies);
+        trackEvent('company_view', { cik, name: company.name });
+        trackEvent('search', { query, cik, name: company.name });
       } catch (e) {
         showError(e.message);
       } finally {
