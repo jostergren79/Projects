@@ -8,19 +8,19 @@ Current version: **v1.7.4** (2026-05-28) — conversion-focused frontend release
 
 ## Current metrics
 
-_Refreshed May 29. **Numbers below are external-only** — Jason's 4 own IPs (`71.34.14.90`, `97.116.24.43`, + 2 IPv6) are filtered out. Note `71.34.14.90` is the **home-network public IP shared by ≥2 people** (Jason + Sam, via NAT). As of May 25 the durable filter is the per-device `?internal=1` opt-out; IP filter is now legacy/historical fallback. Two $0 comp Pro+ accounts (`cus_UUN2ChsZV2aaRC`, Sam `cus_UZVNfwfk7hlPBv`); Stripe confirms $0 real revenue._
+_Refreshed May 31. **Numbers below are external-only** — Jason's 4 own IPs (`71.34.14.90`, `97.116.24.43`, + 2 IPv6) are filtered out. Note `71.34.14.90` is the **home-network public IP shared by ≥2 people** (Jason + Sam, via NAT). As of May 25 the durable filter is the per-device `?internal=1` opt-out; IP filter is now legacy/historical fallback. Two $0 comp Pro+ accounts (`cus_UUN2ChsZV2aaRC`, Sam `cus_UZVNfwfk7hlPBv`); Stripe confirms $0 real revenue._
 
 | Metric | Value | Updated |
 |--------|-------|---------|
-| MRR | $0 | May 29, 2026 |
-| Paying users | 0 (+2 comp Pro+: `cus_UUN2ChsZV2aaRC` + Sam `cus_UZVNfwfk7hlPBv` — both $0 MRR) | May 29, 2026 |
-| Free signups (digest) | 0 external | May 29, 2026 |
-| External engaged visitors (24h) | 1 session at ~1:20 AM UTC May 29 — Google → homepage → searched → TANGER INC (CIK 0000899715) → upgrade_modal_open → no conversion. 1 digest_banner_view (no signup). 0 t.co referrals. | May 29, 2026 |
-| Real external conversions | 0 | May 29, 2026 |
-| Countries | 2: US, France | May 29, 2026 |
-| Top referrers (7d, external) | google, direct — t.co = 0, LinkedIn = 0 | May 29, 2026 |
+| MRR | $0 | May 31, 2026 |
+| Paying users | 0 (+2 comp Pro+: `cus_UUN2ChsZV2aaRC` + Sam `cus_UZVNfwfk7hlPBv` — both $0 MRR) | May 31, 2026 |
+| Free signups (digest) | 0 external | May 31, 2026 |
+| External engaged visitors | 0 engaged external sessions May 30–31. May 30 = 4 homepage-only hits, all `$direct`, ≥2 from a GCP crawler IP (`104.197.69.115`) — no `company_view`, no signup, no conversion. Last real engaged session remains the May 29 TANGER INC visit (→ upgrade_modal_open → no convert). | May 31, 2026 |
+| Real external conversions | 0 | May 31, 2026 |
+| Countries | 2: US, France | May 31, 2026 |
+| Top referrers (7d, external) | google, direct — t.co = 0, LinkedIn = 0 | May 31, 2026 |
 | X followers / combined 2nd-degree reach | 4 / ~10.3k combined (Ann Barbour 6.8k, Ashton ~2.3k) | May 21, 2026 |
-| Last X post | Day 16 — $BA methodology card (exception flags 0 vs FSS 100/100; "two signals, two questions") posted May 29 | May 29, 2026 |
+| Last X post | Day 17 — $HEI HEICO card (operating margin 25.5%, 3.8 SD above its own 8-qtr avg; "exception flags fire in both directions"; rev +25%, NI $234M); posted Sun May 31 | May 31, 2026 |
 | Last LinkedIn post | Build-in-public retrospective (15 days / 17 releases) + DM sent to Allie K. Miller | May 27, 2026 |
 
 ---
@@ -29,19 +29,15 @@ _Refreshed May 29. **Numbers below are external-only** — Jason's 4 own IPs (`7
 
 _Replace completed items each session. Keep this list short._
 
-**✅ Shipped (May 29) — analytics tracking fixes (no version bump — analytics plumbing):**
-- [x] **`company_view` tracking gap fixed** — event was only firing on direct `?cik=` loads; search-path arrivals (the majority of organic Google traffic) were invisible to funnel analytics. Now fires in both paths.
-- [x] **`digest_banner_view` URL corrected** — `history.pushState` moved before `renderDashboard` in search flow; in-render events now capture company URL instead of homepage URL.
-
-**✅ Distribution (May 29):**
-- [x] Day 16 — $BA methodology card posted: exception flags 0 vs FSS 100/100, "two signals, two questions" angle. No replies (Friday).
+**✅ Distribution (May 31):**
+- [x] Day 17 — $HEI HEICO card posted (Sun): operating margin 25.5%, 3.8 SD above its own 8-qtr avg, highest in 3+ years; "exception flags fire in both directions" angle (follows Friday's $BA "deviation from own history" beat). SEC-verified: HEICO OM, Lowe's GM, Snowflake/HEICO/Lowe's NI+EPS all matched EDGAR XBRL exactly.
 
 **▶ NEXT SESSION:**
 
-1. [ ] **Watch conversion metrics** — `company_view` now fires in search path; next session check if funnel data looks healthier. v1.7.4 baseline: 1 upgrade modal open / 0 convert. Also watch digest signup rate post-banner-fix.
-2. [ ] **$AZO Q3 Spotlight** — Q3 XBRL **not yet ingested** (latest period still Feb 2026 / Q2). Watch for ingestion; post fresh Spotlight once data lands.
-3. [ ] **Trace `POST /analytics/event 400`** — fires twice/page after auth — `routers/analytics.py` validation.
-4. [ ] **Webhook self-heal** — handle `customer.subscription.created`/`updated` so dashboard-created subs activate without requiring sign-in.
+1. [ ] **MONDAY (Jun 1) pre-market post** — peak window. **$LOW Lowe's card is already built + SEC-verified + ready to render** (`/tmp/card_low.html`: sales +10% but gross margin 32.7%, ~3.0 SD below its own avg — divergence angle). Just render to PNG and post. Hold for replies: Lowe's GM dip invites a "that's just tariffs/housing" debate — answer with "the model flags the deviation, not the cause."
+2. [ ] **Watch conversion metrics** — `company_view` now fires in search path (fixed May 29); check if funnel looks healthier. Baseline: 1 upgrade-modal open / 0 convert. Also watch digest signup rate post-banner-fix.
+3. [ ] **Trace `POST /analytics/event 400`** — confirmed cause: frontend fires `subscription_success` via `trackEvent`, but it's **missing from the backend `_ALLOWED_EVENTS` allowlist** (`routers/analytics.py:19`) → guaranteed 400 (PostHog still gets it; only the Railway-log copy is rejected). One-line fix. NOTE: this fires once post-checkout, not "twice/page after auth" — that symptom may be separate; needs a logged-in repro.
+4. [ ] **Webhook self-heal** — handle `customer.subscription.created`/`updated` so dashboard-created subs activate without sign-in. Confirmed not done: webhook handles `checkout.session.completed`/`subscription.deleted`/`payment_failed` only (`routers/checkout.py:180`).
 5. [ ] **LinkedIn channel decision** — DM to Allie K. Miller (May 27) still unanswered; 0 referrals. Watch for reply; decide whether to keep posting.
 6. [ ] **Ongoing distribution** — 4 replies/day target; reply threads into high-impression accounts are the proven reach driver. Monday pre-market = peak window.
 
@@ -54,10 +50,10 @@ _Replace completed items each session. Keep this list short._
 
 ---
 
-## Current state — May 29, 2026
+## Current state — May 31, 2026
 
 _Session history lives in `CHANGELOG.md` + git log; settled decisions in `DECISIONS_ARCHIVE.md`. This note keeps only the latest 1–2 sessions._
 
-_**May 29 session (Friday, light) — posted Day 16 X card + fixed 2 analytics tracking bugs; no revenue change ($0 MRR, 0 external paying).** **(1) X post:** Boeing $BA methodology card — "two signals, two questions" angle (exception flags 0 vs FSS 100/100 ELEVATED; news hook = FAA production ramp cleared May 27). Option A copy. No replies (Friday, Jason zonked). **(2) Analytics fixes (commit d21df56, no version bump):** (a) `company_view` event was missing from the search path — only fired on direct `?cik=` URL loads; any user arriving via search (majority of Google organic) was invisible to company-level funnel tracking. Fixed by adding `trackEvent('company_view', ...)` to `search()` in `edgar-frontend/edgar.html`. (b) `history.pushState` was running after `renderDashboard`, so in-render events like `digest_banner_view` logged the homepage URL instead of the company URL. Fixed by moving `pushState` + back-bar display before `renderDashboard`. **(3) PostHog (May 29):** 1 external engaged session early AM — Google → TANGER INC via search → upgrade_modal_open (company: TANGER INC) → no conversion; 0 signups. Session was pre-fix so company_view still showed 0. **(4) Prod health:** v1.7.4 online, Railway healthy._
+_**May 31 session (Sunday) — distribution-only: posted Day 17 X card; no code shipped, no revenue change ($0 MRR, 0 external paying).** **(1) X post (Day 17):** $HEI HEICO card — "exception flags fire in both directions" angle, continuing Friday's $BA "deviation from a company's own history" beat. Operating margin 25.5%, 3.8 SD ABOVE its own 8-qtr avg (positive-direction flag), highest in 3+ years; rev +25% YoY, NI $234M / EPS $1.66. Card built from scratch in dashboard palette (no template existed), rendered headless Chrome 1080×1350 @2x, mobile-legibility verified at 400px. PNG also at `~/Desktop/edgarwolf_HEI_card.png`. **(2) Data integrity:** SEC EDGAR XBRL ground-truth cross-checks all PASSED — HEICO OM (25.47% = OI $350.4M / rev $1.376B), Lowe's GM (32.68%), and HEICO/Lowe's/Snowflake NI+EPS all matched EdgarWolf exactly. (Self-correction: I briefly suspected a Target net-income bug — it was MY misread of the prior-year comparative; EW reports Target NI $781M / EPS $1.71 correctly. NO bug. Disregard any spawned "Target bug" task.) **(3) Built but not yet posted:** $LOW Lowe's card (`/tmp/card_low.html`) — queued for Monday pre-market. **(4) PostHog May 30–31:** 0 engaged external sessions; May 30 = 4 homepage-only `$direct` hits, ≥2 from GCP crawler IP. **(5) Prod health:** v1.7.4 online, Railway healthy, tree clean/pushed (last code commit d21df56, May 29). **(6) Doc note:** AZO Spotlight already posted days ago (on Q2 FY26 data); AZO Q3 still not ingested as of May 31 (latest period = Feb 14 2026 / Q2) — no pending AZO work, removed from next-session list._
 
-_**May 28 session — shipped v1.7.4 (conversion-focused frontend release) + doc cleanup; no revenue change ($0 MRR, 0 external paying). Digest banner gated post-company-view; landing subhead → anomaly value prop; upgrade modal names viewed company. PostHog: 22 banner views / 0 signups, 1 modal open / 0 convert (baseline). $AZO Q3 not yet ingested. LinkedIn: 0 reply from Allie K. Miller.**_
+_**May 29 session (Friday) — posted Day 16 $BA X card + fixed 2 analytics tracking bugs (commit d21df56, no version bump); no revenue change. (a) `company_view` was missing from the search path (only fired on direct `?cik=` loads) — now fires in both. (b) `history.pushState` moved before `renderDashboard` so in-render events log the company URL, not homepage. PostHog: 1 engaged session (Google → TANGER INC → upgrade_modal_open → no convert).**_
