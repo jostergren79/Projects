@@ -20,7 +20,7 @@ _Refreshed May 31. **Numbers below are external-only** — Jason's 4 own IPs (`7
 | Countries | 2: US, France | May 31, 2026 |
 | Top referrers (7d, external) | google, direct — t.co = 0, LinkedIn = 0 | May 31, 2026 |
 | X followers / combined 2nd-degree reach | 4 / ~10.3k combined (Ann Barbour 6.8k, Ashton ~2.3k) | May 21, 2026 |
-| Last X post | Day 17 — $HEI HEICO card (operating margin 25.5%, 3.8 SD above its own 8-qtr avg; "exception flags fire in both directions"; rev +25%, NI $234M); posted Sun May 31 | May 31, 2026 |
+| Last X post | Day 18 — $LOW Lowe's card (gross margin 32.7%, 3.0 SD below its own 8-qtr avg; "sales accelerating, margin compressing" divergence angle; rev +10% YoY); posted Mon Jun 1 pre-market | Jun 1, 2026 |
 | Last LinkedIn post | Build-in-public retrospective (15 days / 17 releases) + DM sent to Allie K. Miller | May 27, 2026 |
 
 ---
@@ -29,17 +29,16 @@ _Refreshed May 31. **Numbers below are external-only** — Jason's 4 own IPs (`7
 
 _Replace completed items each session. Keep this list short._
 
-**✅ Distribution (May 31):**
-- [x] Day 17 — $HEI HEICO card posted (Sun): operating margin 25.5%, 3.8 SD above its own 8-qtr avg, highest in 3+ years; "exception flags fire in both directions" angle (follows Friday's $BA "deviation from own history" beat). SEC-verified: HEICO OM, Lowe's GM, Snowflake/HEICO/Lowe's NI+EPS all matched EDGAR XBRL exactly.
+**✅ Distribution (Jun 1):**
+- [x] Day 18 — $LOW Lowe's card posted (Mon pre-market): gross margin 32.7%, 3.0 SD below its own 8-qtr avg; divergence angle ("sales accelerating, margin compressing"); rev $23.1B +10% YoY. Card pre-built + SEC-verified from prior session.
 
 **▶ NEXT SESSION:**
 
-1. [ ] **MONDAY (Jun 1) pre-market post** — peak window. **$LOW Lowe's card is already built + SEC-verified + ready to render** (`/tmp/card_low.html`: sales +10% but gross margin 32.7%, ~3.0 SD below its own avg — divergence angle). Just render to PNG and post. Hold for replies: Lowe's GM dip invites a "that's just tariffs/housing" debate — answer with "the model flags the deviation, not the cause."
-2. [ ] **Watch conversion metrics** — `company_view` now fires in search path (fixed May 29); check if funnel looks healthier. Baseline: 1 upgrade-modal open / 0 convert. Also watch digest signup rate post-banner-fix.
-3. [ ] **Trace `POST /analytics/event 400`** — confirmed cause: frontend fires `subscription_success` via `trackEvent`, but it's **missing from the backend `_ALLOWED_EVENTS` allowlist** (`routers/analytics.py:19`) → guaranteed 400 (PostHog still gets it; only the Railway-log copy is rejected). One-line fix. NOTE: this fires once post-checkout, not "twice/page after auth" — that symptom may be separate; needs a logged-in repro.
-4. [ ] **Webhook self-heal** — handle `customer.subscription.created`/`updated` so dashboard-created subs activate without sign-in. Confirmed not done: webhook handles `checkout.session.completed`/`subscription.deleted`/`payment_failed` only (`routers/checkout.py:180`).
-5. [ ] **LinkedIn channel decision** — DM to Allie K. Miller (May 27) still unanswered; 0 referrals. Watch for reply; decide whether to keep posting.
-6. [ ] **Ongoing distribution** — 4 replies/day target; reply threads into high-impression accounts are the proven reach driver. Monday pre-market = peak window.
+1. [ ] **Watch conversion metrics** — `company_view` now fires in search path (fixed May 29); check if funnel looks healthier. Baseline: 1 upgrade-modal open / 0 convert. Also watch digest signup rate post-banner-fix.
+2. [ ] **Trace `POST /analytics/event 400`** — confirmed cause: frontend fires `subscription_success` via `trackEvent`, but it's **missing from the backend `_ALLOWED_EVENTS` allowlist** (`routers/analytics.py:19`) → guaranteed 400 (PostHog still gets it; only the Railway-log copy is rejected). One-line fix. NOTE: this fires once post-checkout, not "twice/page after auth" — that symptom may be separate; needs a logged-in repro.
+3. [ ] **Webhook self-heal** — handle `customer.subscription.created`/`updated` so dashboard-created subs activate without sign-in. Confirmed not done: webhook handles `checkout.session.completed`/`subscription.deleted`/`payment_failed` only (`routers/checkout.py:180`).
+4. [ ] **LinkedIn channel decision** — DM to Allie K. Miller (May 27) still unanswered; 0 referrals. Watch for reply; decide whether to keep posting.
+5. [ ] **Ongoing distribution** — 4 replies/day target; reply threads into high-impression accounts are the proven reach driver.
 
 **Tech debt / soon:**
 - [ ] Submit to SaaSWorthy, Product Hunt, G2, Capterra, AlternativeTo.
@@ -50,10 +49,10 @@ _Replace completed items each session. Keep this list short._
 
 ---
 
-## Current state — May 31, 2026
+## Current state — Jun 1, 2026
 
 _Session history lives in `CHANGELOG.md` + git log; settled decisions in `DECISIONS_ARCHIVE.md`. This note keeps only the latest 1–2 sessions._
 
-_**May 31 session (Sunday) — distribution-only: posted Day 17 X card; no code shipped, no revenue change ($0 MRR, 0 external paying).** **(1) X post (Day 17):** $HEI HEICO card — "exception flags fire in both directions" angle, continuing Friday's $BA "deviation from a company's own history" beat. Operating margin 25.5%, 3.8 SD ABOVE its own 8-qtr avg (positive-direction flag), highest in 3+ years; rev +25% YoY, NI $234M / EPS $1.66. Card built from scratch in dashboard palette (no template existed), rendered headless Chrome 1080×1350 @2x, mobile-legibility verified at 400px. PNG also at `~/Desktop/edgarwolf_HEI_card.png`. **(2) Data integrity:** SEC EDGAR XBRL ground-truth cross-checks all PASSED — HEICO OM (25.47% = OI $350.4M / rev $1.376B), Lowe's GM (32.68%), and HEICO/Lowe's/Snowflake NI+EPS all matched EdgarWolf exactly. (Self-correction: I briefly suspected a Target net-income bug — it was MY misread of the prior-year comparative; EW reports Target NI $781M / EPS $1.71 correctly. NO bug. Disregard any spawned "Target bug" task.) **(3) Built but not yet posted:** $LOW Lowe's card (`/tmp/card_low.html`) — queued for Monday pre-market. **(4) PostHog May 30–31:** 0 engaged external sessions; May 30 = 4 homepage-only `$direct` hits, ≥2 from GCP crawler IP. **(5) Prod health:** v1.7.4 online, Railway healthy, tree clean/pushed (last code commit d21df56, May 29). **(6) Doc note:** AZO Spotlight already posted days ago (on Q2 FY26 data); AZO Q3 still not ingested as of May 31 (latest period = Feb 14 2026 / Q2) — no pending AZO work, removed from next-session list._
+_**Jun 1 session (Monday) — distribution-only: posted Day 18 $LOW Lowe's card; no code shipped, no revenue change ($0 MRR, 0 external paying).** **(1) X post (Day 18):** $LOW Lowe's card — divergence angle ("sales accelerating, margin compressing"): gross margin 32.7%, 3.0 SD below its own 8-qtr avg (multi-year low), even as rev hit $23.1B +10% YoY (best growth in 2 years). Card was pre-built + SEC-verified from May 31 session; rendered headless Chrome 1080×1350 @2x this session, PNG at `~/Desktop/edgarwolf_LOW_card.png`. Day count confirmed via git log: campaign started May 13/14, Day 18 = Jun 1. **(2) PostHog Jun 1:** 1 external `page_view` at 20:54 UTC for `?cik=0000046619` (direct CIK link); no `company_view` fired (likely bounced before full dashboard load). 0 conversions. **(3) Prod health:** v1.7.4 online, Railway healthy. **(4) Reply pre-load:** for tariff/housing pushback — "the model flags the deviation from its own history, not the cause."_
 
-_**May 29 session (Friday) — posted Day 16 $BA X card + fixed 2 analytics tracking bugs (commit d21df56, no version bump); no revenue change. (a) `company_view` was missing from the search path (only fired on direct `?cik=` loads) — now fires in both. (b) `history.pushState` moved before `renderDashboard` so in-render events log the company URL, not homepage. PostHog: 1 engaged session (Google → TANGER INC → upgrade_modal_open → no convert).**_
+_**May 31 session (Sunday) — distribution-only: posted Day 17 $HEI HEICO card; no code shipped, no revenue change.** Operating margin 25.5%, 3.8 SD ABOVE its own 8-qtr avg; rev +25% YoY, NI $234M / EPS $1.66. PNG at `~/Desktop/edgarwolf_HEI_card.png`. PostHog May 30–31: 0 engaged external sessions. Prod: v1.7.4 online, tree clean/pushed (last code commit d21df56, May 29)._
