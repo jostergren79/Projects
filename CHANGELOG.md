@@ -10,6 +10,24 @@ Versioning follows [Semantic Versioning](https://semver.org/):
 
 ---
 
+## [1.7.5] — 2026-06-02
+
+Backend reliability: two webhook/analytics fixes.
+
+### Fixed
+- **`subscription_success` 400 on Railway logs** — event was firing from the frontend
+  post-checkout but missing from `_ALLOWED_EVENTS` in `routers/analytics.py`. Added it;
+  Railway log copy now captured. PostHog was always receiving it (direct SDK call bypasses
+  the backend allowlist).
+- **Webhook self-heal for dashboard-provisioned subscriptions** — webhook handler only
+  covered `checkout.session.completed`; subscriptions created via Stripe Dashboard never
+  activated. Added `_sync_subscription()` helper and wired `customer.subscription.created`
+  and `customer.subscription.updated` events: both now upsert tier to the DB when the
+  subscription status is `active`. No welcome email on these paths (checkout owns that).
+  **Action required:** add both event types in Stripe Dashboard → Webhooks → Edit endpoint.
+
+---
+
 ## [1.7.4] — 2026-05-28
 
 Conversion-focused release. PostHog showed traffic arriving (mostly via Google) but

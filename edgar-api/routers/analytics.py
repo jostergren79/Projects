@@ -30,6 +30,7 @@ _ALLOWED_EVENTS = {
     "digest_banner_view",
     "digest_banner_dismiss",
     "digest_signup",
+    "subscription_success",
 }
 
 

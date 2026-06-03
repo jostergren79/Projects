@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    width: 1080px;
+    height: 1350px;
+    overflow: hidden;
+    background: #0f1117;
+    color: #e8eaf6;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    display: flex;
+    flex-direction: column;
+    padding: 56px 64px 48px;
+    gap: 32px;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .ew-brand {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: #4f8ef7;
+  }
+  .badge {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    background: #1a1d27;
+    border: 1px solid #2e3352;
+    border-radius: 6px;
+    padding: 6px 14px;
+    color: #8b90b8;
+  }
+
+  /* ── COMPANY ID ── */
+  .co-block { flex-shrink: 0; }
+  .co-name {
+    font-size: 44px;
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -.02em;
+  }
+  .co-meta {
+    margin-top: 8px;
+    font-size: 16px;
+    color: #8b90b8;
+    letter-spacing: .02em;
+  }
+  .co-meta span { color: #4f8ef7; font-weight: 600; }
+
+  /* ── DIVIDER ── */
+  .divider { height: 1px; background: #2e3352; flex-shrink: 0; }
+
+  /* ── METRICS GRID ── */
+  .metrics {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px 28px;
+    flex-shrink: 0;
+  }
+  .metric {
+    background: #1a1d27;
+    border: 1px solid #2e3352;
+    border-radius: 12px;
+    padding: 28px 28px;
+  }
+  .metric .label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .11em;
+    text-transform: uppercase;
+    color: #8b90b8;
+    margin-bottom: 10px;
+  }
+  .metric .value {
+    font-size: 44px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -.02em;
+  }
+  .metric .delta {
+    margin-top: 8px;
+    font-size: 14px;
+    color: #8b90b8;
+  }
+  .metric .delta.up { color: #34d399; }
+  .metric .delta.swing { color: #fbbf24; }
+  .metric.record { border-color: #34d399; }
+  .metric .record-label {
+    display: inline-block;
+    margin-top: 10px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: #34d399;
+    background: #162a1e;
+    border: 1px solid #34d399;
+    border-radius: 4px;
+    padding: 3px 9px;
+  }
+
+  /* ── EBAY CALLOUT ── */
+  .ebay-block {
+    background: #1f1a0e;
+    border: 2px solid #fbbf24;
+    border-radius: 14px;
+    padding: 30px 32px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  .ebay-block .risk-quote {
+    margin-top: auto;
+  }
+  .ebay-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 22px;
+  }
+  .ebay-tag {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: #fbbf24;
+    background: #2a2212;
+    border: 1px solid #fbbf24;
+    border-radius: 4px;
+    padding: 4px 10px;
+  }
+  .ebay-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #fbbf24;
+  }
+  .ebay-rows {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 28px;
+    margin-bottom: 22px;
+  }
+  .ebay-stat .elabel {
+    font-size: 11px;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: #8b90b8;
+    margin-bottom: 6px;
+  }
+  .ebay-stat .evalue {
+    font-size: 38px;
+    font-weight: 800;
+    color: #fbbf24;
+    letter-spacing: -.02em;
+  }
+  .ebay-stat .esub {
+    margin-top: 5px;
+    font-size: 13px;
+    color: #8b90b8;
+  }
+  .risk-quote {
+    background: #2a2212;
+    border-left: 3px solid #fbbf24;
+    border-radius: 0 8px 8px 0;
+    padding: 14px 18px;
+  }
+  .risk-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: #8b90b8;
+    margin-bottom: 6px;
+  }
+  .risk-text {
+    font-size: 16px;
+    font-weight: 600;
+    color: #e8eaf6;
+    line-height: 1.45;
+  }
+
+  /* ── SUPPLEMENTAL ROW ── */
+  .sup-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+    flex-shrink: 0;
+  }
+  .sup-stat {
+    background: #1a1d27;
+    border: 1px solid #2e3352;
+    border-radius: 12px;
+    padding: 22px 24px;
+  }
+  .sup-stat .slabel {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: #8b90b8;
+    margin-bottom: 8px;
+  }
+  .sup-stat .svalue {
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -.01em;
+  }
+  .sup-stat .sdelta {
+    margin-top: 5px;
+    font-size: 12px;
+    color: #8b90b8;
+  }
+  .sup-stat .sdelta.up { color: #34d399; }
+
+  /* ── FOOTER ── */
+  .footer-row {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    padding-top: 22px;
+    border-top: 1px solid #2e3352;
+    flex-shrink: 0;
+  }
+  .cash-block .clabel {
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: #8b90b8;
+    margin-bottom: 4px;
+  }
+  .cash-block .cvalue {
+    font-size: 26px;
+    font-weight: 800;
+    color: #4f8ef7;
+    letter-spacing: -.01em;
+  }
+  .cash-block .csub {
+    margin-top: 3px;
+    font-size: 13px;
+    color: #8b90b8;
+  }
+  .ew-url {
+    text-align: right;
+    font-size: 13px;
+    color: #8b90b8;
+  }
+  .ew-url strong {
+    display: block;
+    font-size: 16px;
+    font-weight: 700;
+    color: #4f8ef7;
+  }
+</style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="ew-brand">EdgarWolf</div>
+    <div class="badge">8-K Filed Jun 2, 2026</div>
+  </div>
+
+  <div class="co-block">
+    <div class="co-name">GameStop Corp.</div>
+    <div class="co-meta"><span>$GME</span> &nbsp;·&nbsp; Q1 FY2026 Earnings &nbsp;·&nbsp; Period ended May 2, 2026</div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="metrics">
+    <div class="metric">
+      <div class="label">Net Sales</div>
+      <div class="value">$835.3M</div>
+      <div class="delta up">+14% YoY &nbsp;($732.4M prior)</div>
+    </div>
+    <div class="metric">
+      <div class="label">Gross Margin</div>
+      <div class="value">40.7%</div>
+      <div class="delta up">+6.2 pp &nbsp;(was 34.5%)</div>
+    </div>
+    <div class="metric">
+      <div class="label">Operating Income</div>
+      <div class="value">$143.3M</div>
+      <div class="delta swing">Swung from -$10.8M loss</div>
+    </div>
+    <div class="metric record">
+      <div class="label">Net Income</div>
+      <div class="value">$389.6M</div>
+      <div class="record-label">Highest quarter in history</div>
+    </div>
+  </div>
+
+  <div class="ebay-block">
+    <div class="ebay-header">
+      <div class="ebay-tag">Filing Signal</div>
+      <div class="ebay-title">The eBay Play</div>
+    </div>
+    <div class="ebay-rows">
+      <div class="ebay-stat">
+        <div class="elabel">Unrealized gain on eBay derivatives</div>
+        <div class="evalue">$268.4M</div>
+        <div class="esub">Put + call options on $EBAY stock</div>
+      </div>
+      <div class="ebay-stat">
+        <div class="elabel">Collateral pledged this quarter</div>
+        <div class="evalue">$1.0B</div>
+        <div class="esub">As collateral for derivative asset</div>
+      </div>
+    </div>
+    <div class="risk-quote">
+      <div class="risk-label">Risk Factors &nbsp;·&nbsp; 8-K 6/2/26</div>
+      <div class="risk-text">"...the Company's ability to complete its proposed acquisition of eBay Inc."</div>
+    </div>
+  </div>
+
+  <div class="sup-row">
+    <div class="sup-stat">
+      <div class="slabel">SG&amp;A</div>
+      <div class="svalue">$201.6M</div>
+      <div class="sdelta up">-12% YoY &nbsp;(was $228.1M)</div>
+    </div>
+    <div class="sup-stat">
+      <div class="slabel">EPS — Diluted</div>
+      <div class="svalue">$0.66</div>
+      <div class="sdelta up">was $0.09</div>
+    </div>
+    <div class="sup-stat">
+      <div class="slabel">Buyback Auth.</div>
+      <div class="svalue">$2.0B</div>
+      <div class="sdelta">Approved Jun 2, 2026</div>
+    </div>
+  </div>
+
+  <div class="footer-row">
+    <div class="cash-block">
+      <div class="clabel">Cash + Securities + Digital Assets</div>
+      <div class="cvalue">$9.7 Billion</div>
+      <div class="csub">$2.0B share repurchase authorized today</div>
+    </div>
+    <div class="ew-url">
+      <strong>edgarwolf.com</strong>
+      ?cik=0001326380
+    </div>
+  </div>
+
+</body>
+</html>

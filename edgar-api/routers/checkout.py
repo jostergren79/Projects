@@ -161,6 +161,36 @@ def _send_welcome_email(to_email: str, tier: str) -> None:
         logger.error("Failed to send welcome email to %s: %s", mask_email(to_email), e)
 
 
+def _sync_subscription(sub, trigger: str) -> None:
+    """Upsert a user record from an active Stripe subscription object.
+
+    Used by subscription.created and subscription.updated webhooks to handle
+    dashboard-provisioned subs that never go through checkout.session.completed.
+    No welcome email is sent — checkout.session.completed owns that.
+    """
+    customer_id = sub.get("customer", "")
+    items = sub.get("items", {}).get("data", [])
+    if not customer_id or not items:
+        return
+    price_id = (items[0].get("price") or {}).get("id", "")
+    tier = _tier_from_price_id(price_id)
+    if not tier:
+        return
+    try:
+        customer = stripe.Customer.retrieve(customer_id)
+        email = customer.get("email", "") if isinstance(customer, dict) else customer.email
+    except stripe.StripeError as exc:
+        logger.error("Stripe error fetching customer=%s for %s: %s", customer_id, trigger, exc)
+        return
+    if not email:
+        return
+    try:
+        upsert_user(customer_id, email, tier)
+        logger.info("EVENT subscription_synced trigger=%s customer=%s tier=%s", trigger, customer_id, tier)
+    except Exception as exc:
+        logger.error("upsert_user failed for customer=%s: %s", customer_id, exc)
+
+
 @router.post("/webhook/stripe")
 async def stripe_webhook(request: Request):
     payload = await request.body()
@@ -196,6 +226,19 @@ async def stripe_webhook(request: Request):
             except Exception as exc:
                 logger.error("upsert_user failed for customer=%s: %s", customer_id, exc)
             _send_welcome_email(customer_email, tier)
+
+    elif event.type in ("customer.subscription.created", "customer.subscription.updated"):
+        sub = event.data.object
+        prev = event.data.get("previous_attributes") or {}
+        status = sub.get("status", "")
+        # For .created: sync any active sub (catches dashboard-provisioned subs).
+        # For .updated: only re-sync when status or items (tier) actually changed.
+        if status == "active" and (
+            event.type == "customer.subscription.created"
+            or "status" in prev
+            or "items" in prev
+        ):
+            _sync_subscription(sub, event.type)
 
     elif event.type == "customer.subscription.deleted":
         sub = event.data.object
