@@ -8,17 +8,17 @@ Current version: **v1.7.5** (2026-06-02) — conversion-focused frontend release
 
 ## Current metrics
 
-_Refreshed Jun 2. **Numbers below are external-only** — Jason's IPs filtered (added `97.116.28.254` as confirmed internal this session). Per-device `?internal=1` opt-out is the durable filter. Two $0 comp Pro+ accounts (`cus_UUN2ChsZV2aaRC`, Sam `cus_UZVNfwfk7hlPBv`); Stripe confirms $0 real revenue._
+_Refreshed Jun 5. **Numbers below are external-only** — Jason's IPs filtered. Per-device `?internal=1` opt-out is the durable filter. Two $0 comp Pro+ accounts (`cus_UUN2ChsZV2aaRC`, Sam `cus_UZVNfwfk7hlPBv`); Stripe confirms $0 real revenue._
 
 | Metric | Value | Updated |
 |--------|-------|---------|
-| MRR | $0 | Jun 2, 2026 |
-| Paying users | 0 (+2 comp Pro+: `cus_UUN2ChsZV2aaRC` + Sam `cus_UZVNfwfk7hlPBv` — both $0 MRR) | Jun 2, 2026 |
-| Free signups (digest) | 0 external | Jun 2, 2026 |
-| External engaged visitors | 0 external events Jun 2. `97.116.28.254` (LinkedIn referrer → Apple CIK) confirmed internal this session. | Jun 2, 2026 |
-| Real external conversions | 0 | Jun 2, 2026 |
-| Countries | 2: US, France | Jun 2, 2026 |
-| Top referrers (7d, external) | google, direct — t.co = 0 | Jun 2, 2026 |
+| MRR | $0 | Jun 5, 2026 |
+| Paying users | 0 (+2 comp Pro+: `cus_UUN2ChsZV2aaRC` + Sam `cus_UZVNfwfk7hlPBv` — both $0 MRR) | Jun 5, 2026 |
+| Free signups (digest) | 0 external | Jun 5, 2026 |
+| External engaged visitors | Jun 3: 8 external events (1 company_view, 1 digest_banner_view, 3 page_view). Jun 4–5: 0 new. | Jun 5, 2026 |
+| Real external conversions | 0 | Jun 5, 2026 |
+| Countries | 2: US, France | Jun 5, 2026 |
+| Top referrers (7d, external) | google, direct — t.co = 0 | Jun 5, 2026 |
 | X followers / combined 2nd-degree reach | 4 / ~10.3k combined (Ann Barbour 6.8k, Ashton ~2.3k) | May 21, 2026 |
 | Last X post | Day 19 — $GME Q1 FY2026 earnings card; eBay derivatives angle ("proposed acquisition of eBay" from risk factors); posted Jun 2 | Jun 2, 2026 |
 | Last LinkedIn post | Build-in-public retrospective (15 days / 17 releases) + DM sent to Allie K. Miller | May 27, 2026 |
@@ -54,10 +54,10 @@ _Replace completed items each session. Keep this list short._
 
 ---
 
-## Current state — Jun 2, 2026
+## Current state — Jun 5, 2026
 
 _Session history lives in `CHANGELOG.md` + git log; settled decisions in `DECISIONS_ARCHIVE.md`. This note keeps only the latest 1–2 sessions._
 
-_**Jun 2 session (Tuesday) — code + distribution: shipped v1.7.5 (two backend fixes), posted Day 19 $GME card. $0 MRR, 0 external paying.** **(1) Code shipped:** `subscription_success` added to analytics allowlist (was 400ing on Railway); webhook self-heal added for `customer.subscription.created`/`updated` via `_sync_subscription()` — Stripe Dashboard still needs event types added. **(2) X post (Day 19):** $GME Q1 FY2026 earnings card — biggest post to date. Record $389.6M net income (highest quarter in company history); $268.4M from unrealized eBay derivatives; $1B collateral pledged; risk factors disclose "proposed acquisition of eBay Inc." PNG at `~/Desktop/edgarwolf_GME_card.png`, card HTML at `cards/gme_q1fy26.html`. **(3) PostHog Jun 2:** 0 external events. `97.116.28.254` (LinkedIn referrer → Apple CIK) confirmed as Jason's internal IP — added to known list. **(4) Prod health:** v1.7.5 deployed, Railway healthy._
+_**Jun 5 session (Friday) — start-only, no code shipped, no posts.** **(1) PostHog Jun 3:** 8 external events — 1 company_view (engaged visitor hit a dashboard), 1 digest_banner_view, 3 page_view. No upgrade-modal opens, no signups. Countries: US + France. Jun 4–5: 0 new events. **(2) Prod health:** v1.7.5 deployed, Railway healthy. **(3) Stripe Dashboard action still open:** `customer.subscription.created` + `customer.subscription.updated` need to be added to webhook endpoint config. Last X post remains Day 19 $GME (Jun 2) — 3 days without a post._
 
-_**Jun 1 session (Monday) — distribution-only: posted Day 18 $LOW Lowe's card; no code shipped.** Gross margin 32.7%, 3.0 SD below 8-qtr avg; rev $23.1B +10% YoY. PNG at `~/Desktop/edgarwolf_LOW_card.png`._
+_**Jun 2 session (Tuesday) — code + distribution: shipped v1.7.5 (two backend fixes), posted Day 19 $GME card. $0 MRR, 0 external paying.** **(1) Code shipped:** `subscription_success` added to analytics allowlist; webhook self-heal added for `customer.subscription.created`/`updated` via `_sync_subscription()`. **(2) X post (Day 19):** $GME Q1 FY2026 earnings card — record $389.6M NI; $268.4M unrealized eBay derivatives; $1B collateral; risk factors disclose "proposed acquisition of eBay Inc." PNG at `~/Desktop/edgarwolf_GME_card.png`, card HTML at `cards/gme_q1fy26.html`._
