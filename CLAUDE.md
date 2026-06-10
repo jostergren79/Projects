@@ -32,7 +32,7 @@ Run all steps automatically when Jason types `claude start`:
 1. **Read `STATE.md`** — current metrics, active priorities, and the NEXT SESSION plan. (This file, `CLAUDE.md`, auto-loads.)
 2. **Pull live metrics from PostHog** (project 424339, US Cloud — see Active Decisions). Compare against the STATE.md metrics table; note anything new (visits, countries, upgrade-modal opens, signups, conversions).
 3. **Check prod health:** `GET /health` (expect ok + cache healthy) and `GET /openapi.json` (confirm deployed version vs `VERSION`).
-4. **Note pending externals:** any reply from `ai_eng@spacex.com`; r/SecurityAnalysis mod approval; Railway deploy-queue state.
+4. **Note pending externals:** r/SecurityAnalysis mod approval; Railway deploy-queue state.
 5. **Restate the NEXT SESSION plan** from STATE.md and confirm the focus with Jason before diving in.
 
 ## End-of-session sequence
@@ -103,7 +103,7 @@ Feature gating LIVE since May 10, 2026. Differentiation is feature **depth**, no
 - **$SOFI:** Contrarian/Green; four straight profitable quarters. XBRL revenue concepts unreliable for fintechs/banks — use bottom-line figures only.
 
 **Channels:**
-- **X (PRIMARY):** personal account. 6 rotating themes — Company Spotlight, Methodology, Sector Sweep, Contrarian/Green, Builder Update, Retrospective. 4 replies/day target. Monday pre-market = peak window. CIK-direct URL (`?cik=<CIK>`) on every company-specific post. **Data-card pipeline:** build HTML in the dashboard palette (CSS vars in `edgar-frontend/edgar.html`) → render with headless Chrome `--screenshot --force-device-scale-factor=2` (4:5, 1080×1350) → verify legibility by downscaling to ~400px (mobile feed width) with `sips`.
+- **X (PRIMARY):** personal account. 6 rotating themes — Company Spotlight, Methodology, Sector Sweep, Contrarian/Green, Builder Update, Retrospective. 4 replies/day target. Monday pre-market = peak window. CIK-direct URL (`?cik=<CIK>`) on every company-specific post. **Daily post + card automation:** Cowork runs at 8 AM daily, generates the post copy and data card automatically. **Data-card pipeline:** build HTML in the dashboard palette (CSS vars in `edgar-frontend/edgar.html`) → render with headless Chrome `--screenshot --force-device-scale-factor=2` (4:5, 1080×1350) → verify legibility by downscaling to ~400px (mobile feed width) with `sips`.
 - **Sector Sweeps run (log each new one here to avoid repeats):** consumer staples / packaged food; RF + analog semis ($SWKS $QRVO $ADI $ON $MCHP, May 22 2026). Verify live data per name before drafting — z-score flags fire in BOTH directions and high FSS is often filing-velocity, not margin, driven.
 - **StockTwits:** live since May 18. Bearish/Bullish sentiment tag required. Same data-forward format as X.
 - **r/SecurityAnalysis:** post drafted, awaiting mod approval.

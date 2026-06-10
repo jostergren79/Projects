@@ -20,8 +20,8 @@ _Refreshed Jun 5. **Numbers below are external-only** — Jason's IPs filtered. 
 | Countries | 2: US, France | Jun 5, 2026 |
 | Top referrers (7d, external) | google, direct — t.co = 0 | Jun 5, 2026 |
 | X followers / combined 2nd-degree reach | 4 / ~10.3k combined (Ann Barbour 6.8k, Ashton ~2.3k) | May 21, 2026 |
-| Last X post | Day 19 — $GME Q1 FY2026 earnings card; eBay derivatives angle ("proposed acquisition of eBay" from risk factors); posted Jun 2 | Jun 2, 2026 |
-| Last LinkedIn post | Build-in-public retrospective (15 days / 17 releases) + DM sent to Allie K. Miller | May 27, 2026 |
+| Last X post | Day 20 — $VSCO Q2 2026 turnaround card; revenue +15.3% YoY (3 SD above avg), gross margin 37.5% 8-qtr high, $48M NI after 4 straight loss quarters, FSS 82/100, 8-K 3 days before 10-Q; posted Jun 10 | Jun 10, 2026 |
+| Daily post automation | Cowork runs at 8 AM daily — generates post copy + data card automatically | Jun 10, 2026 |
 
 ---
 
@@ -39,25 +39,24 @@ _Replace completed items each session. Keep this list short._
 
 **▶ NEXT SESSION:**
 
-1. [ ] **Stripe Dashboard action** — add `customer.subscription.created` + `customer.subscription.updated` to webhook endpoint event list (code shipped, Stripe won't send them until configured).
-2. [ ] **Watch GME engagement** — monitor replies/impressions; reply with filing data to anyone engaging. eBay angle may drive thread activity.
+1. [x] **Stripe Dashboard action** — `customer.subscription.created` + `customer.subscription.updated` added to webhook endpoint Jun 10, 2026. All 5 events now configured: checkout.session.completed, customer.subscription.created/deleted/updated, invoice.payment_failed.
+2. [ ] **Watch VSCO + GME engagement** — monitor replies/impressions; reply with filing data to anyone engaging.
 3. [ ] **Watch conversion metrics** — check if funnel looks healthier post-fixes. Baseline: 1 upgrade-modal open / 0 convert.
-4. [ ] **Ongoing distribution** — next X post; reply threads into high-impression accounts.
-5. [ ] **LinkedIn — revisit if Allie K. Miller replies** (DM sent May 27; parked until then).
+4. [ ] **Ongoing distribution** — reply threads into high-impression accounts. Daily post + card now automated via Cowork (8 AM).
 
 **Tech debt / soon:**
-- [ ] Submit to SaaSWorthy, Product Hunt, G2, Capterra, AlternativeTo.
-- [ ] Expand sitemap to /privacy and /terms.
+- [ ] Submit to SaaSWorthy, Product Hunt, G2, Capterra, AlternativeTo. **AlternativeTo: account created Jun 10; eligible to submit Jun 17, 2026.**
+- [x] Expand sitemap to /privacy and /terms. Done Jun 10, 2026.
 - [ ] Chart.js defensive fix: `responsive: true, maintainAspectRatio: false` + sized wrappers.
 - [ ] `/test/run-alert-check` 403 with `DEV_SECRET` — reconcile deployed value vs `railway variables`. Non-blocking.
-- [x] ~~PostHog internal-traffic filter leak~~ — fixed May 25. **Still open:** flip PostHog's "Enable filter on all new insights" ON; filter localhost.
+- [x] ~~PostHog internal-traffic filter leak~~ — fixed May 25. "Enable filter on all new insights" confirmed ON Jun 10. Note: IP address filter in PostHog is set as inclusive (shows only matching IP) rather than exclusive — low priority since device-flag (`?internal=1`) is the primary filter.
 
 ---
 
-## Current state — Jun 5, 2026
+## Current state — Jun 10, 2026
 
 _Session history lives in `CHANGELOG.md` + git log; settled decisions in `DECISIONS_ARCHIVE.md`. This note keeps only the latest 1–2 sessions._
 
-_**Jun 5 session (Friday) — start-only, no code shipped, no posts.** **(1) PostHog Jun 3:** 8 external events — 1 company_view (engaged visitor hit a dashboard), 1 digest_banner_view, 3 page_view. No upgrade-modal opens, no signups. Countries: US + France. Jun 4–5: 0 new events. **(2) Prod health:** v1.7.5 deployed, Railway healthy. **(3) Stripe Dashboard action still open:** `customer.subscription.created` + `customer.subscription.updated` need to be added to webhook endpoint config. Last X post remains Day 19 $GME (Jun 2) — 3 days without a post._
+_**Jun 10 session (Tuesday) — config + cleanup, no code shipped. $0 MRR, 0 paying. (1) X post (Day 20):** $VSCO Q2 2026 turnaround card posted — revenue +15.3% YoY (3 SD above avg), gross margin 37.5% (8-qtr high), $48M NI after 4 straight loss quarters, FSS 82/100, 8-K filed 3 days before 10-Q. CIK 0001856437. **(2) Stripe webhook:** `customer.subscription.created` + `customer.subscription.updated` added to Stripe Dashboard endpoint config — now fully wired. **(3) PostHog filter fixed:** removed inclusive IP address chip from internal-user filter; "Enable filter on all new insights" confirmed ON; dashboards now show real external traffic. 2 unique external visitors in last 7 days (Jun 3 + Jun 6). **(4) Sitemap:** /privacy.html + /terms.html added. **(5) AlternativeTo:** account created Jun 10; eligible to submit Jun 17. **(6) Cowork:** 8 AM daily automation live — generates post copy + data card automatically._
 
-_**Jun 2 session (Tuesday) — code + distribution: shipped v1.7.5 (two backend fixes), posted Day 19 $GME card. $0 MRR, 0 external paying.** **(1) Code shipped:** `subscription_success` added to analytics allowlist; webhook self-heal added for `customer.subscription.created`/`updated` via `_sync_subscription()`. **(2) X post (Day 19):** $GME Q1 FY2026 earnings card — record $389.6M NI; $268.4M unrealized eBay derivatives; $1B collateral; risk factors disclose "proposed acquisition of eBay Inc." PNG at `~/Desktop/edgarwolf_GME_card.png`, card HTML at `cards/gme_q1fy26.html`._
+_**Jun 5 session (Friday) — start-only, no code shipped, no posts.** PostHog Jun 3: 8 external events. Prod v1.7.5 healthy. Stripe webhook config was still open._
