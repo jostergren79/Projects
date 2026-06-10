@@ -166,3 +166,8 @@ edgar-api/.pytest_cache/
 
 # Local Claude Code workspace config
 .claude/
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
